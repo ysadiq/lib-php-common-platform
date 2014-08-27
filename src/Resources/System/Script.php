@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Enums\ScriptLanguages;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -33,8 +34,10 @@ use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
@@ -69,6 +72,10 @@ class Script extends BaseSystemRestResource
      * @var string The path to script storage area
      */
     protected $_scriptPath = null;
+    /**
+     * @type bool True if user scripts are enabled
+     */
+    protected $_enableUserScripts = false;
     /**
      * @var string The path to user script storage area
      */
@@ -132,9 +139,11 @@ class Script extends BaseSystemRestResource
         }
 
         //  User scripts are stored here
+        $this->_enableUserScripts = Pii::getParam( 'dsp.enable_user_scripts', false );
         $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
+        $this->_userScriptPath = Platform::getPrivatePath( static::DEFAULT_USER_SCRIPT_PATH );
 
-        if ( empty( $this->_scriptPath ) )
+        if ( empty( $this->_scriptPath ) || empty( $this->_userScriptPath ) )
         {
             $_message = 'Empty script path';
         }
@@ -149,10 +158,10 @@ class Script extends BaseSystemRestResource
             }
             else if ( !is_writable( $this->_scriptPath ) )
             {
-                $_message = 'Scripts path not writeable: ' . $this->_scriptPath;
+                $_message = 'Scripts path not writable: ' . $this->_scriptPath;
             }
 
-            if ( Pii::getParam( 'dsp.enable_user_scripts', false ) )
+            if ( $this->_enableUserScripts )
             {
                 if ( !is_dir( $this->_userScriptPath ) )
                 {
@@ -163,7 +172,14 @@ class Script extends BaseSystemRestResource
                 }
                 else if ( !is_writable( $this->_userScriptPath ) )
                 {
-                    $_message = 'User scripts path not writeable: ' . $this->_userScriptPath;
+                    $_message = 'User scripts path not writable: ' . $this->_userScriptPath;
+                }
+            }
+            else
+            {
+                if ( Option::get( $this->_requestPayload, 'is_user_script', false ) )
+                {
+                    throw new ForbiddenException( 'User scripts are not allowed on this server.' );
                 }
             }
         }
@@ -173,8 +189,7 @@ class Script extends BaseSystemRestResource
             Log::error( $_message );
 
             throw new RestException(
-                HttpResponse::ServiceUnavailable,
-                'This service is not available. Storage path, area, and/or required libraries are missing.'
+                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path, area, and/or required libraries are missing.'
             );
         }
 
@@ -184,16 +199,24 @@ class Script extends BaseSystemRestResource
     }
 
     /**
-     * @param bool $includeUserScripts If true, any user scripts are included in the list
+     * @param string $language           The language of the scripts to return. Defaults to "*", or all
+     * @param bool   $includeUserScripts If true, any user scripts are included in the list
+     * @param bool   $onlyUserScripts    IF true, only user scripts are returned
      *
      * @return array|bool
      */
-    protected function _getScriptList( $includeUserScripts = true )
+    protected function _getScriptList( $language = ScriptLanguages::JAVASCRIPT, $includeUserScripts = true, $onlyUserScripts = false )
     {
         $_resources = array(
-            'event' => $this->_scriptPath . '/*',
-            'user'  => $this->_userScriptPath . '/*',
+            'event' => $this->_scriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'user'  => $this->_userScriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
         );
+
+        //  If user scripts are disabled, remove from list of paths to check
+        if ( !$this->_enableUserScripts || !$includeUserScripts )
+        {
+            unset( $_resources['user'] );
+        }
 
         $_response = array();
 
@@ -214,9 +237,13 @@ class Script extends BaseSystemRestResource
             }
         }
 
-        if ( !$includeUserScripts )
+        if ( !$this->_enableUserScripts || !$includeUserScripts )
         {
             unset( $_response['user'] );
+        }
+        else if ( $this->_enableUserScripts && $includeUserScripts && $onlyUserScripts )
+        {
+            unset( $_response['event'] );
         }
 
         return $_response;
@@ -232,26 +259,38 @@ class Script extends BaseSystemRestResource
     protected function _buildScriptArray( $scripts = array(), $userScripts = false, $includeBody = false )
     {
         $_response = array();
+        $_scriptPath = $this->_getScriptPath( null, null, $userScripts );
+
         foreach ( $scripts as $_script )
         {
-            $_eventName = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
-            $_fullScriptPath = $this->_scriptPath . DIRECTORY_SEPARATOR . $_script;
+            $_scriptId = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
+            $_fullScriptPath = $_scriptPath . DIRECTORY_SEPARATOR . $_script;
 
             $_resource = array(
-                'script_id'      => $_eventName,
+                'script_id'      => $_scriptId,
                 'is_user_script' => $userScripts,
                 'script'         => $_script,
                 'file_name'      => $_script,
                 'file_path'      => $_fullScriptPath,
                 'file_mtime'     => filemtime( $_fullScriptPath ),
-                'event_name'     => $_eventName,
-                'language'       => trim( str_replace( $_eventName, null, $_script ), '.' ),
+                'event_name'     => $_scriptId,
+                'language'       => trim( str_replace( $_scriptId, null, $_script ), '.' ),
             );
 
             if ( $includeBody )
             {
-                $_resource['script_body'] = @file_get_contents( $this->_scriptPath . '/' . $_script );
+                if ( false !== ( $_body = @file_get_contents( $_fullScriptPath ) ) )
+                {
+                    $_resource['script_body'] = $_body;
+                    unset( $_body );
+                }
+                else
+                {
+                    $_resource['script_body'] = null;
+                }
             }
+
+            ksort( $_resource );
 
             $_response[] = $_resource;
             unset( $_resource, $_eventName );
@@ -268,19 +307,29 @@ class Script extends BaseSystemRestResource
      */
     protected function _listResources()
     {
-        $_scripts = $this->_getScriptList( Pii::getParam( 'dsp.enable_user_scripts' ) );
-        $_includeBody = Option::get( $this->_requestPayload, 'include_script_body', false );
+        $_includeBody = Option::getBool( $this->_requestPayload, 'include_script_body', false );
+        $_includeUserScripts =
+            !$this->_enableUserScripts ? false : Option::getBool( $this->_requestPayload, 'include_user_scripts', $this->_enableUserScripts );
+        $_onlyUserScripts = Option::getBool( $this->_requestPayload, 'include_only_user_scripts', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
+
+        $_scripts = $this->_getScriptList( $_language, $_includeUserScripts, $_onlyUserScripts );
+
         $_response = array();
 
         if ( !empty( $_scripts ) )
         {
             $_response = $this->_buildScriptArray( Option::get( $_scripts, 'event', array() ), false, $_includeBody );
-            $_response += $this->_buildScriptArray( Option::get( $_scripts, 'user', array() ), true, $_includeBody );
+
+            if ( isset( $_scripts['user'] ) && !empty( $_scripts['user'] ) )
+            {
+                $_response = array_merge( $_response, $this->_buildScriptArray( Option::get( $_scripts, 'user', array() ), true, $_includeBody ) );
+            }
         }
 
         ksort( $_response );
 
-        return array( 'resource' => $_response );
+        return array('resource' => $_response);
     }
 
     /**
@@ -297,8 +346,9 @@ class Script extends BaseSystemRestResource
             return $this->_listResources();
         }
 
-        $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', 'js' );
+        $_includeBody = Option::getBool( $this->_requestPayload, 'include_script_body', true );
+        $_user = Option::getBool( $this->_requestPayload, 'is_user_script', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = $this->_getScriptPath( null, $_language, $_user );
         $_script = basename( $_path );
 
@@ -307,7 +357,7 @@ class Script extends BaseSystemRestResource
             throw new NotFoundException( '"' . $this->_resourceId . '" was not found.' );
         }
 
-        $_body = @file_get_contents( $_path );
+        $_body = $_includeBody ? @file_get_contents( $_path ) : false;
 
         return array(
             'script_id'      => $this->_resourceId,
@@ -339,31 +389,25 @@ class Script extends BaseSystemRestResource
             throw new BadRequestException( 'No resource id specified.' );
         }
 
-        $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', 'js' );
-        $_path =
-            ( $_user ? $this->_userScriptPath : $this->_scriptPath ) .
-            '/' .
-            trim( $this->_resourceId, '/ ' ) .
-            '.' .
-            $_language;
+        $_params = $this->_getRequestData();
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, ' /' ), $_params['language'], $_params['is_user_script'] );
         $_script = basename( $_path );
 
-        $_scriptBody = Option::get( $this->_requestPayload, 'record' );
+//        Log::debug( print_r( $_params, true ) . PHP_EOL . print_r( $_SERVER, true ) . PHP_EOL . print_r( $_REQUEST, true ) );
 
-        if ( is_array( $_scriptBody ) )
+        if ( is_array( $_params['request_body'] ) )
         {
-            $_scriptBody = current( $_scriptBody );
+            $_params['request_body'] = current( $_params['request_body'] );
         }
 
-        if ( empty( $_scriptBody ) )
+        if ( empty( $_params['request_body'] ) )
         {
             throw new BadRequestException( 'You must supply a "script_body".' );
         }
 
-        if ( false === $_bytes = @file_put_contents( $_path, $_scriptBody ) )
+        if ( false === ( $_bytes = @file_put_contents( $_path, $_params['request_body'] ) ) )
         {
-            throw new InternalServerErrorException( 'Error writing file to storage area.' );
+            throw new FileSystemException( 'Error writing file to storage area: ' . $_path );
         }
 
         //  Clear the swagger cache...
@@ -372,13 +416,13 @@ class Script extends BaseSystemRestResource
         return array(
             'script_id'      => $this->_resourceId,
             'script'         => $_script,
-            'script_body'    => $_scriptBody,
-            'is_user_script' => $_user,
-            'language'       => $_language,
+            'script_body'    => $_params['request_body'],
+            'is_user_script' => $_params['is_user_script'],
+            'language'       => $_params['language'],
             'file_name'      => $_script,
             'file_path'      => $_path,
             'file_mtime'     => filemtime( $_path ),
-            'event_name'     => $_user ? false : $this->_resourceId,
+            'event_name'     => $_params['is_user_script'] ? false : $this->_resourceId,
             'bytes_written'  => $_bytes,
         );
     }
@@ -399,14 +443,9 @@ class Script extends BaseSystemRestResource
             throw new BadRequestException( 'No script ID specified.' );
         }
 
-        $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', 'js' );
-        $_path =
-            ( $_user ? $this->_userScriptPath : $this->_scriptPath ) .
-            '/' .
-            trim( $this->_resourceId, '/ ' ) .
-            '.' .
-            $_language;
+        $_user = Option::getBool( $this->_requestPayload, 'is_user_script', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, ' /' ), $_language, $_user );
         $_script = basename( $_path );
 
         if ( !file_exists( $_path ) )
@@ -455,13 +494,12 @@ class Script extends BaseSystemRestResource
         if ( !extension_loaded( 'v8js' ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable,
-                'This DSP cannot run server-side javascript scripts. The "v8js" is not available.'
+                HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.'
             );
         }
 
-        $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', 'js' );
+        $_user = Option::getBool( $this->_requestPayload, 'is_user_script', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
 
         $_api = array(
             'api'     => Api::getScriptingObject(),
@@ -489,15 +527,53 @@ class Script extends BaseSystemRestResource
             GlobFlags::GLOB_NODOTS
         );
 
-        foreach ( $_scripts as $_script )
+        if ( !empty( $_scripts ) )
         {
-            if ( $eventName == str_replace( '.js', null, $_script ) )
+            foreach ( $_scripts as $_script )
             {
-                return $_script;
+                if ( $eventName == str_replace( '.js', null, $_script ) )
+                {
+                    return $_script;
+                }
             }
         }
 
         return false;
+    }
+
+    /**
+     * @param array $keys Additional parameter keys to include in the defaults
+     *
+     * @return array
+     */
+    protected function _getRequestData( array $keys = array() )
+    {
+        $_postData = RestData::getPostedData( false, true );
+
+        $_result = array(
+            'is_user_script'            => Option::getBool( $_postData, 'is_user_script', false ),
+            'include_script_body'       => Option::getBool( $_postData, 'include_script_body', false ),
+            'include_user_scripts'      => !$this->_enableUserScripts
+                ? false
+                : Option::getBool(
+                    $_postData,
+                    'include_user_scripts',
+                    $this->_enableUserScripts
+                ),
+            'include_only_user_scripts' => Option::getBool( $_postData, 'include_only_user_scripts', false ),
+            'language'                  => Option::get( $_postData, 'language', ScriptLanguages::JAVASCRIPT ),
+            'request_body'              => Option::getDeep( $_postData, 'record', 0 ),
+        );
+
+        if ( !empty( $keys ) )
+        {
+            foreach ( $keys as $_key )
+            {
+                $_result[$_key] = Option::get( $this->_requestPayload, $_key );
+            }
+        }
+
+        return $_result;
     }
 
     /**
@@ -515,19 +591,21 @@ class Script extends BaseSystemRestResource
      * Constructs the full path to a server-side script
      *
      * @param string $scriptName The script name or null if $this->_resourceId is to be used
-     * @param string $extension
-     * @param bool   $userScript
+     * @param string $language   The script language
+     * @param bool   $userScript True if you want a user script's path
      *
      * @return string
      */
-    protected function _getScriptPath( $scriptName = null, $extension = 'js', $userScript = false )
+    protected function _getScriptPath( $scriptName = null, $language = ScriptLanguages::JAVASCRIPT, $userScript = false )
     {
-        return
-            ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) .
-            '/' .
-            trim( $scriptName ?: $this->_resourceId, '/ ' ) .
-            '.' .
-            $extension;
+        if ( null === $scriptName && null === $language )
+        {
+            return ( $userScript ? $this->_userScriptPath : $this->_scriptPath );
+        }
+
+        $scriptName = trim( $scriptName ?: $this->_resourceId, ' ' . DIRECTORY_SEPARATOR ) . ( $language ? '.' . $language : null );
+
+        return ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) . DIRECTORY_SEPARATOR . $scriptName;
     }
 
     /**

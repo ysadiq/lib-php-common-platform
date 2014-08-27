@@ -93,6 +93,17 @@ return array(
                 ),
             ),
         ),
+        'PhpInfoSection'      => array(
+            'id'         => 'PhpInfoSection',
+            'properties' => array(
+                'name' => array(
+                    'type'  => 'array',
+                    'items' => array(
+                        'type' => 'string',
+                    ),
+                ),
+            ),
+        ),
         'EnvironmentResponse' => array(
             'id'         => 'EnvironmentResponse',
             'properties' => array(
@@ -105,7 +116,12 @@ return array(
                 'platform' => array(
                     'type' => 'PlatformSection',
                 ),
-                'php_info' => array(),
+                'php_info' => array(
+                    'type'  => 'array',
+                    'items' => array(
+                        '$ref' => 'PhpInfoSection',
+                    ),
+                ),
             ),
         ),
     )

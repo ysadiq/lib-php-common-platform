@@ -27,8 +27,8 @@
  */
 return array(
     'resourcePath' => '/{api_name}',
-    'produces'     => array( 'application/json', 'application/xml' ),
-    'consumes'     => array( 'application/json', 'application/xml' ),
+    'produces'     => array('application/json', 'application/xml'),
+    'consumes'     => array('application/json', 'application/xml'),
     'apis'         => array(
         array(
             'path'        => '/{api_name}',
@@ -37,7 +37,19 @@ return array(
         ),
     ),
     'models'       => array(
-        'Resource'  => array(
+        'ComponentList' => array(
+            'id'         => 'ComponentList',
+            'properties' => array(
+                'resource' => array(
+                    'type'        => 'Array',
+                    'description' => 'Array of accessible components available by this service.',
+                    'items'       => array(
+                        'type' => 'string',
+                    ),
+                ),
+            ),
+        ),
+        'Resource'      => array(
             'id'         => 'Resource',
             'properties' => array(
                 'name' => array(
@@ -46,7 +58,7 @@ return array(
                 ),
             ),
         ),
-        'Resources' => array(
+        'Resources'     => array(
             'id'         => 'Resources',
             'properties' => array(
                 'resource' => array(
@@ -58,7 +70,7 @@ return array(
                 ),
             ),
         ),
-        'Success'   => array(
+        'Success'       => array(
             'id'         => 'Success',
             'properties' => array(
                 'success' => array(

@@ -61,7 +61,7 @@ if ( !isset( $_baseDbOps ) )
             'summary'          => 'getTables() - List all table names.',
             'nickname'         => 'getTables',
             'notes'            => 'List the table names in this storage, return as an array.',
-            'type'             => 'Tables',
+            'type'             => 'ComponentList',
             'event_name'       => array('{api_name}.list'),
             'parameters'       => array(
                 array(
@@ -90,7 +90,7 @@ if ( !isset( $_baseDbOps ) )
             'summary'          => 'getAccessComponents() - List all role accessible components.',
             'nickname'         => 'getAccessComponents',
             'notes'            => 'List the names of all the role accessible components.',
-            'type'             => 'AccessComponents',
+            'type'             => 'ComponentList',
             'event_name'       => array('{api_name}.list'),
             'parameters'       => array(
                 array(
@@ -2058,7 +2058,7 @@ $_models = array(
         'id'         => 'Tables',
         'properties' => array(
             'table' => array(
-                'type'        => 'Array',
+                'type'        => 'array',
                 'description' => 'Array of tables and their properties.',
                 'items'       => array(
                     '$ref' => 'Table',

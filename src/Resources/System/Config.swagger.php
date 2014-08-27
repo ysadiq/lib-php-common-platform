@@ -121,6 +121,33 @@ $_commonProperties = array(
             '$ref' => 'HostInfo',
         ),
     ),
+    'restricted_verbs'           => array(
+        'type'        => 'array',
+        'description' => 'An array of HTTP verbs that must be tunnelled on this server.',
+        'items'       => array(
+            'type' => 'string',
+        ),
+    ),
+    'install_type'               => array(
+        'type'        => 'integer',
+        'description' => 'The internal installation type ID for this server.',
+    ),
+    'install_name'               => array(
+        'type'        => 'string',
+        'description' => 'The name of the installation type for this server.',
+    ),
+    'is_hosted'                  => array(
+        'type'        => 'boolean',
+        'description' => 'True if this is a free hosted DreamFactory DSP.',
+    ),
+    'is_private'                 => array(
+        'type'        => 'boolean',
+        'description' => 'True if this is a non-free DreamFactory hosted DSP.',
+    ),
+    'is_guest' => array(
+        'type'        => 'boolean',
+        'description' => 'True if the current user has not logged in.',
+    ),
 );
 
 $_config['models'] = array(

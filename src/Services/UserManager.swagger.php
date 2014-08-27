@@ -17,50 +17,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Option;
 
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
-$_custom = require( __DIR__ . '/../Resources/User/CustomSettings.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/User/Device.swagger.php' );
-$_password = require( __DIR__ . '/../Resources/User/Password.swagger.php' );
-$_profile = require( __DIR__ . '/../Resources/User/Profile.swagger.php' );
-$_register = require( __DIR__ . '/../Resources/User/Register.swagger.php' );
-$_session = require( __DIR__ . '/../Resources/User/Session.swagger.php' );
-
-$_base['apis'] = array_merge(
+$_base['apis'] = array(
     array(
-        array(
-            'path'        => '/{api_name}',
-            'operations'  => array(
-                array(
-                    'method'     => 'GET',
-                    'summary'    => 'getResources() - List resources available for user session management.',
-                    'nickname'   => 'getResources',
-                    'type'       => 'Resources',
-                    'notes'      => 'See listed operations for each resource available.',
-                    'event_name' => '{api_name}.list',
-                ),
+        'path'        => '/{api_name}',
+        'operations'  => array(
+            array(
+                'method'     => 'GET',
+                'summary'    => 'getResources() - List resources available for user session management.',
+                'nickname'   => 'getResources',
+                'type'       => 'Resources',
+                'notes'      => 'See listed operations for each resource available.',
+                'event_name' => '{api_name}.list',
             ),
-            'description' => 'Operations available for user session management.',
         ),
+        'description' => 'Operations available for user session management.',
     ),
-    Option::get( $_custom, 'apis' ),
-    Option::get( $_device, 'apis' ),
-    Option::get( $_password, 'apis' ),
-    Option::get( $_profile, 'apis' ),
-    Option::get( $_register, 'apis' ),
-    Option::get( $_session, 'apis' )
 );
 
-$_base['models'] = array_merge(
-    Option::get( $_base, 'models' ),
-    Option::get( $_custom, 'models' ),
-    Option::get( $_device, 'models' ),
-    Option::get( $_password, 'models' ),
-    Option::get( $_profile, 'models' ),
-    Option::get( $_register, 'models' ),
-    Option::get( $_session, 'models' )
-);
+//  Load resources
+$_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'User';
+
+if ( false !== ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) && !empty( $_files ) )
+{
+    foreach ( $_files as $_file )
+    {
+        $_load = array();
+        $_key = strtolower( str_replace( '.swagger.php', null, $_file ) );
+
+        /** @noinspection PhpIncludeInspection */
+        $_load[$_key] = require( $_resourcePath . DIRECTORY_SEPARATOR . $_file );
+        $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
+        $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
+
+//        Log::debug( '    * Found ' . $_file );
+        unset( $_load );
+    }
+}
+
+unset( $_resourcePath, $_namespaces );
 
 return $_base;

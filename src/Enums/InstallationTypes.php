@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Enums;
 
 use DreamFactory\Platform\Utility\Fabric;
+use DreamFactory\Platform\Utility\Platform;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\SeedEnum;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
@@ -38,7 +40,7 @@ class InstallationTypes extends SeedEnum
      * @var string All packages have this doc root
      */
     const DEFAULT_PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
-    
+
     /**
      * Package Types
      */
@@ -83,15 +85,15 @@ class InstallationTypes extends SeedEnum
     /**
      * @var string
      */
-    const BLUEMIX_PACKAGE_MARKER = '/home/vcap/app/htdocs';
+    const BLUEMIX_PACKAGE_MARKER = '.bluemix';
+    /**
+     * @var string
+     */
+    const PIVOTAL_PACKAGE_MARKER = '.pivotal';
     /**
      * @var string
      */
     const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
-    /**
-     * @var string
-     */
-    const PIVOTAL_PACKAGE_MARKER = '/home/vcap/app/htdocs';
     /**
      * @var string
      */
@@ -100,10 +102,33 @@ class InstallationTypes extends SeedEnum
      * @var string
      */
     const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
+    /**
+     * @var string
+     */
+    const PAAS_MARKER = '/.paas';
 
     //*************************************************************************
     //	Methods
     //*************************************************************************
+
+    /**
+     * Returns the array of restricted verbs for the install type given.
+     *
+     * @param int $installType
+     *
+     * @return array array of verbs that are restricted. If there are no  restrictions, an empty array is returned.
+     */
+    public static function getRestrictedVerbs( $installType = null )
+    {
+        static $_restrictedVerbs = array(
+            self::BLUEMIX_PACKAGE => array(
+                HttpMethod::PATCH,
+                HttpMethod::MERGE,
+            ),
+        );
+
+        return Option::get( $_restrictedVerbs, $installType, array() );
+    }
 
     /**
      * Determine the type of installation this is
@@ -120,23 +145,29 @@ class InstallationTypes extends SeedEnum
             self::BITNAMI_PACKAGE => self::BITNAMI_PACKAGE_MARKER,
             self::DEB_PACKAGE     => self::DEB_PACKAGE_MARKER,
             self::RPM_PACKAGE     => self::RPM_PACKAGE_MARKER,
-            self::BLUEMIX_PACKAGE => self::BLUEMIX_PACKAGE_MARKER,
             self::PIVOTAL_PACKAGE => self::PIVOTAL_PACKAGE_MARKER,
+            self::BLUEMIX_PACKAGE => self::BLUEMIX_PACKAGE_MARKER,
         );
 
         $_docRoot = Option::server( 'DOCUMENT_ROOT' );
-
-        //	Default to stand-alone
         $_type = static::FABRIC_HOSTED;
+        $_cachedType = Platform::storeGet( INSTALL_TYPE_KEY );
 
         //	Hosted?
         if ( !Fabric::fabricHosted() )
         {
+            //	Default to stand-alone
             $_type = static::STANDALONE_PACKAGE;
 
             foreach ( $_markers as $_id => $_marker )
             {
-                if ( false !== stripos( $_docRoot, $_marker ) )
+                if ( '.' === $_marker[0] && null !== $_cachedType )
+                {
+                    $_type = $_cachedType;
+                    break;
+                }
+
+                if ( '.' !== $_marker[0] && false !== stripos( $_docRoot, $_marker ) )
                 {
                     $_type = $_id;
                     break;
@@ -144,9 +175,9 @@ class InstallationTypes extends SeedEnum
             }
         }
 
-        //	Kajigger the name
-        $prettyName = Inflector::display( strtolower( static ::nameOf( $_type ) ) );
+        $prettyName = Inflector::display( strtolower( static::nameOf( $_type ) ) );
 
+        //	Kajigger the name
         return $prettyPrint ? $prettyName : $_type;
     }
 }

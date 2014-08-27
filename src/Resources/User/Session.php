@@ -382,10 +382,7 @@ class Session extends BasePlatformRestResource
 
         if ( null !== $user_id && $_user->id != $user_id )
         {
-            throw new ForbiddenException( 'Naughty, naughty... Not yours. ' .
-                                          $_user->id .
-                                          ' != ' .
-                                          print_r( $user_id, true ) );
+            throw new ForbiddenException( 'Naughty, naughty... Not yours. ' . $_user->id . ' != ' . print_r( $user_id, true ) );
         }
 
         $_email = $_user->email;
@@ -711,7 +708,7 @@ class Session extends BasePlatformRestResource
                         $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
                         $_exactFound = true;
                     }
-                    elseif (0 == strcasecmp( substr($component, 0, strpos($component, '/') + 1) . '*', $_tempComponent ) )
+                    elseif ( 0 == strcasecmp( substr( $component, 0, strpos( $component, '/' ) + 1 ) . '*', $_tempComponent ) )
                     {
                         $_componentAllowed = array_merge( $_componentAllowed, array_flip( $_tempVerbs ) );
                         $_componentFound = true;
@@ -724,17 +721,25 @@ class Session extends BasePlatformRestResource
                 }
                 else
                 {
-                    if (empty($_tempComponent))
+                    if ( empty( $_tempComponent ) )
                     {
                         // exact match
                         $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
                         $_exactFound = true;
                     }
-                    elseif ( '*' == $_tempComponent)
+                    elseif ( '*' == $_tempComponent )
                     {
-                        $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
-                        $_allFound = true;
+                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
+                        $_serviceFound = true;
                     }
+                }
+            }
+            else
+            {
+                if ( empty( $_tempService ) && ( '*' == $_tempComponent ) )
+                {
+                    $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
+                    $_allFound = true;
                 }
             }
         }
@@ -1197,8 +1202,7 @@ class Session extends BasePlatformRestResource
 
         if ( $add_apps )
         {
-            $appFields =
-                'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
+            $appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
             /**
              * @var App[] $_apps
              */

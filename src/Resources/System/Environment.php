@@ -30,7 +30,6 @@ use Kisma\Core\Utility\Scalar;
 /**
  * Config
  * DSP system administration manager
- *
  */
 class Environment extends BaseSystemRestResource
 {
@@ -112,7 +111,7 @@ class Environment extends BaseSystemRestResource
             foreach ( $_raw as $_line )
             {
                 $_fields = explode( '=', $_line );
-                $_release[ str_replace( 'distrib_', null, strtolower( $_fields[0] ) ) ] = trim( $_fields[1], PHP_EOL . '"' );
+                $_release[str_replace( 'distrib_', null, strtolower( $_fields[0] ) )] = trim( $_fields[1], PHP_EOL . '"' );
             }
         }
 
@@ -163,15 +162,15 @@ class Environment extends BaseSystemRestResource
 
                 if ( strlen( $_match[1] ) )
                 {
-                    $_info[ $_match[1] ] = array();
+                    $_info[$_match[1]] = array();
                 }
                 elseif ( isset( $_match[3] ) )
                 {
-                    $_info[ $_lastKey ][ $_match[2] ] = isset( $_match[4] ) ? array($_match[3], $_match[4]) : $_match[3];
+                    $_info[$_lastKey][$_match[2]] = isset( $_match[4] ) ? array($_match[3], $_match[4]) : $_match[3];
                 }
                 else
                 {
-                    $_info[ $_lastKey ][] = $_match[2];
+                    $_info[$_lastKey][] = $_match[2];
                 }
 
                 unset( $_keys, $_match );
@@ -183,6 +182,8 @@ class Environment extends BaseSystemRestResource
 
     /**
      * @param array $info
+     *
+     * @param bool  $recursive
      *
      * @return array
      */
@@ -204,8 +205,8 @@ class Environment extends BaseSystemRestResource
                     continue;
                 }
 
-                $info['general'][ $_key ] = $_value;
-                unset( $info[0][ $_key ] );
+                $info['general'][$_key] = $_value;
+                unset( $info[0][$_key] );
             }
 
             unset( $info[0] );
@@ -223,26 +224,15 @@ class Environment extends BaseSystemRestResource
             if ( is_array( $_value ) && 2 == count( $_value ) && isset( $_value[0], $_value[1] ) )
             {
                 $_v1 = Option::get( $_value, 0 );
-                $_v2 = Option::get( $_value, 1 );
 
                 if ( $_v1 == '<i>no value</i>' )
                 {
                     $_v1 = null;
                 }
 
-                if ( $_v2 == '<i>no value</i>' )
-                {
-                    $_v2 = null;
-                }
-
                 if ( Scalar::in( strtolower( $_v1 ), 'on', 'off', '0', '1' ) )
                 {
                     $_v1 = Option::getBool( $_value, 0 );
-                }
-
-                if ( Scalar::in( strtolower( $_v2 ), 'on', 'off', '0', '1' ) )
-                {
-                    $_v2 = Option::getBool( $_value, 1 );
                 }
 
                 $_value = $_v1;
@@ -253,7 +243,7 @@ class Environment extends BaseSystemRestResource
                 $_value = $this->_cleanPhpInfo( $_value, true );
             }
 
-            $_clean[ $_key ] = $_value;
+            $_clean[$_key] = $_value;
         }
 
         return $_clean;

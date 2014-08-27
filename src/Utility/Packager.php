@@ -356,46 +356,35 @@ class Packager
                                 $msg = $_result[0]['error']['message'];
                                 throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
                             }
+
+                            $_db->refreshSchemaCache();
                         }
                     }
                 }
                 else
                 {
+                    $_serviceName = 'db'; // default service
                     // single or multiple tables for one service
                     $_tables = Option::get( $_data, 'table' );
                     if ( !empty( $_tables ) )
                     {
-                        $_serviceName = Option::get( $_data, 'api_name' );
-                        if ( empty( $_serviceName ) )
-                        {
-                            $_serviceName = 'db'; // for older packages
-                        }
-                        /** @var $_db BaseDbSvc */
-                        $_db = ServiceHandler::getServiceObject( $_serviceName );
-                        $_result = $_db->updateTables( $_tables, true );
-                        if ( isset( $_result[0]['error'] ) )
-                        {
-                            $msg = $_result[0]['error']['message'];
-                            throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
-                        }
+                        $_serviceName = Option::get( $_data, 'api_name', $_serviceName, false, true );
                     }
                     else
                     {
-                        // single table with no wrappers - try default schema service
-                        $table = Option::get( $_data, 'name' );
-                        if ( !empty( $table ) )
-                        {
-                            $_serviceName = 'db';
-                            /** @var $_db BaseDbSvc */
-                            $_db = ServiceHandler::getServiceObject( $_serviceName );
-                            $_result = $_db->updateTables( $_data, true );
-                            if ( isset( $_result['error'] ) )
-                            {
-                                $msg = $_result['error']['message'];
-                                throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
-                            }
-                        }
+                        $_tables = $_data;
                     }
+
+                    /** @var $_db BaseDbSvc */
+                    $_db = ServiceHandler::getServiceObject( $_serviceName );
+                    $_result = $_db->updateTables( $_tables );
+                    if ( isset( $_result[0]['error'] ) )
+                    {
+                        $msg = $_result[0]['error']['message'];
+                        throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
+                    }
+
+                    $_db->refreshSchemaCache();
                 }
                 $_zip->deleteName( 'schema.json' );
             }
@@ -433,47 +422,30 @@ class Packager
                 }
                 else
                 {
+                    $_serviceName = 'db';
                     // single or multiple tables for one service
                     $_tables = Option::get( $_data, 'table' );
                     if ( !empty( $_tables ) )
                     {
-                        $_serviceName = Option::get( $_data, 'api_name' );
-                        if ( empty( $_serviceName ) )
-                        {
-                            $_serviceName = 'db'; // for older packages
-                        }
-                        $_db = ServiceHandler::getServiceObject( $_serviceName );
-                        foreach ( $_tables as $table )
-                        {
-                            $tableName = Option::get( $table, 'name' );
-                            $records = Option::get( $table, 'record' );
-                            /** @var $_db BaseDbSvc */
-                            $_db->overrideAction( HttpMethod::POST );
-                            $_result = $_db->createRecords( $tableName, $records );
-                            if ( isset( $_result['record'][0]['error'] ) )
-                            {
-                                $msg = $_result['record'][0]['error']['message'];
-                                throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
-                            }
-                        }
+                        $_serviceName = Option::get( $_data, 'api_name', $_serviceName, false, true );
                     }
                     else
                     {
-                        // single table with no wrappers - try default database service
-                        $tableName = Option::get( $_data, 'name' );
-                        if ( !empty( $tableName ) )
+                        $_tables = $_data;
+                    }
+
+                    $_db = ServiceHandler::getServiceObject( $_serviceName );
+                    foreach ( $_tables as $table )
+                    {
+                        $tableName = Option::get( $table, 'name' );
+                        $records = Option::get( $table, 'record' );
+                        /** @var $_db BaseDbSvc */
+                        $_db->overrideAction( HttpMethod::POST );
+                        $_result = $_db->createRecords( $tableName, $records );
+                        if ( isset( $_result['record'][0]['error'] ) )
                         {
-                            $_serviceName = 'db';
-                            $_db = ServiceHandler::getServiceObject( $_serviceName );
-                            $records = Option::get( $_data, 'record' );
-                            /** @var $_db BaseDbSvc */
-                            $_db->overrideAction( HttpMethod::POST );
-                            $_result = $_db->createRecords( $tableName, $records );
-                            if ( isset( $_result['record'][0]['error'] ) )
-                            {
-                                $msg = $_result['record'][0]['error']['message'];
-                                throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
-                            }
+                            $msg = $_result['record'][0]['error']['message'];
+                            throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
                         }
                     }
                 }
