@@ -940,6 +940,7 @@ SQL;
                 array('name' => 'provider', 'label' => 'Provider'),
                 array('name' => 'provider_user', 'label' => 'Provider User'),
                 array('name' => 'role', 'label' => 'Role'),
+                array('name' => 'script', 'label' => 'Script'),
                 array('name' => 'service', 'label' => 'Service'),
                 array('name' => 'user', 'label' => 'User'),
             )
