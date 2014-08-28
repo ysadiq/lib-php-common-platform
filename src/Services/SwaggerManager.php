@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
@@ -801,7 +800,7 @@ SQL;
         if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
         {
             //  Delete any cache files too...
-            Platform::storeDelete( PlatformStore::buildCacheKey() );
+            Platform::storeDelete( Platform::getCacheKey() );
 
             //  Try and remove any cache data from /tmp
             @shell_exec( 'rm -rf /tmp/.dsp* /tmp/.dfcc-* /tmp/*.dfcc' );

@@ -21,13 +21,12 @@ namespace DreamFactory\Platform\Events\Stores;
 
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventStoreLike;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
- * A store for the platform event system
+ * A wrapper around the app store for the event system
  */
 class EventStore implements EventStoreLike
 {
@@ -133,7 +132,7 @@ class EventStore implements EventStoreLike
      */
     public function getStats()
     {
-        return Platform::getStore()->getStats();
+        return null;
     }
 
     /**
@@ -145,7 +144,7 @@ class EventStore implements EventStoreLike
      */
     public function fetch( $id )
     {
-        return Platform::getStore()->fetch( $id );
+        return Pii::appStoreGet( $id );
 
     }
 

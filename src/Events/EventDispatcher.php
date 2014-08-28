@@ -277,7 +277,7 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         //  Run any scripts
-        if ( static::$_enableEventScripts && !$this->_runEventScripts( $eventName, $event ) )
+        if ( !$this->_runEventScripts( $eventName, $event ) )
         {
             return true;
         }
@@ -811,10 +811,12 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         $_exposedEvent = $_event = ScriptEvent::normalizeEvent( $eventName, $event, $this );
+        $_output = null;
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
             $_result = null;
+            $_thisOutput = null;
 
             try
             {
@@ -823,8 +825,13 @@ class EventDispatcher implements EventDispatcherInterface
                     $eventName . '.js',
                     $_exposedEvent,
                     $_event['platform'],
-                    $_output
+                    $_thisOutput
                 );
+
+                if ( !empty( $_thisOutput ) )
+                {
+                    $_output .= $_thisOutput;
+                }
 
                 //  Bail on errors...
                 if ( is_array( $_result ) && ( isset( $_result['error'] ) || isset( $_result['exception'] ) ) )
