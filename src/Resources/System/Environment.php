@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\Platform;
@@ -44,7 +43,7 @@ class Environment extends BaseSystemRestResource
     /**
      * @type int The number of seconds at most to cache these resources
      */
-    const CONFIG_CACHE_TTL = PlatformStore::DEFAULT_TTL;
+    const CONFIG_CACHE_TTL = Platform::DEFAULT_CACHE_TTL;
     /**
      * @type string file containing linux system information
      */

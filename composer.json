@@ -37,7 +37,7 @@
 		"pear-pear.php.net/Mail_mimeDecode": "*",
 		"dreamfactory/yii":                  "~1.1.13.3",
 		"dreamfactory/lib-php-common":       "~1.5@stable",
-		"dreamfactory/lib-php-common-yii":   "~1.5@stable",
+		"dreamfactory/lib-php-common-yii":   "~1.5@dev",
 		"dreamfactory/oasys":                "~0.4@stable",
 		"dreamfactory/javascript-sdk":       "~1.0",
 		"dreamfactory/azure-sdk-for-php":    "dev-develop as dev-master"

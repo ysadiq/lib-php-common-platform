@@ -28,6 +28,8 @@ use Kisma\Core\Utility\Option;
 /**
  * A simple store class that use's the Kisma store
  * @method bool setNamespace( string $namespace )
+ *
+ * @deprecated in v1.7.11, to be removed in v2.0.0
  */
 class PlatformStore extends Flexistore
 {
