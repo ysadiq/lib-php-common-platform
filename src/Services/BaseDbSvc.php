@@ -2997,7 +2997,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         switch ( $this->_action )
         {
             case static::GET:
-                $_refresh = Option::get( $this->_requestPayload, 'refresh' );
+                $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
                 if ( empty( $_tableName ) )
                 {
                     $_tables = Option::get( $this->_requestPayload, 'names' );
