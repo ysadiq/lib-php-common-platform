@@ -125,9 +125,6 @@ class EventStore implements EventStoreLike
 
     /**
      * Retrieves cached information from the data store.
-     *
-     * @since 2.2
-     *
      * @return array|null An associative array with server's statistics if available, NULL otherwise.
      */
     public function getStats()
