@@ -360,7 +360,7 @@ class Session extends BasePlatformRestResource
 
         /** @var User $_user */
         $_user = $user
-            ?: ResourceStore::model( 'user' )->with(
+            ? : ResourceStore::model( 'user' )->with(
                 'role.role_service_accesses',
                 'role.role_system_accesses',
                 'role.apps',
@@ -467,7 +467,7 @@ class Session extends BasePlatformRestResource
 
         /** @var Role $_role */
         $_role = $role
-            ?: ResourceStore::model( 'role' )->with(
+            ? : ResourceStore::model( 'role' )->with(
                 'role_service_accesses',
                 'role_system_accesses',
                 'apps',
@@ -733,7 +733,8 @@ class Session extends BasePlatformRestResource
             }
             else
             {
-                if ( empty( $_tempService ) && ( '*' == $_tempComponent ) )
+                // system services don't fall under the "All" services category
+                if ( ( 'system' != $service ) && empty( $_tempService ) && ( '*' == $_tempComponent ) )
                 {
                     $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
                     $_allFound = true;
@@ -1115,7 +1116,7 @@ class Session extends BasePlatformRestResource
             return static::$_userId = Pii::user()->getId();
         }
 
-        return static::$_userId = $setToIfNull ?: null;
+        return static::$_userId = $setToIfNull ? : null;
     }
 
     /**
