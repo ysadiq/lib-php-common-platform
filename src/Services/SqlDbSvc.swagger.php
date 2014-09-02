@@ -60,7 +60,7 @@ $_addApis = array(
             array(
                 'method'           => 'GET',
                 'summary'          => 'callStoredProc() - Call a stored procedure.',
-                'nickname'         => 'callStoredProc()',
+                'nickname'         => 'callStoredProc',
                 'notes'            =>
                     'Call a stored procedure with no parameters. ' .
                     'Set an optional wrapper for the returned data set. ',
@@ -92,7 +92,7 @@ $_addApis = array(
             array(
                 'method'           => 'POST',
                 'summary'          => 'callStoredProcWithParams() - Call a stored procedure.',
-                'nickname'         => 'callStoredProcWithParams()',
+                'nickname'         => 'callStoredProcWithParams',
                 'notes'            =>
                     'Call a stored procedure with parameters. ' .
                     'Set an optional wrapper and schema for the returned data set. ',
