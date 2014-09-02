@@ -191,6 +191,14 @@ $_script = array(
                             'paramType'     => 'query',
                             'required'      => false,
                         ),
+                        array(
+                            'name'          => 'log_output',
+                            'description'   => 'If true (the default), script output (not the returned result) will be sent to the log as "info". If you do not want script output in the logs, set this parameter to "false" when making the call.',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'query',
+                            'required'      => false,
+                        ),
                         //                        array(
                         //                            'name'          => 'language',
                         //                            'description'   => 'The language of the script',

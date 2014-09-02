@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\User;
 
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -28,7 +27,6 @@ use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -333,9 +331,8 @@ class Session extends BasePlatformRestResource
         // And logout browser session
         Pii::user()->logout();
 
-        //  Flush any stored configs
+        //  Flush the config
         Pii::flushConfig();
-        Platform::storeDelete( PlatformStore::buildCacheKey() );
     }
 
     /**
@@ -736,7 +733,8 @@ class Session extends BasePlatformRestResource
             }
             else
             {
-                if ( empty( $_tempService ) && ( '*' == $_tempComponent ) )
+                // system services don't fall under the "All" services category
+                if ( ( 'system' != $service ) && empty( $_tempService ) && ( '*' == $_tempComponent ) )
                 {
                     $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
                     $_allFound = true;

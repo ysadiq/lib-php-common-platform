@@ -940,6 +940,7 @@ SQL;
                 array('name' => 'provider', 'label' => 'Provider'),
                 array('name' => 'provider_user', 'label' => 'Provider User'),
                 array('name' => 'role', 'label' => 'Role'),
+                array('name' => 'script', 'label' => 'Script'),
                 array('name' => 'service', 'label' => 'Service'),
                 array('name' => 'user', 'label' => 'User'),
             )
@@ -1052,6 +1053,7 @@ SQL;
 
         try
         {
+            // grab admin count, not including the default user@example.com
             $_admins = Sql::scalar(
                 <<<SQL
 SELECT
@@ -1060,7 +1062,8 @@ FROM
 	{$_tableName}
 WHERE
 	is_sys_admin = 1 AND
-	is_deleted = 0
+	is_deleted = 0 AND
+	email != 'user@example.com'
 SQL
             );
 

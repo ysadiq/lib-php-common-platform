@@ -499,20 +499,29 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::getBool( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
+        $_logOutput = Option::getBool( $this->_requestPayload, 'log_output', true );
 
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_api = array(
             'api'     => Api::getScriptingObject(),
             'config'  => Config::getCurrentConfig(),
             'session' => Session::generateSessionDataFromUser( Session::getCurrentUserId() )
         );
 
-        return ScriptEngine::runScript(
+        $_result = ScriptEngine::runScript(
             $this->_getScriptPath( $this->_resourceId, $_language, $_user ),
-            $this->_resource . '.' . $this->_resourceId,
+            $this->_resource . '.' . ( $_user ? 'user.' : null ) . $this->_resourceId,
             $this->_requestPayload,
-            $_api
+            $_api,
+            $_output
         );
+
+        if ( !empty( $_output ) && $_logOutput )
+        {
+            Log::info( 'Script ' . ( $_user ? 'User ' : null ) . 'Script "' . $this->_resourceId . '" output:' . PHP_EOL . $_output . PHP_EOL );
+        }
+
+        return $_result;
     }
 
     /**

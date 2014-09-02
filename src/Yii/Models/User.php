@@ -198,7 +198,7 @@ class User extends BasePlatformSystemModel
     /** {@InheritDoc} */
     public function setAttributes( $values, $safeOnly = true )
     {
-        if ( isset( $values['password'] ) )
+        if ( array_key_exists( 'password', $values ) )
         {
             if ( !empty( $values['password'] ) )
             {
@@ -208,7 +208,7 @@ class User extends BasePlatformSystemModel
             unset( $values['password'] );
         }
 
-        if ( isset( $values['security_answer'] ) )
+        if ( array_key_exists( 'security_answer', $values ) )
         {
             if ( !empty( $values['security_answer'] ) )
             {
@@ -224,15 +224,15 @@ class User extends BasePlatformSystemModel
             if ( $_id == Session::getCurrentUserId() )
             {
                 //	Make sure you don't remove yourself from admin, role, or deactivate yourself
-                if ( isset( $values['is_sys_admin'] ) && ( $values['is_sys_admin'] != $this->is_sys_admin ) )
+                if ( array_key_exists( 'is_sys_admin', $values ) && ( $values['is_sys_admin'] != $this->is_sys_admin ) )
                 {
                     throw new StorageException( 'You can not change your own admin status.' );
                 }
-                if ( isset( $values['role_id'] ) && ( $values['role_id'] != $this->role_id ) )
+                if ( array_key_exists( 'role_id', $values ) && ( $values['role_id'] != $this->role_id ) )
                 {
                     throw new StorageException( 'You can not change your own role status.' );
                 }
-                if ( isset( $values['is_active'] ) && ( $values['is_active'] != $this->is_active ) )
+                if ( array_key_exists( 'is_active', $values ) && ( $values['is_active'] != $this->is_active ) )
                 {
                     throw new StorageException( 'You can not change your own active status.' );
                 }

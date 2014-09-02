@@ -20,16 +20,13 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
-use Kisma\Core\Interfaces\StoreLike;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -61,6 +58,10 @@ class Platform
      * @type int The memcache port
      */
     const MEMCACHE_PORT = 11211;
+    /**
+     * @type int The default cache ttl, 5m = 3000ms
+     */
+    const DEFAULT_CACHE_TTL = 3000;
 
     //*************************************************************************
     //	Members
@@ -312,7 +313,18 @@ class Platform
             )
         );
 
-        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
+        $_uuid =
+            '{' .
+            substr( $_hash, 0, 8 ) .
+            '-' .
+            substr( $_hash, 8, 4 ) .
+            '-' .
+            substr( $_hash, 12, 4 ) .
+            '-' .
+            substr( $_hash, 16, 4 ) .
+            '-' .
+            substr( $_hash, 20, 12 ) .
+            '}';
 
         return $_uuid;
     }
@@ -344,21 +356,16 @@ class Platform
     //*************************************************************************
 
     /**
-     * Retrieves the store instance for the platform. If it has not yet been created,
-     * a new instance is created and seeded with $data
+     * @param string $addendum Additional data to add to key
      *
-     * @param array $data An array of key value pairs with which to seed the store
-     *
-     * @return StoreLike|CacheProvider
+     * @return string A string that uniquely identifies the owner
      */
-    public static function getStore( array $data = array() )
+    public static function getCacheKey( $addendum = null )
     {
-        if ( null === static::$_persistentStore )
-        {
-            static::$_persistentStore = new PlatformStore( CacheTypes::FILE_SYSTEM, $data );
-        }
-
-        return static::$_persistentStore;
+        return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
+            ? $_SERVER['REMOTE_ADDR']
+            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
+                gethostname() . ( $addendum ? '.' . $addendum : null );
     }
 
     /**
@@ -369,7 +376,7 @@ class Platform
      *
      * @return mixed
      */
-    public static function storeGet( $key, $defaultValue = null, $remove = false, $ttl = PlatformStore::DEFAULT_TTL )
+    public static function storeGet( $key, $defaultValue = null, $remove = false, $ttl = self::DEFAULT_CACHE_TTL )
     {
         return static::_doGet( $key, $defaultValue, $remove, $ttl );
     }
@@ -386,7 +393,7 @@ class Platform
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
-    public static function storeSet( $key, $data, $ttl = PlatformStore::DEFAULT_TTL )
+    public static function storeSet( $key, $data, $ttl = self::DEFAULT_CACHE_TTL )
     {
         return static::_doSet( $key, $data, $ttl );
     }
@@ -605,15 +612,4 @@ class Platform
         return $_dispatcher ?: $_dispatcher = Pii::app()->getDispatcher();
     }
 
-}
-
-if ( Pii::getParam( 'dsp.log_cache_stats' ) )
-{
-    Platform::on(
-        Pii::getParam( 'dsp.cache_stats_event' ),
-        function ( $eventName, $event, $dispatcher )
-        {
-            Log::debug( 'Cache stats: ' . print_r( Platform::getStore()->getStats(), true ) );
-        }
-    );
 }

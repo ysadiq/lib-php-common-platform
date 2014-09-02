@@ -19,11 +19,8 @@
  */
 namespace DreamFactory\Platform\Scripting;
 
-use DreamFactory\Platform\Resources\System\Config;
-use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Services\SwaggerManager;
-use DreamFactory\Platform\Utility\Platform;
-use Kisma\Core\Enums\HttpMethod;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
@@ -32,6 +29,19 @@ use Kisma\Core\Utility\Option;
  */
 class Api
 {
+    //******************************************************************************
+    //* Constants
+    //******************************************************************************
+
+    /**
+     * @type string The cache key for my junk
+     */
+    const CACHE_KEY = 'platform.scripting.api';
+    /**
+     * @type string The cache key for my object
+     */
+    const OBJECT_CACHE_KEY = 'platform.scripting.api.api_object';
+
     //*************************************************************************
     //	Members
     //*************************************************************************
@@ -40,24 +50,14 @@ class Api
      * @var \stdClass
      */
     protected static $_apiObject = null;
-    /**
-     * @var string The Swagger cache
-     */
-    protected $_cachePath;
 
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
-    /**
-     * @param string $swaggerPath If specified, used as Swagger base path
-     */
-    public function __construct( $swaggerPath = null )
+    public function __construct()
     {
-        $swaggerPath = $swaggerPath ? : Platform::getSwaggerPath();
-
-        $this->_cachePath = $swaggerPath . '/cache';
-        static::$_apiObject = Platform::mcGet( 'scripting.api_object' );
+        static::$_apiObject = Pii::appStoreGet( static::OBJECT_CACHE_KEY );
     }
 
     /**
@@ -109,7 +109,7 @@ class Api
         }
 
         //	Store it
-        Platform::mcSet( 'scripting.api_object', static::$_apiObject = $_apiObject );
+        Pii::appStoreSet( static::OBJECT_CACHE_KEY, static::$_apiObject = $_apiObject );
 
         unset( $_apiObject );
 
@@ -161,9 +161,9 @@ class Api
             foreach ( $_api['operations'] as $_operation )
             {
                 if ( !isset( $_operation['nickname'] ) ||
-                     !isset( $_operation['method'] ) ||
-                     !isset( $_api['path'] ) ||
-                     false === strpos( $_api['path'], '{table_name}' )
+                    !isset( $_operation['method'] ) ||
+                    !isset( $_api['path'] ) ||
+                    false === strpos( $_api['path'], '{table_name}' )
                 )
                 {
                     continue;
@@ -197,26 +197,21 @@ class Api
      */
     protected function _loadCacheFile( $cacheFile = null )
     {
-        $_json = null;
-        $_file = $this->_cachePath . ( $cacheFile ? '/' . $cacheFile . '.json' : SwaggerManager::SWAGGER_CACHE_FILE );
+        $_cache = Pii::appStoreGet( static::CACHE_KEY );
 
-        if ( !file_exists( $_file ) )
+        if ( empty( $_cache ) )
         {
-            SwaggerManager::getSwagger();
-        }
+            $_cache = SwaggerManager::getSwagger();
 
-        if ( false === ( $_json = file_get_contents( $_file ) ) || empty( $_json ) )
-        {
-            Log::error( 'Unable to open Swagger cache file: ' . $_file );
-        }
+            if ( is_string( $_cache ) )
+            {
+                if ( false === ( $_cache = json_decode( $_cache, true ) ) || JSON_ERROR_NONE != json_last_error() )
+                {
+                    throw new \RuntimeException( 'Cache file cannot be read or is corrupted.' );
+                }
+            }
 
-        $_cache = json_decode( $_json, true );
-
-        if ( empty( $_cache ) || JSON_ERROR_NONE !== json_last_error() )
-        {
-            Log::error( 'No Swagger cache or invalid JSON detected.' );
-
-            return false;
+            Pii::appStoreSet( static::CACHE_KEY, $_cache );
         }
 
         return $_cache;
