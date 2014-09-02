@@ -800,7 +800,10 @@ SQL;
         if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
         {
             //  Delete any cache files too...
-            Platform::storeDelete( Platform::getCacheKey() );
+            Platform::storeDelete(
+                PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR']
+                    : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : gethostname()
+            );
 
             //  Try and remove any cache data from /tmp
             @shell_exec( 'rm -rf /tmp/.dsp* /tmp/.dfcc-* /tmp/*.dfcc' );
@@ -890,6 +893,5 @@ SQL;
                 'readOnly'    => true,
             ),
         );
-
     }
 }
