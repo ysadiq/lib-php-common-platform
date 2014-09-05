@@ -2416,11 +2416,38 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             }
                         }
                         $_options = array('options' => $_options, 'flags' => $_flags);
-                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_REGEXP, $_options ) )
+                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_INT, $_options ) )
                         {
                             if ( $_throw )
                             {
                                 $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not in the valid range.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'float':
+                        $_decimal = Option::get( $_config, 'decimal', '.' );
+                        $_options['decimal'] = $_decimal;
+                        $_options = array('options' => $_options);
+                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_FLOAT, $_options ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not an acceptable float value.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'boolean':
+                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not an acceptable boolean value.";
                                 throw new BadRequestException( $_msg );
                             }
 

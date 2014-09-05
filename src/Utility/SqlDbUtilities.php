@@ -586,66 +586,66 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         natcasesort( $names );
         $names = array_values( $names );
         $related = array();
-        foreach ( $names as $name )
-        {
-            $table = $db->schema->getTable( $name );
-            if ( !$table )
-            {
-                throw new NotFoundException( "Table '$name' does not exist in the database." );
-            }
-            $fks = $fks2 = $table->foreignKeys;
-            foreach ( $fks as $key => $value )
-            {
-                $refTable = Option::get( $value, 0 );
-                $refField = Option::get( $value, 1 );
-                if ( 0 == strcasecmp( $refTable, $parent_table ) )
-                {
-                    // other, must be has_many or many_many
-                    $relationName = Inflector::pluralize( $name ) . '_by_' . $key;
-                    $related[] = array(
-                        'name'      => $relationName,
-                        'type'      => 'has_many',
-                        'ref_table' => $name,
-                        'ref_field' => $key,
-                        'field'     => $refField
-                    );
-                    // if other has many relationships exist, we can say these are related as well
-                    foreach ( $fks2 as $key2 => $value2 )
-                    {
-                        $tmpTable = Option::get( $value2, 0 );
-                        $tmpField = Option::get( $value2, 1 );
-                        if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
-                            ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
-                            ( 0 != strcasecmp( $parent_table, $name ) )
-                        )
-                        { // not same as parent, i.e. via reference back to self
-                            // not the same key
-                            $relationName = Inflector::pluralize( $tmpTable ) . '_by_' . $name;
-                            $related[] = array(
-                                'name'      => $relationName,
-                                'type'      => 'many_many',
-                                'ref_table' => $tmpTable,
-                                'ref_field' => $tmpField,
-                                'join'      => "$name($key,$key2)",
-                                'field'     => $refField
-                            );
-                        }
-                    }
-                }
-                if ( 0 == strcasecmp( $name, $parent_table ) )
-                {
-                    // self, get belongs to relations
-                    $relationName = $refTable . '_by_' . $key;
-                    $related[] = array(
-                        'name'      => $relationName,
-                        'type'      => 'belongs_to',
-                        'ref_table' => $refTable,
-                        'ref_field' => $refField,
-                        'field'     => $key
-                    );
-                }
-            }
-        }
+//        foreach ( $names as $name )
+//        {
+//            $table = $db->schema->getTable( $name );
+//            if ( !$table )
+//            {
+//                throw new NotFoundException( "Table '$name' does not exist in the database." );
+//            }
+//            $fks = $fks2 = $table->foreignKeys;
+//            foreach ( $fks as $key => $value )
+//            {
+//                $refTable = Option::get( $value, 0 );
+//                $refField = Option::get( $value, 1 );
+//                if ( 0 == strcasecmp( $refTable, $parent_table ) )
+//                {
+//                    // other, must be has_many or many_many
+//                    $relationName = Inflector::pluralize( $name ) . '_by_' . $key;
+//                    $related[] = array(
+//                        'name'      => $relationName,
+//                        'type'      => 'has_many',
+//                        'ref_table' => $name,
+//                        'ref_field' => $key,
+//                        'field'     => $refField
+//                    );
+//                    // if other has many relationships exist, we can say these are related as well
+//                    foreach ( $fks2 as $key2 => $value2 )
+//                    {
+//                        $tmpTable = Option::get( $value2, 0 );
+//                        $tmpField = Option::get( $value2, 1 );
+//                        if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
+//                            ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
+//                            ( 0 != strcasecmp( $parent_table, $name ) )
+//                        )
+//                        { // not same as parent, i.e. via reference back to self
+//                            // not the same key
+//                            $relationName = Inflector::pluralize( $tmpTable ) . '_by_' . $name;
+//                            $related[] = array(
+//                                'name'      => $relationName,
+//                                'type'      => 'many_many',
+//                                'ref_table' => $tmpTable,
+//                                'ref_field' => $tmpField,
+//                                'join'      => "$name($key,$key2)",
+//                                'field'     => $refField
+//                            );
+//                        }
+//                    }
+//                }
+//                if ( 0 == strcasecmp( $name, $parent_table ) )
+//                {
+//                    // self, get belongs to relations
+//                    $relationName = $refTable . '_by_' . $key;
+//                    $related[] = array(
+//                        'name'      => $relationName,
+//                        'type'      => 'belongs_to',
+//                        'ref_table' => $refTable,
+//                        'ref_field' => $refField,
+//                        'field'     => $key
+//                    );
+//                }
+//            }
+//        }
 
         return $related;
     }
