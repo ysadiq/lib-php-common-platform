@@ -134,7 +134,7 @@
                     "email": "kontakt@beberlei.de"
                 },
                 {
-                    "name": "Johannes Schmitt",
+                    "name": "Johannes M. Schmitt",
                     "email": "schmittjoh@gmail.com",
                     "homepage": "https://github.com/schmittjoh",
                     "role": "Developer of wrapped JMSSerializerBundle"
@@ -332,12 +332,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -684,16 +684,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.57",
+            "version": "0.2.58",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "3f832cb3874f6baaddc6f25ab1d9a9976fef1f8d"
+                "reference": "416670260edac67d3683e94aef3a25034901ee73"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/3f832cb3874f6baaddc6f25ab1d9a9976fef1f8d",
-                "reference": "3f832cb3874f6baaddc6f25ab1d9a9976fef1f8d",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/416670260edac67d3683e94aef3a25034901ee73",
+                "reference": "416670260edac67d3683e94aef3a25034901ee73",
                 "shasum": ""
             },
             "require": {
@@ -738,7 +738,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-08-26 18:37:18"
+            "time": "2014-09-05 19:02:47"
         },
         {
             "name": "monolog/monolog",
@@ -859,10 +859,10 @@
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
-            "version": "1.3.12",
+            "version": "1.3.13",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/Archive_Tar-1.3.12.tgz",
+                "url": "http://pear.php.net/get/Archive_Tar-1.3.13.tgz",
                 "reference": null,
                 "shasum": null
             },
@@ -870,7 +870,7 @@
                 "php": ">=4.3.0.0"
             },
             "replace": {
-                "pear-pear/archive_tar": "== 1.3.12.0"
+                "pear-pear/archive_tar": "== 1.3.13.0"
             },
             "type": "pear-library",
             "autoload": {
@@ -992,10 +992,10 @@
         },
         {
             "name": "pear-pear.php.net/Net_URL2",
-            "version": "2.0.6",
+            "version": "2.0.7",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/Net_URL2-2.0.6.tgz",
+                "url": "http://pear.php.net/get/Net_URL2-2.0.7.tgz",
                 "reference": null,
                 "shasum": null
             },
@@ -1003,7 +1003,7 @@
                 "php": ">=5.1.4.0"
             },
             "replace": {
-                "pear-pear/net_url2": "== 2.0.6.0"
+                "pear-pear/net_url2": "== 2.0.7.0"
             },
             "type": "pear-library",
             "autoload": {
