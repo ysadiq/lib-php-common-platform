@@ -465,8 +465,8 @@ SQL;
     {
         // Create and login first admin user
         // Use the model attributes, or check system state variables
-        $_email = Pii::getState( 'email', Option::get( $attributes, 'email' ) );
-        $_password = Pii::getState( 'password', Option::get( $attributes, 'password' ) );
+        $_email =  Option::get( $attributes, 'email', Pii::getState( 'email' ) );
+        $_password = Option::get( $attributes, 'password', Pii::getState( 'password' ) );
 
         if ( empty( $_email ) || empty( $_password ) )
         {
@@ -598,7 +598,7 @@ SQL;
             throw new \Exception( 'Error opening zip file.' );
         }
 
-        $_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'storage' );
+        $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'storage');
 
         try
         {
@@ -1040,20 +1040,20 @@ SQL;
     /**
      * Returns true if this DSP has been activated
      *
-     * @return bool|int Returns 2+ if # of admins is greater than 1
+     * @return bool Returns true if # of admins is greater than 0
      */
     public static function activated()
     {
         $_tableName = static::SYSTEM_TABLE_PREFIX . 'user';
 
-        if ( null !== ( $_state = Pii::getState( 'dsp.admin_count' ) ) )
+        if ( true === Platform::storeGet( 'dsp.admin_activated' ) )
         {
-            return $_state;
+            return true;
         }
 
         try
         {
-            // grab admin count, not including the default user@example.com
+            // grab admin count
             $_admins = Sql::scalar(
                 <<<SQL
 SELECT
@@ -1062,19 +1062,26 @@ FROM
 	{$_tableName}
 WHERE
 	is_sys_admin = 1 AND
-	is_deleted = 0 AND
-	email != 'user@example.com'
+	is_deleted = 0
 SQL
             );
 
-            $_state = ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
+            $_state = ( !empty( $_admins ) );
         }
         catch ( \Exception $_ex )
         {
+            Log::error( '  * System error querying admin activated state.' );
             $_state = false;
         }
 
-        Pii::setState( 'dsp.admin_count', false === $_state ? null : $_state );
+        if ( $_state )
+        {
+			// cache it for later access
+			if ( false === Platform::storeSet( 'dsp.admin_activated', $_state ) )
+			{
+				Log::error( '  * System error caching admin activated state.' );
+			}
+        }
 
         return $_state;
     }

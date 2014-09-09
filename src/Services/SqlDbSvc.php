@@ -849,11 +849,6 @@ class SqlDbSvc extends BaseDbSvc
         {
             $_command->where( $where );
         }
-        if ( !empty( $bind_values ) )
-        {
-            $_command->bindValues( $bind_values );
-        }
-
         if ( !empty( $_order ) )
         {
             $_command->order( $_order );
@@ -869,6 +864,13 @@ class SqlDbSvc extends BaseDbSvc
             $_needLimit = true;
         }
         $_command->limit( $_limit );
+
+        // must bind values after setting all components of the query,
+        // otherwise yii text string is generated without limit, etc.
+        if ( !empty( $bind_values ) )
+        {
+            $_command->bindValues( $bind_values );
+        }
 
         $this->checkConnection();
         $_reader = $_command->query();
@@ -2170,31 +2172,41 @@ class SqlDbSvc extends BaseDbSvc
 
             $_name = Option::get( $_filter, 'name' );
             $_op = Option::get( $_filter, 'operator' );
+            $_value = Option::get( $_filter, 'value' );
+            $_value = static::interpretFilterValue( $_value );
+
             if ( empty( $_name ) || empty( $_op ) )
             {
                 // log and bail
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
             }
 
-            $_value = Option::get( $_filter, 'value' );
-            $_value = static::interpretFilterValue( $_value );
-            if ( $use_params )
+            switch ($_op)
             {
-                $_paramName = ':ssf_' . $_name . '_' . $_key;
-                $_params[$_paramName] = $_value;
-                $_value = $_paramName;
-            }
-            else
-            {
-                if ( is_bool( $_value ) )
-                {
-                    $_value = $_value ? 'true' : 'false';
-                }
+                case 'is null':
+                case 'is not null':
+                    $_sql .= $this->_dbConn->quoteColumnName( $_name ) . " $_op";
+                    break;
+                default:
+                    if ( $use_params )
+                    {
+                        $_paramName = ':ssf_' . $_name . '_' . $_key;
+                        $_params[$_paramName] = $_value;
+                        $_value = $_paramName;
+                    }
+                    else
+                    {
+                        if ( is_bool( $_value ) )
+                        {
+                            $_value = $_value ? 'true' : 'false';
+                        }
 
-                $_value = ( is_null( $_value ) ) ? 'NULL' : $this->_dbConn->quoteValue( $_value );
-            }
+                        $_value = ( is_null( $_value ) ) ? 'NULL' : $this->_dbConn->quoteValue( $_value );
+                    }
 
-            $_sql .= $this->_dbConn->quoteColumnName( $_name ) . " $_op $_value";
+                    $_sql .= $this->_dbConn->quoteColumnName( $_name ) . " $_op $_value";
+                    break;
+            }
         }
 
         return array('filter' => $_sql, 'params' => $_params);
