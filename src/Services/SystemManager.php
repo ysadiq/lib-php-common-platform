@@ -465,7 +465,7 @@ SQL;
     {
         // Create and login first admin user
         // Use the model attributes, or check system state variables
-        $_email =  Option::get( $attributes, 'email', Pii::getState( 'email' ) );
+        $_email = Option::get( $attributes, 'email', Pii::getState( 'email' ) );
         $_password = Option::get( $attributes, 'password', Pii::getState( 'password' ) );
 
         if ( empty( $_email ) || empty( $_password ) )
@@ -512,7 +512,7 @@ SQL;
             $_user->setAttributes( $_fields );
 
             // write back login datetime
-            $_user->last_login_date = date( 'c' );
+            $_user->last_login_date = Platform::getSystemTimestamp();
             $_user->save();
 
             // update session with current real user
@@ -1076,11 +1076,11 @@ SQL
 
         if ( $_state )
         {
-			// cache it for later access
-			if ( false === Platform::storeSet( 'dsp.admin_activated', $_state ) )
-			{
-				Log::error( '  * System error caching admin activated state.' );
-			}
+            // cache it for later access
+            if ( false === Platform::storeSet( 'dsp.admin_activated', $_state ) )
+            {
+                Log::error( '  * System error caching admin activated state.' );
+            }
         }
 
         return $_state;

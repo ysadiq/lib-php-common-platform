@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Sql;
 
@@ -35,46 +36,46 @@ use Kisma\Core\Utility\Sql;
  */
 class Stat extends BasePlatformSystemModel
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @var int
-	 */
-	const TYPE_LOCAL_AUTH = 0;
-	/**
-	 * @var int
-	 */
-	const TYPE_DRUPAL_AUTH = 1;
-	/**
-	 * @var int
-	 */
-	const TYPE_ASGARD = 2;
+    /**
+     * @var int
+     */
+    const TYPE_LOCAL_AUTH = 0;
+    /**
+     * @var int
+     */
+    const TYPE_DRUPAL_AUTH = 1;
+    /**
+     * @var int
+     */
+    const TYPE_ASGARD = 2;
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * @return string the associated database table name
-	 */
-	public function tableName()
-	{
-		return static::tableNamePrefix() . 'stat';
-	}
+    /**
+     * @return string the associated database table name
+     */
+    public function tableName()
+    {
+        return static::tableNamePrefix() . 'stat';
+    }
 
-	/**
-	 * @param int    $type
-	 * @param int    $userId
-	 * @param string $statData
-	 * @param string $date
-	 *
-	 * @return int
-	 */
-	public static function create( $type, $userId, $statData, $date = null )
-	{
-		$_sql = <<<SQL
+    /**
+     * @param int    $type
+     * @param int    $userId
+     * @param string $statData
+     * @param string $date
+     *
+     * @return int
+     */
+    public static function create( $type, $userId, $statData, $date = null )
+    {
+        $_sql = <<<SQL
 INSERT INTO df_sys_stat
 (
 	type,
@@ -95,28 +96,30 @@ VALUES
 )
 SQL;
 
-		//	Make sure we have a json string in the db...
-		if ( !is_string( $statData ) )
-		{
-			if ( false === ( $_data = json_encode( $statData ) ) )
-			{
-				return false;
-			}
+        //	Make sure we have a json string in the db...
+        if ( !is_string( $statData ) )
+        {
+            if ( false === ( $_data = json_encode( $statData ) ) )
+            {
+                return false;
+            }
 
-			$statData = $_data;
-		}
+            $statData = $_data;
+        }
 
-		$_params = array(
-			':type'               => $type,
-			':user_id'            => $userId,
-			':stat_date'          => $date ? : date( 'c' ),
-			':stat_data'          => $statData,
-			':created_date'       => date( 'c' ),
-			':last_modified_date' => date( 'c' ),
-		);
+        $_timestamp = Platform::getSystemTimestamp();
 
-		$_pdo = Pii::pdo();
+        $_params = array(
+            ':type'               => $type,
+            ':user_id'            => $userId,
+            ':stat_date'          => $date ?: $_timestamp,
+            ':stat_data'          => $statData,
+            ':created_date'       => $_timestamp,
+            ':last_modified_date' => $_timestamp,
+        );
 
-		return Sql::execute( $_sql, $_params, $_pdo );
-	}
+        $_pdo = Pii::pdo();
+
+        return Sql::execute( $_sql, $_params, $_pdo );
+    }
 }

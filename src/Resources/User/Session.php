@@ -27,6 +27,7 @@ use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -294,7 +295,7 @@ class Session extends BasePlatformRestResource
         static::$_ownerId = sha1( $_user->email );
 
         // write back login datetime
-        $_user->update( array('last_login_date' => date( 'c' )) );
+        $_user->update( array('last_login_date' => Platform::getSystemTimestamp()) );
 
         if ( $return_extras )
         {
@@ -360,7 +361,7 @@ class Session extends BasePlatformRestResource
 
         /** @var User $_user */
         $_user = $user
-            ? : ResourceStore::model( 'user' )->with(
+            ?: ResourceStore::model( 'user' )->with(
                 'role.role_service_accesses',
                 'role.role_system_accesses',
                 'role.apps',
@@ -467,7 +468,7 @@ class Session extends BasePlatformRestResource
 
         /** @var Role $_role */
         $_role = $role
-            ? : ResourceStore::model( 'role' )->with(
+            ?: ResourceStore::model( 'role' )->with(
                 'role_service_accesses',
                 'role_system_accesses',
                 'apps',
@@ -1116,7 +1117,7 @@ class Session extends BasePlatformRestResource
             return static::$_userId = Pii::user()->getId();
         }
 
-        return static::$_userId = $setToIfNull ? : null;
+        return static::$_userId = $setToIfNull ?: null;
     }
 
     /**

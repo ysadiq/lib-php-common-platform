@@ -62,6 +62,10 @@ class Platform
      * @type int The default cache ttl, 5m = 3000ms
      */
     const DEFAULT_CACHE_TTL = 3000;
+    /**
+     * @type string The default date() format
+     */
+    const DEFAULT_TIMESTAMP_FORMAT = '';
 
     //*************************************************************************
     //	Members
@@ -364,7 +368,9 @@ class Platform
     {
         return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
             ? $_SERVER['REMOTE_ADDR']
-            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
+            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] )
+                ? $_SERVER['HTTP_HOST']
+                :
                 gethostname() . ( $addendum ? '.' . $addendum : null );
     }
 
@@ -612,4 +618,18 @@ class Platform
         return $_dispatcher ?: $_dispatcher = Pii::app()->getDispatcher();
     }
 
+    /**
+     * Generates a timestamp in a consistent format.
+     * Value is set in config/common.config.php and stored in the "platform.timestamp_format" key
+     *
+     * @param string $format Valid date() format to override configured or default
+     *
+     * @return bool|string
+     */
+    public static function getSystemTimestamp( $format = null )
+    {
+        $_format = $format ?: Pii::getParam( 'platform.timestamp_format', static::DEFAULT_TIMESTAMP_FORMAT );
+
+        return date( $_format );
+    }
 }
