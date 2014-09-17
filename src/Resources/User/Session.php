@@ -936,7 +936,14 @@ class Session extends BasePlatformRestResource
             return false;
         }
 
-        static::_checkCache();
+        try
+        {
+            static::_checkCache();
+        }
+        catch ( \Exception $ex )
+        {
+            // ignore session exception, return lookups if we find them
+        }
 
         $_parts = explode( '.', $lookup );
         if ( count( $_parts ) > 1 )
