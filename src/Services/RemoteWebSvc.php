@@ -185,11 +185,13 @@ class RemoteWebSvc extends BasePlatformRestService
         parent::_preProcess();
 
         $this->_query = $this->buildParameterString( $this->_action );
-        $this->_url =
-            rtrim( $this->_baseUrl, '/' ) .
-            ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) .
-            '?' .
-            $this->_query;
+        $this->_url = rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null );
+
+        if ( !empty( $this->_query ) )
+        {
+            $_splicer = ( false === strpos( $this->_baseUrl, '?' ) ) ? '?' : '&';
+            $this->_url .= $_splicer . $this->_query;
+        }
 
         //	set additional headers
         $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
@@ -208,7 +210,7 @@ class RemoteWebSvc extends BasePlatformRestService
         $_result = Curl::request(
             $this->_action,
             $this->_url,
-            RestData::getPostedData() ? : array(),
+            RestData::getPostedData() ?: array(),
             $this->_curlOptions
         );
 

@@ -216,11 +216,6 @@ class EmailSvc extends BasePlatformRestService
             $_replyEmail = EmailUtilities::sanitizeAndValidateEmails( $_replyEmail, 'swift' );
         }
 
-        // do lookup replacement, currently {xxx}
-        Session::replaceLookupsInStrings( $_subject );
-        Session::replaceLookupsInStrings( $_text );
-        Session::replaceLookupsInStrings( $_html );
-
         // do placeholder replacement, currently {xxx}
         if ( !empty( $data ) )
         {
@@ -236,6 +231,11 @@ class EmailSvc extends BasePlatformRestService
                 }
             }
         }
+
+        // do lookup replacement, currently {xxx}
+        Session::replaceLookupsInStrings( $_subject );
+        Session::replaceLookupsInStrings( $_text );
+        Session::replaceLookupsInStrings( $_html );
 
         if ( empty( $_html ) )
         {
