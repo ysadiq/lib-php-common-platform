@@ -103,6 +103,7 @@ class ScriptEngine
     //*************************************************************************
     //	Methods
     //*************************************************************************
+    /** @noinspection PhpUndefinedClassInspection */
 
     /**
      * Registers various available extensions to the v8 instance...
@@ -152,7 +153,7 @@ class ScriptEngine
         static::$_instances[spl_object_hash( $_engine )] = $_engine;
 
         return $_engine;
-    }
+    }/** @noinspection PhpUndefinedClassInspection */
 
     /**
      * Publically destroy engine
@@ -416,7 +417,7 @@ class ScriptEngine
         }
 
         return empty( $_registered ) ? false : $_registered;
-    }
+    }/** @noinspection PhpUndefinedClassInspection */
 
     /**
      * @param \V8Js  $engine
@@ -444,10 +445,9 @@ _wrapperResult = (function() {
     var _event = {$_jsonEvent};
 
 	try	{
-		_event.script_result = (function(event, platform) {
+            _event.script_result = (function(event, platform) {
 		
-			{$script}
-			;
+			{$script};
 			
 		})(_event, DSP.platform);
 	}
@@ -550,8 +550,7 @@ JS;
             return null;
         }
 
-        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error()
-        )
+        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error() )
         {
             $_contentType = 'text/plain';
             $_payload = $payload;
@@ -597,6 +596,13 @@ JS;
      */
     protected static function _getExposedApi()
     {
+        static $_api;
+
+        if ( null !== $_api )
+        {
+            return $_api;
+        }
+
         $_api = new \stdClass();
 
         $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
@@ -619,7 +625,7 @@ JS;
             return static::inlineRequest( HttpMethod::POST, $path, $payload, $curlOptions );
         };
 
-        $_api->delete = function ( $path, $payload = null, $curlOptions )
+        $_api->delete = function ( $path, $payload = null, $curlOptions = array() )
         {
             return static::inlineRequest( HttpMethod::DELETE, $path, $payload, $curlOptions );
         };
