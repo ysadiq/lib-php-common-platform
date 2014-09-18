@@ -63,9 +63,9 @@ class Platform
      */
     const DEFAULT_CACHE_TTL = 3000;
     /**
-     * @type string The default date() format
+     * @type string The default date() format (YYYY-MM-DD HH:MM:SS)
      */
-    const DEFAULT_TIMESTAMP_FORMAT = '';
+    const DEFAULT_TIMESTAMP_FORMAT = 'Y-m-d H:i:s';
 
     //*************************************************************************
     //	Members
