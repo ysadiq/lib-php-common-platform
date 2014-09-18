@@ -226,10 +226,10 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string                                                 $eventName
-     * @param \Symfony\Component\EventDispatcher\Event|PlatformEvent $event
+     * @param string              $eventName
+     * @param Event|PlatformEvent $event
      *
-     * @return \Symfony\Component\EventDispatcher\Event|PlatformEvent|void
+     * @return Event|PlatformEvent|void
      */
     public function dispatch( $eventName, Event $event = null )
     {
@@ -522,15 +522,15 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string                                   $className
-     * @param string                                   $methodName
-     * @param \Symfony\Component\EventDispatcher\Event $event
-     * @param string                                   $eventName
-     * @param EventDispatcher                          $dispatcher
+     * @param string          $className
+     * @param string          $methodName
+     * @param Event           $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
      *
      * @return mixed
      */
-    protected function _executeEventPhpScript( $className, $methodName, \Symfony\Component\EventDispatcher\Event $event, $eventName = null, $dispatcher = null )
+    protected function _executeEventPhpScript( $className, $methodName, Event $event, $eventName = null, $dispatcher = null )
     {
         try
         {
@@ -1111,6 +1111,8 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @param EventObserverLike|EventObserverLike[] $observer
+     *
+     * @return bool
      */
     public function removeObserver( $observer )
     {
@@ -1136,6 +1138,8 @@ class EventDispatcher implements EventDispatcherInterface
                 unset( static::$_observers[$_index] );
             }
         }
+
+        return true;
     }
 
     /**
