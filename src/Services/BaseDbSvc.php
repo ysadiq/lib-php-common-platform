@@ -370,7 +370,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     return array('resource' => $_result);
                 default:
-                    throw new BadRequestException('Currently only GET is supported for this API resource.' );
+                    throw new BadRequestException( 'Currently only GET is supported for this API resource.' );
                     break;
             }
         }
@@ -2285,7 +2285,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     case 'api_read_only':
                         if ( $_throw )
                         {
-                            $_msg = ( !empty( $_msg ) ) ? : "Field '$name' is read only.";
+                            if ( empty( $_msg ) )
+                            {
+                                $_msg = "Field '$name' is read only.";
+                            }
                             throw new BadRequestException( $_msg );
                         }
 
@@ -2296,7 +2299,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' can only be set during record creation.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' can only be set during record creation.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2308,7 +2314,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be null.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value can not be null.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2320,7 +2329,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be empty.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value can not be empty.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2332,7 +2344,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be empty.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value can not be empty.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2344,7 +2359,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value must be a valid email address.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value must be a valid email address.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2370,7 +2388,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value must be a valid URL.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value must be a valid URL.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2409,7 +2430,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not in the valid range.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value is not in the valid range.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2424,7 +2448,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not an acceptable float value.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value is not an acceptable float value.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2436,7 +2463,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not an acceptable boolean value.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value is not an acceptable boolean value.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2456,7 +2486,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value is invalid.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2474,7 +2507,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         {
                             if ( $_throw )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value is invalid.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
 
@@ -2497,12 +2533,18 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             $_count = count( $value );
                             if ( $_count < $_min )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value does not contain enough selections.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
                             if ( !empty( $_max ) && ( $_count > $_max ) )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value contains too many selections.";
+                                if ( empty( $_msg ) )
+                                {
+                                    $_msg = "Field '$name' value contains too many selections.";
+                                }
                                 throw new BadRequestException( $_msg );
                             }
                             foreach ( $value as $_item )
@@ -2511,7 +2553,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                                 {
                                     if ( $_throw )
                                     {
-                                        $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                        if ( empty( $_msg ) )
+                                        {
+                                            $_msg = "Field '$name' value is invalid.";
+                                        }
                                         throw new BadRequestException( $_msg );
                                     }
 
@@ -3169,7 +3214,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \DreamFactory\Platform\Exceptions\RestException
      * @throws \Exception
      */
-    public function describeDatabase( $options = null, /** @noinspection PhpUnusedParameterInspection */ $refresh = false )
+    public function describeDatabase( $options = null, /** @noinspection PhpUnusedParameterInspection */
+        $refresh = false )
     {
 
         $_namesOnly = Option::getBool( $options, 'names_only' );

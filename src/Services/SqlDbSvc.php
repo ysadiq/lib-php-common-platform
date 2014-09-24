@@ -1160,7 +1160,7 @@ class SqlDbSvc extends BaseDbSvc
                         /** validations **/
 
                         $_validations = Option::get( $_fieldInfo, 'validation' );
-                        if ( !is_array( $_validations ) )
+                        if ( !empty($_validations) && is_string( $_validations ) )
                         {
                             // backwards compatible with old strings
                             $_validations = array_map( 'trim', explode( ',', $_validations ) );
