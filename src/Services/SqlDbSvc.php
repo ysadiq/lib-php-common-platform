@@ -1422,7 +1422,7 @@ class SqlDbSvc extends BaseDbSvc
 
             $bindArray[] = array(
                 'name'     => $field,
-                'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type, $dbType ),
+                'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type ),
                 'php_type' => SqlDbUtilities::determinePhpConversionType( $type ),
             );
 
@@ -2971,11 +2971,6 @@ class SqlDbSvc extends BaseDbSvc
 
     // Handle schema options, table add, delete, etc
 
-    public function refreshSchemaCache()
-    {
-        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -3080,7 +3075,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTables( $tables, $check_exist = false )
+    public function createTables( $tables, $check_exist = false, $return_schema = false )
     {
         $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
@@ -3103,13 +3098,21 @@ class SqlDbSvc extends BaseDbSvc
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeTables( $tables );
+        }
+
         return $_result;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function createTable( $table, $properties = array(), $check_exist = false )
+    public function createTable( $table, $properties = array(), $check_exist = false, $return_schema = false )
     {
         $this->checkForNativeSystemTable( $table, false );
 
@@ -3125,13 +3128,23 @@ class SqlDbSvc extends BaseDbSvc
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
-        return Option::get( $_result, 0, array() );
+        $_result = Option::get( $_result, 0, array() );
+
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeTable( $table );
+        }
+
+        return $_result;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    public function createField( $table, $field, $properties = array(), $check_exist = false, $return_schema = false )
     {
         $this->checkForNativeSystemTable( $table, false );
 
@@ -3148,13 +3161,21 @@ class SqlDbSvc extends BaseDbSvc
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
-        return $this->describeField( $table, $field );
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeField( $table, $field );
+        }
+
+        return $_result;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTables( $tables, $allow_delete_fields = false )
+    public function updateTables( $tables, $allow_delete_fields = false, $return_schema = false )
     {
         $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
@@ -3168,21 +3189,29 @@ class SqlDbSvc extends BaseDbSvc
             $this->checkForNativeSystemTable( $_name, false );
         }
 
-        $_out = SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
-        $_labels = Option::get( $_out, 'labels', null, true );
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
-        return $_out;
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeTables( $tables );
+        }
+
+        return $_result;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $table, $properties, $allow_delete_fields = false )
+    public function updateTable( $table, $properties, $allow_delete_fields = false, $return_schema = false )
     {
         $this->checkForNativeSystemTable( $table, false );
 
@@ -3199,13 +3228,23 @@ class SqlDbSvc extends BaseDbSvc
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
-        return Option::get( $_result, 0, array() );
+        $_result = Option::get( $_result, 0, array() );
+
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeTable( $table );
+        }
+
+        return $_result;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false, $return_schema = false )
     {
         if ( empty( $table ) )
         {
@@ -3227,7 +3266,15 @@ class SqlDbSvc extends BaseDbSvc
             SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
         }
 
-        return $this->describeField( $table, $field );
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
+        if ( $return_schema )
+        {
+            return $this->describeField( $table, $field );
+        }
+
+        return $_result;
     }
 
     /**

@@ -415,7 +415,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 throw new NotFoundException( "Table '$name' does not exist in the database." );
             }
 
-            $_driverType = static::getDbDriverType( $db );
+            $defaultSchema = $db->schema->getDefaultSchema();
             $extras = static::reformatFieldLabelArray( $extras );
             $labelInfo = Option::get( $extras, '', array() );
 
@@ -423,23 +423,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $schemaName = $table->schemaName;
             if ( !empty( $schemaName ) )
             {
-                switch ( $_driverType )
+                if ( $defaultSchema !== $schemaName )
                 {
-                    case static::DRV_SQLSRV:
-                        if ( 'dbo' !== $schemaName )
-                        {
-                            $publicName = $schemaName . '.' . $publicName;
-                        }
-                        break;
-                    case static::DRV_PGSQL:
-                        if ( 'public' !== $schemaName )
-                        {
-                            $publicName = $schemaName . '.' . $publicName;
-                        }
-                        break;
-                    default:
-                        $publicName = $schemaName . '.' . $publicName;
-                        break;
+                    $publicName = $schemaName . '.' . $publicName;
                 }
             }
 
@@ -528,52 +514,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * @param \CDbColumnSchema $column
-     * @param array            $foreign_keys
-     * @param array            $label_info
-     *
-     * @throws \Exception
-     * @return array
-     */
-    protected static function describeFieldInternal( $column, $foreign_keys, $label_info )
-    {
-        $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
-        $validation = json_decode( Option::get( $label_info, 'validation' ), true );
-        $picklist = Option::get( $label_info, 'picklist' );
-        $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
-        $refTable = '';
-        $refFields = '';
-        if ( 1 == $column->isForeignKey )
-        {
-            $referenceTo = Option::get( $foreign_keys, $column->name );
-            $refTable = Option::get( $referenceTo, 0 );
-            $refFields = Option::get( $referenceTo, 1 );
-        }
-
-        return array(
-            'name'               => $column->name,
-            'label'              => $label,
-            'type'               => static::_determineDfType( $column, $label_info ),
-            'db_type'            => $column->dbType,
-            'length'             => intval( $column->size ),
-            'precision'          => intval( $column->precision ),
-            'scale'              => intval( $column->scale ),
-            'default'            => $column->defaultValue,
-            'required'           => static::determineRequired( $column ),
-            'allow_null'         => $column->allowNull,
-            'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
-            'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
-            'auto_increment'     => $column->autoIncrement,
-            'is_primary_key'     => $column->isPrimaryKey,
-            'is_foreign_key'     => $column->isForeignKey,
-            'ref_table'          => $refTable,
-            'ref_fields'         => $refFields,
-            'validation'         => $validation,
-            'value'              => $picklist
-        );
-    }
-
-    /**
      * @param \CDbConnection $db
      * @param                $parent_table
      *
@@ -582,958 +522,47 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      */
     public static function describeTableRelated( $db, $parent_table )
     {
-        $names = $db->schema->getTableNames();
-        natcasesort( $names );
-        $names = array_values( $names );
-        $related = array();
-        foreach ( $names as $name )
+        $_schema = $db->schema->getTable( $parent_table );
+        $_related = array();
+
+        // foreign keys point to relationships that this table "belongs to"
+        // currently handled by schema handler, see below
+//        foreach ( $_schema->foreignKeys as $_key => $_value )
+//        {
+//            $_refTable = Option::get( $_value, 0 );
+//            $_refField = Option::get( $_value, 1 );
+//            $_name = $_refTable . '_by_' . $_key;
+//            $_related[] = array(
+//                'name'      => $_name,
+//                'type'      => 'belongs_to',
+//                'ref_table' => $_refTable,
+//                'ref_field' => $_refField,
+//                'field'     => $_key
+//            );
+//        }
+
+        // foreign refs point to relationships other tables have with this table
+        foreach ( $_schema->foreignRefs as $_refs )
         {
-            $table = $db->schema->getTable( $name );
-            if ( !$table )
+            $_name = array();
+            switch ( Option::get( $_refs, 'type' ) )
             {
-                throw new NotFoundException( "Table '$name' does not exist in the database." );
-            }
-            $fks = $fks2 = $table->foreignKeys;
-            foreach ( $fks as $key => $value )
-            {
-                $refTable = Option::get( $value, 0 );
-                $refField = Option::get( $value, 1 );
-                if ( 0 == strcasecmp( $refTable, $parent_table ) )
-                {
-                    // other, must be has_many or many_many
-                    $relationName = Inflector::pluralize( $name ) . '_by_' . $key;
-                    $related[] = array(
-                        'name'      => $relationName,
-                        'type'      => 'has_many',
-                        'ref_table' => $name,
-                        'ref_field' => $key,
-                        'field'     => $refField
-                    );
-                    // if other has many relationships exist, we can say these are related as well
-                    foreach ( $fks2 as $key2 => $value2 )
-                    {
-                        $tmpTable = Option::get( $value2, 0 );
-                        $tmpField = Option::get( $value2, 1 );
-                        if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
-                            ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
-                            ( 0 != strcasecmp( $parent_table, $name ) )
-                        )
-                        { // not same as parent, i.e. via reference back to self
-                            // not the same key
-                            $relationName = Inflector::pluralize( $tmpTable ) . '_by_' . $name;
-                            $related[] = array(
-                                'name'      => $relationName,
-                                'type'      => 'many_many',
-                                'ref_table' => $tmpTable,
-                                'ref_field' => $tmpField,
-                                'join'      => "$name($key,$key2)",
-                                'field'     => $refField
-                            );
-                        }
-                    }
-                }
-                if ( 0 == strcasecmp( $name, $parent_table ) )
-                {
-                    // self, get belongs to relations
-                    $relationName = $refTable . '_by_' . $key;
-                    $related[] = array(
-                        'name'      => $relationName,
-                        'type'      => 'belongs_to',
-                        'ref_table' => $refTable,
-                        'ref_field' => $refField,
-                        'field'     => $key
-                    );
-                }
-            }
-        }
-
-        return $related;
-    }
-
-    /**
-     * @param            $column
-     * @param null|array $label_info
-     *
-     * @return string
-     */
-    protected static function _determineDfType( $column, $label_info = null )
-    {
-        $_simpleType = static::determineGenericType( $column );
-
-        switch ( $_simpleType )
-        {
-            case 'integer':
-                if ( $column->isPrimaryKey && $column->autoIncrement )
-                {
-                    return 'id';
-                }
-
-                if ( isset( $label_info['user_id_on_update'] ) )
-                {
-                    return 'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
-                }
-
-                if ( null !== Option::get( $label_info, 'user_id' ) )
-                {
-                    return 'user_id';
-                }
-
-                if ( $column->isForeignKey )
-                {
-                    return 'reference';
-                }
-                break;
-
-            case 'datetimeoffset':
-            case 'timestamp':
-                if ( isset( $label_info['timestamp_on_update'] ) )
-                {
-                    return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-                }
-                break;
-        }
-
-        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) )
-        )
-        {
-            if ( isset( $label_info['timestamp_on_update'] ) )
-            {
-                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-            }
-        }
-
-        return $_simpleType;
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineMultiByteSupport( $type )
-    {
-        switch ( $type )
-        {
-            case 'nchar':
-            case 'nvarchar':
-                return true;
-            // todo mysql shows these are varchar with a utf8 character set, not in column data
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineIfFixedLength( $type )
-    {
-        switch ( $type )
-        {
-            case 'char':
-            case 'nchar':
-            case 'binary':
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * @param $column
-     *
-     * @return bool
-     */
-    protected static function determineRequired( $column )
-    {
-        if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @param     $field
-     * @param int $driver_type
-     *
-     * @throws \Exception
-     * @return array|string
-     */
-    protected static function buildColumnType( $field, $driver_type = self::DRV_MYSQL )
-    {
-        if ( empty( $field ) )
-        {
-            throw new BadRequestException( "No field given." );
-        }
-
-        try
-        {
-            $sql = Option::get( $field, 'sql' );
-            if ( !empty( $sql ) )
-            {
-                // raw sql definition, just pass it on
-                return $sql;
-            }
-
-            $type = Option::get( $field, 'type' );
-            if ( empty( $type ) )
-            {
-                throw new BadRequestException( "Invalid schema detected - no type element." );
-            }
-
-            /* abstract types handled by yii directly for each driver type
-
-                pk: a generic primary key type, will be converted into int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY for MySQL;
-                string: string type, will be converted into varchar(255) for MySQL;
-                text: text type (long string), will be converted into text for MySQL;
-                integer: integer type, will be converted into int(11) for MySQL;
-                float: floating number type, will be converted into float for MySQL;
-                decimal: decimal number type, will be converted into decimal for MySQL;
-                datetime: datetime type, will be converted into datetime for MySQL;
-                timestamp: timestamp type, will be converted into timestamp for MySQL;
-                time: time type, will be converted into time for MySQL;
-                date: date type, will be converted into date for MySQL;
-                binary: binary data type, will be converted into blob for MySQL;
-                boolean: boolean type, will be converted into tinyint(1) for MySQL;
-                money: money/currency type, will be converted into decimal(19,4) for MySQL.
-            */
-
-            if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
-            {
-                return 'pk'; // simple primary key
-            }
-
-            $allowNull = Option::getBool( $field, 'allow_null', true );
-            $length = Option::get( $field, 'length' );
-            if ( !isset( $length ) )
-            {
-                $length = Option::get( $field, 'size' ); // alias
-            }
-            $default = Option::get( $field, 'default' );
-            $quoteDefault = false;
-            $isPrimaryKey = Option::getBool( $field, 'is_primary_key', false );
-
-            switch ( strtolower( $type ) )
-            {
-                // some types need massaging, some need other required properties
-                case "reference":
-                    $definition = 'int';
+                case 'belongs_to':
+                    $_name['name'] = Option::get( $_refs, 'ref_table', '' ) . '_by_' . Option::get( $_refs, 'field', '' );
                     break;
-                case "timestamp_on_create":
-                    switch ( $driver_type )
-                    {
-                        case SqlDbUtilities::DRV_SQLSRV:
-                        case SqlDbUtilities::DRV_DBLIB:
-                            $definition = 'datetimeoffset';
-                            $default = 'getdate()';
-                            break;
-                        case SqlDbUtilities::DRV_PGSQL:
-                            $definition = 'timestamp';
-                            $default = 'current_timestamp';
-                            break;
-                        default:
-                            $definition = 'timestamp';
-                            $default = 0;
-                            break;
-                    }
-                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
+                case 'has_many':
+                    $_name['name'] = Inflector::pluralize( Option::get( $_refs, 'ref_table', '' ) ) . '_by_' . Option::get( $_refs, 'ref_field', '' );
                     break;
-                case "timestamp_on_update":
-                    switch ( $driver_type )
-                    {
-                        case SqlDbUtilities::DRV_SQLSRV:
-                        case SqlDbUtilities::DRV_DBLIB:
-                            $definition = 'datetimeoffset';
-                            $default = 'getdate()';
-                            break;
-                        case SqlDbUtilities::DRV_PGSQL:
-                            $definition = 'timestamp';
-                            $default = 'current_timestamp';
-                            break;
-                        default:
-                            $definition = 'timestamp';
-                            $default = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP';
-                            break;
-                    }
-                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
+                case 'many_many':
+                    $_join = Option::get( $_refs, 'join', '' );
+                    $_join = substr( $_join, 0, strpos( $_join, '(' ) );
+                    $_name['name'] = Inflector::pluralize( Option::get( $_refs, 'ref_table', '' ) ) . '_by_' . $_join;
                     break;
-                case "user_id":
-                case "user_id_on_create":
-                case "user_id_on_update":
-                    $definition = 'int';
-                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
-                    break;
-                // numbers
-                case 'bit': // ms sql alias
-                case 'bool': // alias
-                case 'boolean': // alias
-                    $definition = 'boolean';
-                    // convert to bit 0 or 1
-                    $default = ( isset( $default ) ) ? intval( Scalar::boolval( $default ) ) : $default;
-                    break;
-                case 'tinyint':
-                case 'smallint':
-                case 'mediumint':
-                case 'int':
-                case 'bigint':
-                case 'integer':
-                    $definition =
-                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                            ( 'mediumint' == $type ) ) ? 'int' : $type;
-                    if ( isset( $length ) )
-                    {
-                        if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                            ( $length <= 255 ) &&
-                            ( $length > 0 )
-                        )
-                        {
-                            $definition .= '(' . intval( $length ) . ')'; // sets the viewable length
-                        }
-                    }
-                    // convert to int
-                    $default = ( isset( $default ) ) ? intval( $default ) : $default;
-                    break;
-                case 'decimal':
-                case 'numeric': // alias
-                case 'number': // alias
-                case 'percent': // alias
-                    $definition = 'decimal';
-                    if ( !isset( $length ) )
-                    {
-                        $length = Option::get( $field, 'precision' ); // alias
-                    }
-                    if ( isset( $length ) )
-                    {
-                        $length = intval( $length );
-                        if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65 ) ) ||
-                            ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                ( $length > 38 ) )
-                        )
-                        {
-                            throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
-                        }
-                        $scale = Option::get( $field, 'scale' );
-                        if ( empty( $scale ) )
-                        {
-                            $scale = Option::get( $field, 'decimals' ); // alias
-                        }
-                        if ( !empty( $scale ) )
-                        {
-                            if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
-                                ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                    ( $scale > 18 ) ) ||
-                                ( $scale > $length )
-                            )
-                            {
-                                throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
-                            }
-                            $definition .= "($length,$scale)";
-                        }
-                        else
-                        {
-                            $definition .= "($length)";
-                        }
-                    }
-                    // convert to float
-                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
-                    break;
-                case 'float':
-                case 'double':
-                    $definition =
-                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'float' : $type;
-                    if ( !isset( $length ) )
-                    {
-                        $length = Option::get( $field, 'precision' ); // alias
-                    }
-                    if ( isset( $length ) )
-                    {
-                        $length = intval( $length );
-                        if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 53 ) ) ||
-                            ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                ( $length > 38 ) )
-                        )
-                        {
-                            throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
-                        }
-                        $scale = Option::get( $field, 'scale' );
-                        if ( empty( $scale ) )
-                        {
-                            $scale = Option::get( $field, 'decimals' ); // alias
-                        }
-                        if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) )
-                        )
-                        {
-                            if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) || ( $scale > $length )
-                            )
-                            {
-                                throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
-                            }
-                            $definition .= "($length,$scale)";
-                        }
-                        else
-                        {
-                            $definition .= "($length)";
-                        }
-                    }
-                    // convert to float
-                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
-                    break;
-                case 'money':
-                case 'smallmoney':
-                    $definition =
-                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
-                            : 'money'; // let yii handle it
-                    // convert to float
-                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
-                    break;
-                // string types
-                case 'string':
-                case 'binary':
-                case 'varbinary':
-                case 'char':
-                case 'varchar':
-                case 'nchar':
-                case 'nvarchar':
-                    $fixed = Option::getBool( $field, 'fixed_length' );
-                    $national = Option::getBool( $field, 'supports_multibyte' );
-                    if ( 0 == strcasecmp( 'string', $type ) )
-                    {
-                        if ( $fixed )
-                        {
-                            $type = ( $national ) ? 'nchar' : 'char';
-                        }
-                        else
-                        {
-                            $type = ( $national ) ? 'nvarchar' : 'varchar';
-                        }
-                        if ( !isset( $length ) )
-                        {
-                            $length = 255;
-                        }
-                    }
-                    elseif ( 0 == strcasecmp( 'binary', $type ) )
-                    {
-                        $type = ( $fixed ) ? 'binary' : 'varbinary';
-                        if ( !isset( $length ) )
-                        {
-                            $length = 255;
-                        }
-                    }
-                    $definition = $type;
-                    switch ( $type )
-                    {
-                        case 'varbinary':
-                        case 'varchar':
-                            if ( isset( $length ) )
-                            {
-                                $length = intval( $length );
-                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                    ( $length > 8000 )
-                                )
-                                {
-                                    $length = 'max';
-                                }
-                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
-                                {
-                                    // max allowed is really dependent number of string columns
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                $definition .= "($length)";
-                            }
-                            break;
-                        case 'binary':
-                        case 'char':
-                            if ( isset( $length ) )
-                            {
-                                $length = intval( $length );
-                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                    ( $length > 8000 )
-                                )
-                                {
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
-                                {
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                $definition .= "($length)";
-                            }
-                            break;
-                        case 'nvarchar':
-                            if ( isset( $length ) )
-                            {
-                                $length = intval( $length );
-                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                    ( $length > 4000 )
-                                )
-                                {
-                                    $length = 'max';
-                                }
-                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
-                                {
-                                    // max allowed is really dependent number of string columns
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                $definition .= "($length)";
-                            }
-                            break;
-                        case 'nchar':
-                            if ( isset( $length ) )
-                            {
-                                $length = intval( $length );
-                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-                                    ( $length > 4000 )
-                                )
-                                {
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
-                                {
-                                    throw new BadRequestException( "String length '$length' is out of valid range." );
-                                }
-                                $definition .= "($length)";
-                            }
-                            break;
-                    }
-                    $quoteDefault = true;
-                    break;
-                case 'text':
-                    $definition =
-                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
-                            : 'text'; // microsoft recommended
-                    $quoteDefault = true;
-                    break;
-                case 'blob':
-                    $definition =
-                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
-                            : 'blob'; // microsoft recommended
-                    $quoteDefault = true;
-                    break;
-                case 'datetime':
-                    $definition =
-                        ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
-                            : 'datetime'; // microsoft recommends
-                    break;
-                default:
-                    // blind copy of column type
-                    $definition = $type;
             }
-
-            // additional properties
-            if ( !Scalar::boolval( $allowNull ) )
-            {
-                $definition .= ' NOT';
-            }
-            $definition .= ' NULL';
-            if ( isset( $default ) )
-            {
-                if ( $quoteDefault )
-                {
-                    $default = "'" . $default . "'";
-                }
-                $definition .= ' DEFAULT ' . $default;
-            }
-            if ( $isPrimaryKey )
-            {
-                $definition .= ' PRIMARY KEY';
-            }
-
-            return $definition;
-        }
-        catch ( \Exception $ex )
-        {
-            throw $ex;
-        }
-    }
-
-    /**
-     * @param \CDbConnection       $db
-     * @param string               $table_name
-     * @param array                $fields
-     * @param null|\CDbTableSchema $schema
-     * @param bool                 $allow_update
-     * @param bool                 $allow_delete
-     *
-     * @throws \Exception
-     * @return string
-     */
-    protected static function buildTableFields( $db, $table_name, $fields, $schema = null, $allow_update = false, $allow_delete = false )
-    {
-        if ( empty( $fields ) )
-        {
-            throw new BadRequestException( "No fields given." );
+            $_related[] = $_name + $_refs;
         }
 
-        $_driverType = static::getDbDriverType( $db );
-        $columns = array();
-        $alter_columns = array();
-        $references = array();
-        $indexes = array();
-        $labels = array();
-        $primaryKey = '';
-        if ( isset( $schema ) )
-        {
-            $primaryKey = $schema->primaryKey;
-        }
-        if ( !isset( $fields[0] ) )
-        {
-            $fields = array($fields);
-        }
-
-        $drop_columns = array();
-        if ( $allow_delete )
-        {
-            foreach ( $schema->columnNames as $_oldName )
-            {
-                $_found = false;
-                foreach ( $fields as $field )
-                {
-                    $_name = strval( Option::get( $field, 'name' ) );
-                    if ( 0 === strcasecmp( $_name, $_oldName ) )
-                    {
-                        $_found = true;
-                        break;
-                    }
-                }
-                if ( !$_found )
-                {
-                    $drop_columns[] = $_oldName;
-                }
-            }
-        }
-        foreach ( $fields as $field )
-        {
-            try
-            {
-                $name = Option::get( $field, 'name' );
-                if ( empty( $name ) )
-                {
-                    throw new BadRequestException( "Invalid schema detected - no name element." );
-                }
-
-                $type = Option::get( $field, 'type', '' );
-                $colSchema = ( isset( $schema ) ) ? $schema->getColumn( $name ) : null;
-                $isAlter = false;
-                if ( isset( $colSchema ) )
-                {
-                    if ( !$allow_update )
-                    {
-                        throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
-                    }
-
-                    if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
-                            ( 0 == strcasecmp( 'pk', $type ) ) ||
-                            Option::getBool( $field, 'is_primary_key' ) ) && ( $colSchema->isPrimaryKey )
-                    )
-                    {
-                        // don't try to alter
-                    }
-                    else
-                    {
-                        $definition = static::buildColumnType( $field, $_driverType );
-                        if ( !empty( $definition ) )
-                        {
-                            $alter_columns[$name] = $definition;
-                        }
-                    }
-                    $isAlter = true;
-                    // todo manage type changes, data migration?
-                }
-                else
-                {
-                    $definition = static::buildColumnType( $field, $_driverType );
-                    if ( !empty( $definition ) )
-                    {
-                        $columns[$name] = $definition;
-                    }
-                }
-
-                // extra checks
-                if ( empty( $type ) )
-                {
-                    // raw definition, just pass it on
-                    if ( $isAlter )
-                    {
-                        // may need to clean out references, etc?
-                    }
-                    continue;
-                }
-
-                $temp = array();
-                if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
-                {
-                    if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
-                    {
-                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-                    }
-                    $primaryKey = $name;
-                }
-                elseif ( Option::getBool( $field, 'is_primary_key' ) )
-                {
-                    if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
-                    {
-                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-                    }
-                    $primaryKey = $name;
-                }
-                elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Option::getBool( $field, 'is_foreign_key' )
-                )
-                {
-                    // special case for references because the table referenced may not be created yet
-                    $refTable = Option::get( $field, 'ref_table' );
-                    if ( empty( $refTable ) )
-                    {
-                        throw new BadRequestException( "Invalid schema detected - no table element for reference type of $name." );
-                    }
-                    $refColumns = Option::get( $field, 'ref_fields', 'id' );
-                    $refOnDelete = Option::get( $field, 'ref_on_delete' );
-                    $refOnUpdate = Option::get( $field, 'ref_on_update' );
-
-                    // will get to it later, $refTable may not be there
-                    $keyName = 'fk_' . $table_name . '_' . $name;
-                    if ( !$isAlter || !$colSchema->isForeignKey )
-                    {
-                        $references[] = array(
-                            'name'       => $keyName,
-                            'table'      => $table_name,
-                            'column'     => $name,
-                            'ref_table'  => $refTable,
-                            'ref_fields' => $refColumns,
-                            'delete'     => $refOnDelete,
-                            'update'     => $refOnUpdate
-                        );
-                    }
-                }
-                elseif ( ( 0 == strcasecmp( 'user_id_on_create', $type ) ) )
-                { // && static::is_local_db()
-                    // special case for references because the table referenced may not be created yet
-                    $temp['user_id_on_update'] = false;
-                    $keyName = 'fk_' . $table_name . '_' . $name;
-                    if ( !$isAlter || !$colSchema->isForeignKey )
-                    {
-                        $references[] = array(
-                            'name'       => $keyName,
-                            'table'      => $table_name,
-                            'column'     => $name,
-                            'ref_table'  => 'df_sys_user',
-                            'ref_fields' => 'id',
-                            'delete'     => null,
-                            'update'     => null
-                        );
-                    }
-                }
-                elseif ( ( 0 == strcasecmp( 'user_id_on_update', $type ) ) )
-                { // && static::is_local_db()
-                    // special case for references because the table referenced may not be created yet
-                    $temp['user_id_on_update'] = true;
-                    $keyName = 'fk_' . $table_name . '_' . $name;
-                    if ( !$isAlter || !$colSchema->isForeignKey )
-                    {
-                        $references[] = array(
-                            'name'       => $keyName,
-                            'table'      => $table_name,
-                            'column'     => $name,
-                            'ref_table'  => 'df_sys_user',
-                            'ref_fields' => 'id',
-                            'delete'     => null,
-                            'update'     => null
-                        );
-                    }
-                }
-                elseif ( ( 0 == strcasecmp( 'user_id', $type ) ) )
-                { // && static::is_local_db()
-                    // special case for references because the table referenced may not be created yet
-                    $temp['user_id'] = true;
-                    $keyName = 'fk_' . $table_name . '_' . $name;
-                    if ( !$isAlter || !$colSchema->isForeignKey )
-                    {
-                        $references[] = array(
-                            'name'       => $keyName,
-                            'table'      => $table_name,
-                            'column'     => $name,
-                            'ref_table'  => 'df_sys_user',
-                            'ref_fields' => 'id',
-                            'delete'     => null,
-                            'update'     => null
-                        );
-                    }
-                }
-                elseif ( ( 0 == strcasecmp( 'timestamp_on_create', $type ) ) )
-                {
-                    $temp['timestamp_on_update'] = false;
-                }
-                elseif ( ( 0 == strcasecmp( 'timestamp_on_update', $type ) ) )
-                {
-                    $temp['timestamp_on_update'] = true;
-                }
-                // regardless of type
-                if ( Option::getBool( $field, 'is_unique' ) )
-                {
-                    // will get to it later, create after table built
-                    $keyName = 'undx_' . $table_name . '_' . $name;
-                    $indexes[] = array(
-                        'name'   => $keyName,
-                        'table'  => $table_name,
-                        'column' => $name,
-                        'unique' => true,
-                        'drop'   => $isAlter
-                    );
-                }
-                elseif ( Option::get( $field, 'is_index' ) )
-                {
-                    // will get to it later, create after table built
-                    $keyName = 'ndx_' . $table_name . '_' . $name;
-                    $indexes[] = array(
-                        'name'   => $keyName,
-                        'table'  => $table_name,
-                        'column' => $name,
-                        'drop'   => $isAlter
-                    );
-                }
-
-                $picklist = '';
-                $values = Option::get( $field, 'value' );
-                if ( empty( $values ) )
-                {
-                    $values = ( isset( $field['values']['value'] ) ) ? $field['values']['value'] : array();
-                }
-                if ( !is_array( $values ) )
-                {
-                    $values = array_map( 'trim', explode( ',', trim( $values, ',' ) ) );
-                }
-                if ( !empty( $values ) )
-                {
-                    foreach ( $values as $value )
-                    {
-                        if ( !empty( $picklist ) )
-                        {
-                            $picklist .= "\r";
-                        }
-                        $picklist .= $value;
-                    }
-                }
-                if ( !empty( $picklist ) )
-                {
-                    $temp['picklist'] = $picklist;
-                }
-
-                // labels
-                $label = Option::get( $field, 'label' );
-                if ( !empty( $label ) )
-                {
-                    $temp['label'] = $label;
-                }
-
-                $validation = Option::get( $field, 'validation' );
-                if ( !empty( $validation ) )
-                {
-                    $temp['validation'] = json_encode( $validation );
-                }
-
-                if ( !empty( $temp ) )
-                {
-                    $temp['table'] = $table_name;
-                    $temp['field'] = $name;
-                    $labels[] = $temp;
-                }
-            }
-            catch ( \Exception $ex )
-            {
-                throw $ex;
-            }
-        }
-
-        return array(
-            'columns'       => $columns,
-            'alter_columns' => $alter_columns,
-            'drop_columns'  => $drop_columns,
-            'references'    => $references,
-            'indexes'       => $indexes,
-            'labels'        => $labels
-        );
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param array          $extras
-     *
-     * @return array
-     */
-    protected static function createFieldExtras( $db, $extras )
-    {
-        $command = $db->createCommand();
-        $references = Option::get( $extras, 'references', array() );
-        if ( !empty( $references ) )
-        {
-            foreach ( $references as $reference )
-            {
-                $command->reset();
-                $name = $reference['name'];
-                $table = $reference['table'];
-                $drop = Option::getBool( $reference, 'drop' );
-                if ( $drop )
-                {
-                    try
-                    {
-                        $command->dropForeignKey( $name, $table );
-                    }
-                    catch ( \Exception $ex )
-                    {
-                        \Yii::log( $ex->getMessage() );
-                    }
-                }
-                // add new reference
-                $refTable = Option::get( $reference, 'ref_table' );
-                if ( !empty( $refTable ) )
-                {
-                    if ( ( 0 == strcasecmp( 'df_sys_user', $refTable ) ) && ( $db != Pii::db() ) )
-                    {
-                        // using user id references from a remote db
-                        continue;
-                    }
-                    /** @noinspection PhpUnusedLocalVariableInspection */
-                    $rows = $command->addForeignKey(
-                        $name,
-                        $table,
-                        $reference['column'],
-                        $refTable,
-                        $reference['ref_fields'],
-                        $reference['delete'],
-                        $reference['update']
-                    );
-                }
-            }
-        }
-        $indexes = Option::get( $extras, 'indexes', array() );
-        if ( !empty( $indexes ) )
-        {
-            foreach ( $indexes as $index )
-            {
-                $command->reset();
-                $name = $index['name'];
-                $table = $index['table'];
-                $drop = Option::getBool( $index, 'drop' );
-                if ( $drop )
-                {
-                    try
-                    {
-                        $command->dropIndex( $name, $table );
-                    }
-                    catch ( \Exception $ex )
-                    {
-                        \Yii::log( $ex->getMessage() );
-                    }
-                }
-                $unique = Option::getBool( $index, 'unique' );
-
-                /** @noinspection PhpUnusedLocalVariableInspection */
-                $rows = $command->createIndex( $name, $table, $index['column'], $unique );
-            }
-        }
+        return $_related;
     }
 
     /**
@@ -1552,21 +581,19 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         {
             throw new BadRequestException( "Table schema received does not have a valid name." );
         }
+
         // does it already exist
         if ( !static::doesTableExist( $db, $table_name ) )
         {
             throw new NotFoundException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
         }
 
-        $schema = $db->schema->getTable( $table_name );
-        if ( !$table_name )
-        {
-            throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-        }
+        $_schema = static::describeTable( $db, $table_name );
+
         try
         {
             $names = array();
-            $results = static::buildTableFields( $db, $table_name, $fields, $schema, $allow_update, $allow_delete );
+            $results = static::buildTableFields( $db, $table_name, $fields, $_schema, $allow_update, $allow_delete );
             $command = $db->createCommand();
             $columns = Option::get( $results, 'columns', array() );
             foreach ( $columns as $name => $definition )
@@ -1597,171 +624,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            Log::error( 'Exception creating fields: ' . $ex->getMessage() );
-            throw $ex;
-        }
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param string         $table_name
-     * @param array          $data
-     * @param bool           $checkExist
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \Exception
-     * @return array
-     */
-    protected static function createTable( $db, $table_name, $data, $checkExist = true )
-    {
-        if ( empty( $table_name ) )
-        {
-            throw new BadRequestException( "Table schema received does not have a valid name." );
-        }
-
-        // does it already exist
-        if ( true === $checkExist && static::doesTableExist( $db, $table_name ) )
-        {
-            throw new BadRequestException( "A table with name '$table_name' already exist in the database." );
-        }
-
-        $fields = Option::get( $data, 'field', array() );
-        if ( empty( $fields ) )
-        {
-            throw new BadRequestException( "No valid fields exist in the received table schema." );
-        }
-
-        if ( !isset( $fields[0] ) )
-        {
-            $fields = array($fields);
-        }
-
-        try
-        {
-            $results = static::buildTableFields( $db, $table_name, $fields );
-            $columns = Option::get( $results, 'columns', array() );
-
-            if ( empty( $columns ) )
-            {
-                throw new BadRequestException( "No valid fields exist in the received table schema." );
-            }
-
-            $command = $db->createCommand();
-            $command->createTable( $table_name, $columns );
-
-            $labels = Option::get( $results, 'labels', array() );
-            // add table labels
-            $label = Option::get( $data, 'label' );
-            $plural = Option::get( $data, 'plural' );
-            if ( !empty( $label ) || !empty( $plural ) )
-            {
-                $labels[] = array(
-                    'table'  => $table_name,
-                    'field'  => '',
-                    'label'  => $label,
-                    'plural' => $plural
-                );
-            }
-            $results['labels'] = $labels;
-
-            return $results;
-        }
-        catch ( \Exception $ex )
-        {
-            Log::error( 'Exception creating table: ' . $ex->getMessage() );
-            throw $ex;
-        }
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param string         $table_name
-     * @param array          $data
-     * @param bool           $allow_delete
-     *
-     * @throws \Exception
-     * @return array
-     */
-    protected static function updateTable( $db, $table_name, $data, $allow_delete = false )
-    {
-        if ( empty( $table_name ) )
-        {
-            throw new BadRequestException( "Table schema received does not have a valid name." );
-        }
-        // does it already exist
-        if ( !static::doesTableExist( $db, $table_name ) )
-        {
-            throw new BadRequestException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
-        }
-
-        //  Is there a name update
-        $newName = Option::get( $data, 'new_name' );
-
-        if ( !empty( $newName ) )
-        {
-            // todo change table name, has issue with references
-        }
-
-        // update column types
-        $fields = Option::get( $data, 'field', array() );
-
-        try
-        {
-            $command = $db->createCommand();
-            $labels = array();
-            $references = array();
-            $indexes = array();
-            if ( !empty( $fields ) )
-            {
-                $schema = $db->schema->getTable( $table_name );
-                if ( !$table_name )
-                {
-                    throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-                }
-                $results = static::buildTableFields( $db, $table_name, $fields, $schema, true, $allow_delete );
-                $columns = Option::get( $results, 'columns', array() );
-                foreach ( $columns as $name => $definition )
-                {
-                    $command->reset();
-                    $command->addColumn( $table_name, $name, $definition );
-                }
-                $columns = Option::get( $results, 'alter_columns', array() );
-                foreach ( $columns as $name => $definition )
-                {
-                    $command->reset();
-                    $command->alterColumn( $table_name, $name, $definition );
-                }
-                $columns = Option::get( $results, 'drop_columns', array() );
-                foreach ( $columns as $name )
-                {
-                    $command->reset();
-                    $command->dropColumn( $table_name, $name );
-                }
-
-                $labels = Option::get( $results, 'labels', array() );
-                $references = Option::get( $results, 'references', array() );
-                $indexes = Option::get( $results, 'indexes', array() );
-            }
-            // add table labels
-            $label = Option::get( $data, 'label' );
-            $plural = Option::get( $data, 'plural' );
-            if ( !empty( $label ) || !empty( $plural ) )
-            {
-                $labels[] = array(
-                    'table'  => $table_name,
-                    'field'  => '',
-                    'label'  => $label,
-                    'plural' => $plural
-                );
-            }
-
-            $results = array('references' => $references, 'indexes' => $indexes, 'labels' => $labels);
-
-            return $results;
-        }
-        catch ( \Exception $ex )
-        {
-            Log::error( 'Exception updating table: ' . $ex->getMessage() );
+            Log::error( 'Exception updating fields: ' . $ex->getMessage() );
             throw $ex;
         }
     }
@@ -1912,90 +775,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * Returns a generic type suitable for type-casting
-     *
-     * @param \CDbColumnSchema $column
-     *
-     * @return string
-     */
-    public static function determineGenericType( $column )
-    {
-        $_simpleType = strstr( $column->dbType, '(', true );
-        $_simpleType = strtolower( $_simpleType ?: $column->dbType );
-
-        switch ( $_simpleType )
-        {
-            case 'bit':
-            case 'bool':
-            case 'boolean':
-                return 'boolean';
-
-            case 'decimal':
-            case 'numeric':
-            case 'number':
-            case 'percent':
-                return 'decimal';
-
-            case 'double':
-            case 'float':
-            case 'real':
-            case 'double precision':
-                return 'float';
-
-            case 'tinyint':
-            case 'smallint':
-            case 'mediumint':
-            case 'int':
-            case 'bigint':
-            case 'integer':
-                if ( $column->size == 1 )
-                {
-                    return 'boolean';
-                }
-
-                return 'integer';
-
-            case 'binary':
-            case 'varbinary':
-            case 'blob':
-            case 'mediumblob':
-            case 'largeblob':
-                return 'binary';
-
-            case 'timestamp':
-            case 'timestamp with time zone': //  PGSQL
-            case 'timestamp without time zone': //  PGSQL
-            case 'datetimeoffset':  //  MSSQL
-                return 'timestamp';
-
-            case 'datetime':
-            case 'datetime2':
-                return 'datetime';
-
-            //	String types
-            case 'string':
-            case 'char':
-            case 'character':
-            case 'text':
-            case 'mediumtext':
-            case 'longtext':
-            case 'varchar':
-            case 'character varying':
-            case 'nchar':
-            case 'nvarchar':
-            default:
-                return 'string';
-        }
-    }
-
-    /**
      * @param $type
-     * @param $db_type
      *
      * @return int | null
      */
-    public static function determinePdoBindingType( $type, /** @noinspection PhpUnusedParameterInspection */
-        $db_type = null )
+    public static function determinePdoBindingType( $type )
     {
         switch ( $type )
         {
@@ -2019,6 +803,1070 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         return null;
+    }
+
+    /**
+     * Refreshes all schema associated with this db connection:
+     *
+     * @param \CDbConnection $db
+     *
+     * @return array
+     */
+    public static function refreshCachedTables( $db )
+    {
+        // let Yii clear out as much as it can
+        $db->schema->refresh();
+
+        $_tables = array();
+        foreach ( $db->getSchema()->getTableNames() as $_table )
+        {
+            $_tables[$_table] = $_table;
+            // lookup by lowercase
+            $_tables[strtolower( $_table )] = $_table;
+        }
+
+        // make a quick lookup for table names for this db
+        $_hash = spl_object_hash( $db );
+        static::$_tableNameCache[$_hash] = $_tables;
+        unset( $_tables );
+    }
+
+    /**
+     * @param \CDbColumnSchema $column
+     * @param array            $foreign_keys
+     * @param array            $label_info
+     *
+     * @throws \Exception
+     * @return array
+     */
+    protected static function describeFieldInternal( $column, $foreign_keys, $label_info )
+    {
+        $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
+        $validation = json_decode( Option::get( $label_info, 'validation' ), true );
+        $picklist = Option::get( $label_info, 'picklist' );
+        $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
+        $refTable = '';
+        $refFields = '';
+        if ( 1 == $column->isForeignKey )
+        {
+            $referenceTo = Option::get( $foreign_keys, $column->name );
+            $refTable = Option::get( $referenceTo, 0 );
+            $refFields = Option::get( $referenceTo, 1 );
+        }
+
+        return array(
+            'name'               => $column->name,
+            'label'              => $label,
+            'type'               => static::_determineDfType( $column, $label_info ),
+            'db_type'            => $column->dbType,
+            'length'             => intval( $column->size ),
+            'precision'          => intval( $column->precision ),
+            'scale'              => intval( $column->scale ),
+            'default'            => $column->defaultValue,
+            'required'           => static::determineRequired( $column ),
+            'allow_null'         => $column->allowNull,
+            'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
+            'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
+            'auto_increment'     => $column->autoIncrement,
+            'is_primary_key'     => $column->isPrimaryKey,
+            'is_foreign_key'     => $column->isForeignKey,
+            'ref_table'          => $refTable,
+            'ref_fields'         => $refFields,
+            'validation'         => $validation,
+            'value'              => $picklist
+        );
+    }
+
+    /**
+     * @param            $column
+     * @param null|array $label_info
+     *
+     * @return string
+     */
+    protected static function _determineDfType( $column, $label_info = null )
+    {
+        $_simpleType = static::determineGenericType( $column );
+
+        switch ( $_simpleType )
+        {
+            case 'integer':
+                if ( $column->isPrimaryKey && $column->autoIncrement )
+                {
+                    return 'id';
+                }
+
+                if ( isset( $label_info['user_id_on_update'] ) )
+                {
+                    return 'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
+                }
+
+                if ( null !== Option::get( $label_info, 'user_id' ) )
+                {
+                    return 'user_id';
+                }
+
+                if ( $column->isForeignKey )
+                {
+                    return 'reference';
+                }
+                break;
+
+            case 'timestamp':
+                if ( isset( $label_info['timestamp_on_update'] ) )
+                {
+                    return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+                }
+                break;
+        }
+
+        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) )
+        )
+        {
+            if ( isset( $label_info['timestamp_on_update'] ) )
+            {
+                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+            }
+        }
+
+        return $_simpleType;
+    }
+
+    /**
+     * @param $type
+     *
+     * @return bool
+     */
+    protected static function determineMultiByteSupport( $type )
+    {
+        switch ( $type )
+        {
+            case 'nchar':
+            case 'nvarchar':
+            case 'nvarchar2':
+                return true;
+            // todo mysql shows these are varchar with a utf8 character set, not in column data
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * @param $type
+     *
+     * @return bool
+     */
+    protected static function determineIfFixedLength( $type )
+    {
+        switch ( $type )
+        {
+            case 'char':
+            case 'nchar':
+            case 'binary':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * @param $column
+     *
+     * @return bool
+     */
+    protected static function determineRequired( $column )
+    {
+        if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array        $field
+     * @param int          $driver_type
+     * @param array | null $old_field
+     *
+     * @throws \Exception
+     * @return array|string
+     */
+    protected static function buildColumnType( $field, $driver_type = self::DRV_MYSQL, $old_field = null )
+    {
+        if ( empty( $field ) )
+        {
+            throw new BadRequestException( "No field given." );
+        }
+
+        $type = strtolower( Option::get( $field, 'type', '' ) );
+        if ( empty( $type ) )
+        {
+            throw new BadRequestException( "Invalid schema detected - no type element." );
+        }
+
+        /* abstract types handled by yii directly for each driver type
+
+            pk: a generic primary key type, will be converted into int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY for MySQL;
+            string: string type, will be converted into varchar(255) for MySQL;
+            text: text type (long string), will be converted into text for MySQL;
+            integer: integer type, will be converted into int(11) for MySQL;
+            float: floating number type, will be converted into float for MySQL;
+            double: floating number type, will be converted into double for MySQL;
+            decimal: decimal number type, will be converted into decimal for MySQL;
+            datetime: datetime type, will be converted into datetime for MySQL;
+            timestamp: timestamp type, will be converted into timestamp for MySQL;
+            time: time type, will be converted into time for MySQL;
+            date: date type, will be converted into date for MySQL;
+            binary: binary data type, will be converted into blob for MySQL;
+            boolean: boolean type, will be converted into tinyint(1) for MySQL;
+            money: money/currency type, will be converted into decimal(19,4) for MySQL.
+        */
+
+        $allowNull = Option::getBool( $field, 'allow_null', true );
+        $default = Option::get( $field, 'default' );
+        $quoteDefault = false;
+        $isPrimaryKey = Option::getBool( $field, 'is_primary_key', false );
+        $definition = $type; // blind copy of column type
+
+        switch ( $type )
+        {
+            // some types need massaging, some need other required properties
+            case 'pk':
+            case 'id':
+                return 'pk'; // simple primary key, bail here
+                break;
+            case 'reference':
+                $definition = 'int';
+                break;
+            case 'timestamp_on_create':
+            case 'timestamp_on_update':
+                $definition = 'timestamp';
+                if ( !isset( $default ) )
+                {
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_SQLSRV:
+                        case SqlDbUtilities::DRV_DBLIB:
+                            $default = 'getdate()';
+                            break;
+                        case SqlDbUtilities::DRV_PGSQL:
+                        case SqlDbUtilities::DRV_OCSQL:
+                            $default = 'current_timestamp';
+                            break;
+                        default:
+                            $default = ( 'timestamp_on_update' === $type ) ? 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' : 0;
+                            break;
+                    }
+                }
+                if ( !isset( $field['allow_null'] ) )
+                {
+                    $allowNull = false;
+                }
+                break;
+            case 'user_id':
+            case 'user_id_on_create':
+            case 'user_id_on_update':
+                $definition = 'int';
+                if ( !isset( $field['allow_null'] ) )
+                {
+                    $allowNull = false;
+                }
+                break;
+            case 'boolean':
+                if ( isset( $default ) )
+                {
+                    // convert to bit 0 or 1, where necessary
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_PGSQL:
+                            $default = ( Scalar::boolval( $default ) ) ? 'TRUE' : 'FALSE';
+                            break;
+                        default:
+                            $default = ( Scalar::boolval( $default ) ) ? '1' : '0';
+                            break;
+                    }
+                }
+                break;
+            case 'integer':
+                $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
+                if ( !empty( $length ) )
+                {
+                    $definition .= "($length)"; // sets the viewable length
+                }
+                if ( isset( $default ) )
+                {
+                    $default = intval( $default );
+                }
+                break;
+            case 'decimal':
+                $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
+                if ( !empty( $length ) )
+                {
+                    $scale = Option::get( $field, 'scale', Option::get( $field, 'decimals' ) );
+                    $definition .= ( !empty( $scale ) ) ? "($length,$scale)" : "($length)";
+                }
+                if ( isset( $default ) )
+                {
+                    $default = floatval( $default );
+                }
+                break;
+            case 'float':
+            case 'double':
+                $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
+                if ( !empty( $length ) )
+                {
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_MYSQL:
+                            $scale = Option::get( $field, 'scale', Option::get( $field, 'decimals' ) );
+                            $definition .= ( !empty( $scale ) ) ? "($length,$scale)" : "($length)";
+                            break;
+                        default:
+                            $definition .= "($length)";
+                            break;
+                    }
+                }
+                if ( isset( $default ) )
+                {
+                    $default = floatval( $default );
+                }
+                break;
+            case 'money':
+                if ( isset( $default ) )
+                {
+                    $default = floatval( $default );
+                }
+                break;
+            case 'string':
+                $length = Option::get( $field, 'length', Option::get( $field, 'size' ) );
+                $fixed = Option::getBool( $field, 'fixed_length' );
+                $national = Option::getBool( $field, 'supports_multibyte' );
+                if ( $fixed )
+                {
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_SQLSRV:
+                        case SqlDbUtilities::DRV_DBLIB:
+                        case SqlDbUtilities::DRV_MYSQL:
+                        case SqlDbUtilities::DRV_OCSQL:
+                            $definition = ( $national ) ? 'nchar' : 'char';
+                            break;
+                        case SqlDbUtilities::DRV_PGSQL:
+                            $definition = ( $national ) ? 'national char' : 'char';
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                elseif ( $national )
+                {
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_SQLSRV:
+                        case SqlDbUtilities::DRV_DBLIB:
+                        case SqlDbUtilities::DRV_MYSQL:
+                            $definition = 'nvarchar';
+                            break;
+                        case SqlDbUtilities::DRV_PGSQL:
+                            $definition = 'national varchar';
+                            break;
+                        case SqlDbUtilities::DRV_OCSQL:
+                            $definition = 'nvarchar2';
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if ( isset( $length ) )
+                {
+                    $definition .= "($length)";
+                }
+                $quoteDefault = true;
+                break;
+            case 'binary':
+                $length = Option::get( $field, 'length', Option::get( $field, 'size' ) );
+                $fixed = Option::getBool( $field, 'fixed_length' );
+                $definition = ( $fixed ) ? 'binary' : 'varbinary';
+                if ( isset( $length ) )
+                {
+                    $definition .= "($length)";
+                }
+                $quoteDefault = true;
+                break;
+            case 'text':
+                $quoteDefault = true;
+                break;
+            case 'blob':
+                $quoteDefault = true;
+                break;
+            case 'datetime':
+            case 'date':
+            case 'time':
+                break;
+        }
+
+        // additional properties
+        if ( isset( $default ) )
+        {
+            if ( $quoteDefault )
+            {
+                $default = "'" . $default . "'";
+            }
+            $definition .= ' DEFAULT ' . $default;
+        }
+        if ( $isPrimaryKey )
+        {
+            $definition .= ' PRIMARY KEY';
+        }
+        if ( !Scalar::boolval( $allowNull ) )
+        {
+            $definition .= ' NOT';
+        }
+        $definition .= ' NULL';
+
+        return $definition;
+    }
+
+    protected static function makeConstraintName( $prefix, $table_name, $field_name, $driver_type)
+    {
+        $_temp = $prefix . '_' . $table_name . '_' . $field_name;
+        switch ($driver_type)
+        {
+            case static::DRV_OCSQL:
+                // must be less than 30 characters
+                if (30 < strlen($_temp))
+                {
+                    $_temp = $prefix . '_' . hash( 'crc32', $table_name . '_' . $field_name);
+                }
+                break;
+        }
+
+        return $_temp;
+    }
+
+    /**
+     * @param \CDbConnection       $db
+     * @param string               $table_name
+     * @param array                $fields
+     * @param null|\CDbTableSchema $schema
+     * @param bool                 $allow_update
+     * @param bool                 $allow_delete
+     *
+     * @throws \Exception
+     * @return string
+     */
+    protected static function buildTableFields( $db, $table_name, $fields, $schema = null, $allow_update = false, $allow_delete = false )
+    {
+        $fields = static::validateAsArray( $fields, null, true, "No valid fields exist in the received table schema." );
+
+        $_driverType = static::getDbDriverType( $db );
+        $_columns = array();
+        $_alterColumns = array();
+        $_references = array();
+        $_indexes = array();
+        $_labels = array();
+        $_primaryKey = Option::get( $schema, 'primary_key', '' );
+        $_dropColumns = array();
+        $_oldFields = array();
+        foreach ( Option::clean( Option::get( $schema, 'field' ) ) as $_old )
+        {
+            $_old = array_change_key_case( $_old, CASE_LOWER );
+
+            $_oldFields[Option::get( $_old, 'name' )] = $_old;
+        }
+        $_fields = array();
+        foreach ( $fields as $_field )
+        {
+            $_field = array_change_key_case( $_field, CASE_LOWER );
+
+            $_fields[Option::get( $_field, 'name' )] = $_field;
+        }
+
+        if ( $allow_delete && !empty( $_oldFields ) )
+        {
+            // check for columns to drop
+            foreach ( $_oldFields as $_oldName => $_oldField )
+            {
+                if ( !isset( $_fields[$_oldName] ) )
+                {
+                    $_dropColumns[] = $_oldName;
+                }
+            }
+        }
+
+        foreach ( $_fields as $_name => $_field )
+        {
+            if ( empty( $_name ) )
+            {
+                throw new BadRequestException( "Invalid schema detected - no name element." );
+            }
+
+            $_isAlter = isset( $_oldFields[$_name] );
+            if ( $_isAlter && !$allow_update )
+            {
+                throw new BadRequestException( "Field '$_name' already exists in table '$table_name'." );
+            }
+
+            $_oldField = ( $_isAlter ) ? $_oldFields[$_name] : array();
+            $_oldForeignKey = Option::get( $_oldField, 'is_foreign_key', false );
+            $_temp = array();
+
+            if ( null !== $_sql = Option::get( $field, 'sql', null, false, true ) )
+            {
+                // raw sql definition, just passing it on
+                if ( $_isAlter )
+                {
+                    $_alterColumns[$_name] = $_sql;
+                    // may need to clean out references, etc?
+                }
+                else
+                {
+                    $_columns[$_name] = $_sql;
+                }
+            }
+            else
+            {
+                if ( $_isAlter )
+                {
+                    // if same as old, don't bother
+                    $_same = true;
+                    foreach ( $_field as $_key => $_value )
+                    {
+                        if ( $_value != Option::get( $_oldField, $_key ) )
+                        {
+                            $_same = false;
+                            break;
+                        }
+                    }
+                    if ( $_same )
+                    {
+                        continue;
+                    }
+                }
+
+                $_definition = static::buildColumnType( $_field, $_driverType, $_oldField );
+
+                if ( !empty( $_definition ) )
+                {
+                    if ( $_isAlter )
+                    {
+                        $_alterColumns[$_name] = $_definition;
+                    }
+                    else
+                    {
+                        $_columns[$_name] = $_definition;
+                    }
+                }
+
+                $_type = strtolower( Option::get( $_field, 'type', '' ) );
+
+                if ( ( 'id' == $_type ) || ( 'pk' == $_type ) || Option::getBool( $_field, 'is_primary_key' ) )
+                {
+                    if ( !empty( $_primaryKey ) && ( 0 != strcasecmp( $_primaryKey, $_name ) ) )
+                    {
+                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
+                    }
+
+                    $_primaryKey = $_name;
+                }
+                elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
+                {
+                    // special case for references because the table referenced may not be created yet
+                    $refTable = Option::get( $_field, 'ref_table' );
+                    if ( empty( $refTable ) )
+                    {
+                        throw new BadRequestException( "Invalid schema detected - no table element for reference type of $_name." );
+                    }
+                    $refColumns = Option::get( $_field, 'ref_fields', 'id' );
+                    $refOnDelete = Option::get( $_field, 'ref_on_delete' );
+                    $refOnUpdate = Option::get( $_field, 'ref_on_update' );
+
+                    // will get to it later, $refTable may not be there
+                    $_keyName = static::makeConstraintName('fk', $table_name, $_name, $_driverType);
+                    if ( !$_isAlter || !$_oldForeignKey )
+                    {
+                        $_references[] = array(
+                            'name'       => $_keyName,
+                            'table'      => $table_name,
+                            'column'     => $_name,
+                            'ref_table'  => $refTable,
+                            'ref_fields' => $refColumns,
+                            'delete'     => $refOnDelete,
+                            'update'     => $refOnUpdate
+                        );
+                    }
+                }
+                elseif ( ( 'user_id_on_create' == $_type ) || ( 'user_id_on_update' == $_type ) )
+                { // && static::is_local_db()
+                    // special case for references because the table referenced may not be created yet
+                    $_temp['user_id_on_update'] = ( 'user_id_on_update' == $_type ) ? true : false;
+                    $_keyName = static::makeConstraintName('fk', $table_name, $_name, $_driverType);
+                    if ( !$_isAlter || !$_oldForeignKey )
+                    {
+                        $_references[] = array(
+                            'name'       => $_keyName,
+                            'table'      => $table_name,
+                            'column'     => $_name,
+                            'ref_table'  => 'df_sys_user',
+                            'ref_fields' => 'id',
+                            'delete'     => null,
+                            'update'     => null
+                        );
+                    }
+                }
+                elseif ( 'user_id' == $_type )
+                { // && static::is_local_db()
+                    // special case for references because the table referenced may not be created yet
+                    $_temp['user_id'] = true;
+                    $_keyName = static::makeConstraintName('fk', $table_name, $_name, $_driverType);
+                    if ( !$_isAlter || !$_oldForeignKey )
+                    {
+                        $_references[] = array(
+                            'name'       => $_keyName,
+                            'table'      => $table_name,
+                            'column'     => $_name,
+                            'ref_table'  => 'df_sys_user',
+                            'ref_fields' => 'id',
+                            'delete'     => null,
+                            'update'     => null
+                        );
+                    }
+                }
+                elseif ( 'timestamp_on_create' == $_type )
+                {
+                    $_temp['timestamp_on_update'] = false;
+                }
+                elseif ( 'timestamp_on_update' == $_type )
+                {
+                    $_temp['timestamp_on_update'] = true;
+                }
+            }
+
+            // regardless of type
+            if ( Option::getBool( $_field, 'is_unique' ) )
+            {
+                // will get to it later, create after table built
+                $_keyName = static::makeConstraintName('undx', $table_name, $_name, $_driverType);
+                $_indexes[] = array(
+                    'name'   => $_keyName,
+                    'table'  => $table_name,
+                    'column' => $_name,
+                    'unique' => true,
+                    'drop'   => $_isAlter
+                );
+            }
+            elseif ( Option::get( $_field, 'is_index' ) )
+            {
+                // will get to it later, create after table built
+                $_keyName = static::makeConstraintName('ndx', $table_name, $_name, $_driverType);
+                $_indexes[] = array(
+                    'name'   => $_keyName,
+                    'table'  => $table_name,
+                    'column' => $_name,
+                    'drop'   => $_isAlter
+                );
+            }
+
+            $_values = Option::get( $_field, 'value' );
+            if ( empty( $_values ) )
+            {
+                $_values = Option::getDeep( $_field, 'values', 'value', array() );
+            }
+            if ( !is_array( $_values ) )
+            {
+                $_values = array_map( 'trim', explode( ',', trim( $_values, ',' ) ) );
+            }
+            if ( !empty( $_values ) )
+            {
+                $_picklist = '';
+                foreach ( $_values as $_value )
+                {
+                    if ( !empty( $_picklist ) )
+                    {
+                        $_picklist .= "\r";
+                    }
+                    $_picklist .= $_value;
+                }
+                if ( !empty( $_picklist ) )
+                {
+                    $_temp['picklist'] = $_picklist;
+                }
+            }
+
+            // labels
+            $_label = Option::get( $_field, 'label' );
+            if ( !empty( $_label ) )
+            {
+                $_temp['label'] = $_label;
+            }
+
+            $_validation = Option::get( $_field, 'validation' );
+            if ( !empty( $_validation ) )
+            {
+                $_temp['validation'] = json_encode( $_validation );
+            }
+
+            if ( !empty( $_temp ) )
+            {
+                $_temp['table'] = $table_name;
+                $_temp['field'] = $_name;
+                $_labels[] = $_temp;
+            }
+        }
+
+        return array(
+            'columns'       => $_columns,
+            'alter_columns' => $_alterColumns,
+            'drop_columns'  => $_dropColumns,
+            'references'    => $_references,
+            'indexes'       => $_indexes,
+            'labels'        => $_labels
+        );
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param array          $extras
+     *
+     * @return array
+     */
+    protected static function createFieldExtras( $db, $extras )
+    {
+        $command = $db->createCommand();
+        $references = Option::get( $extras, 'references', array() );
+        if ( !empty( $references ) )
+        {
+            foreach ( $references as $reference )
+            {
+                $command->reset();
+                $name = $reference['name'];
+                $table = $reference['table'];
+                $drop = Option::getBool( $reference, 'drop' );
+                if ( $drop )
+                {
+                    try
+                    {
+                        $command->dropForeignKey( $name, $table );
+                    }
+                    catch ( \Exception $ex )
+                    {
+                        \Yii::log( $ex->getMessage() );
+                    }
+                }
+                // add new reference
+                $refTable = Option::get( $reference, 'ref_table' );
+                if ( !empty( $refTable ) )
+                {
+                    if ( ( 0 == strcasecmp( 'df_sys_user', $refTable ) ) && ( $db != Pii::db() ) )
+                    {
+                        // using user id references from a remote db
+                        continue;
+                    }
+                    /** @noinspection PhpUnusedLocalVariableInspection */
+                    $rows = $command->addForeignKey(
+                        $name,
+                        $table,
+                        $reference['column'],
+                        $refTable,
+                        $reference['ref_fields'],
+                        $reference['delete'],
+                        $reference['update']
+                    );
+                }
+            }
+        }
+        $indexes = Option::get( $extras, 'indexes', array() );
+        if ( !empty( $indexes ) )
+        {
+            foreach ( $indexes as $index )
+            {
+                $command->reset();
+                $name = $index['name'];
+                $table = $index['table'];
+                $drop = Option::getBool( $index, 'drop' );
+                if ( $drop )
+                {
+                    try
+                    {
+                        $command->dropIndex( $name, $table );
+                    }
+                    catch ( \Exception $ex )
+                    {
+                        \Yii::log( $ex->getMessage() );
+                    }
+                }
+                $unique = Option::getBool( $index, 'unique' );
+
+                /** @noinspection PhpUnusedLocalVariableInspection */
+                $rows = $command->createIndex( $name, $table, $index['column'], $unique );
+            }
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $data
+     * @param bool           $checkExist
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @return array
+     */
+    protected static function createTable( $db, $table_name, $data, $checkExist = true )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table schema received does not have a valid name." );
+        }
+
+        // does it already exist
+        if ( true === $checkExist && static::doesTableExist( $db, $table_name ) )
+        {
+            throw new BadRequestException( "A table with name '$table_name' already exist in the database." );
+        }
+
+        $data = array_change_key_case( $data, CASE_LOWER );
+        $_fields = Option::get( $data, 'field' );
+        try
+        {
+            $_results = static::buildTableFields( $db, $table_name, $_fields );
+            $_columns = Option::get( $_results, 'columns', array() );
+
+            if ( empty( $_columns ) )
+            {
+                throw new BadRequestException( "No valid fields exist in the received table schema." );
+            }
+
+            $db->createCommand()->createTable( $table_name, $_columns );
+
+            $_labels = Option::get( $_results, 'labels', array() );
+            // add table labels
+            $_label = Option::get( $data, 'label' );
+            $_plural = Option::get( $data, 'plural' );
+            if ( !empty( $_label ) || !empty( $_plural ) )
+            {
+                $_labels[] = array(
+                    'table'  => $table_name,
+                    'field'  => '',
+                    'label'  => $_label,
+                    'plural' => $_plural
+                );
+            }
+            $_results['labels'] = $_labels;
+
+            return $_results;
+        }
+        catch ( \Exception $ex )
+        {
+            Log::error( 'Exception creating table: ' . $ex->getMessage() );
+            throw $ex;
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $data
+     * @param bool           $allow_delete
+     *
+     * @throws \Exception
+     * @return array
+     */
+    protected static function updateTable( $db, $table_name, $data, $allow_delete = false )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table schema received does not have a valid name." );
+        }
+        // does it already exist
+        if ( !static::doesTableExist( $db, $table_name ) )
+        {
+            throw new BadRequestException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
+        }
+
+        $_schema = static::describeTable( $db, $table_name );
+
+        //  Is there a name update
+        $_newName = Option::get( $data, 'new_name' );
+
+        if ( !empty( $_newName ) )
+        {
+            // todo change table name, has issue with references
+        }
+
+        // update column types
+        $_fields = Option::get( $data, 'field', array() );
+
+        try
+        {
+            $_command = $db->createCommand();
+            $_labels = array();
+            $_references = array();
+            $_indexes = array();
+            if ( !empty( $_fields ) )
+            {
+                $_results = static::buildTableFields( $db, $table_name, $_fields, $_schema, true, $allow_delete );
+                $_columns = Option::get( $_results, 'columns', array() );
+                foreach ( $_columns as $_name => $_definition )
+                {
+                    $_command->reset();
+                    $_command->addColumn( $table_name, $_name, $_definition );
+                }
+                $_columns = Option::get( $_results, 'alter_columns', array() );
+                foreach ( $_columns as $_name => $_definition )
+                {
+                    $_command->reset();
+                    $_command->alterColumn( $table_name, $_name, $_definition );
+                }
+                $_columns = Option::get( $_results, 'drop_columns', array() );
+                foreach ( $_columns as $_name )
+                {
+                    $_command->reset();
+                    $_command->dropColumn( $table_name, $_name );
+                }
+
+                $_labels = Option::get( $_results, 'labels', array() );
+                $_references = Option::get( $_results, 'references', array() );
+                $_indexes = Option::get( $_results, 'indexes', array() );
+            }
+
+            // add table labels
+            $_label = Option::get( $data, 'label' );
+            $_plural = Option::get( $data, 'plural' );
+            if ( !is_null( $_label ) || !is_null( $_plural ) )
+            {
+                if ( ( $_label != Option::get( $_schema, 'label' ) ) && ( $_plural != Option::get( $_schema, 'plural' ) ) )
+                {
+                    $_labels[] = array(
+                        'table'  => $table_name,
+                        'field'  => '',
+                        'label'  => $_label,
+                        'plural' => $_plural
+                    );
+                }
+            }
+
+            $_results = array('references' => $_references, 'indexes' => $_indexes, 'labels' => $_labels);
+
+            return $_results;
+        }
+        catch ( \Exception $ex )
+        {
+            Log::error( 'Exception updating table: ' . $ex->getMessage() );
+            throw $ex;
+        }
+    }
+
+    /**
+     * Returns a generic type suitable for type-casting
+     *
+     * @param \CDbColumnSchema $column
+     *
+     * @return string
+     */
+    protected static function determineGenericType( $column )
+    {
+        $_simpleType = strstr( $column->dbType, '(', true );
+        $_simpleType = strtolower( $_simpleType ?: $column->dbType );
+
+        switch ( $_simpleType )
+        {
+            case 'bit':
+            case 'bool':
+            case 'boolean':
+                return 'boolean';
+
+            case 'number': // Oracle for boolean, integers and decimals
+                if ( $column->size == 1 )
+                {
+                    return 'boolean';
+                }
+                if (empty($column->scale))
+                {
+                    return 'integer';
+                }
+                return 'decimal';
+
+            case 'decimal':
+            case 'numeric':
+            case 'percent':
+                return 'decimal';
+
+            case 'double':
+            case 'double precision':
+            case 'binary_double': // oracle
+                return 'double';
+
+            case 'float':
+            case 'real':
+            case 'binary_float': // oracle
+                if ( $column->size == 53 )
+                {
+                    return 'double';
+                }
+                return 'float';
+
+            case 'money':
+            case 'smallmoney':
+                return 'money';
+
+            case 'tinyint':
+            case 'smallint':
+            case 'mediumint':
+            case 'bigint':
+            case 'int':
+            case 'integer':
+                if ( $column->size == 1 )
+                {
+                    return 'boolean';
+                }
+
+                return 'integer';
+
+            case 'timestamp':
+            case 'timestamp with time zone': //  PGSQL
+            case 'timestamp without time zone': //  PGSQL
+            case 'datetimeoffset':  //  MSSQL
+                return 'timestamp';
+
+            case 'datetime':
+            case 'datetime2':
+                return 'datetime';
+
+            case 'binary':
+            case 'varbinary':
+            case 'blob':
+            case 'mediumblob':
+            case 'largeblob':
+                return 'binary';
+
+            //	String types
+            case 'text':
+            case 'mediumtext':
+            case 'longtext':
+            case 'clob':
+            case 'nclob':
+                return 'text';
+
+            case 'varchar':
+                if ( $column->size == -1 )
+                {
+                    return 'text'; // varchar(max) in MSSQL
+                }
+                return 'string';
+
+            case 'string':
+            case 'varchar2':
+            case 'char':
+            case 'character':
+            case 'character varying':
+            case 'nchar':
+            case 'nvarchar':
+            case 'nvarchar2':
+            default:
+                return 'string';
+        }
     }
 
     /**
@@ -2059,34 +1907,5 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         return static::$_tableNameCache[$_hash];
-    }
-
-    /**
-     * Refreshes all schema associated with this db connection:
-     *
-     * @param \CDbConnection $db
-     *
-     * @return array
-     */
-    public static function refreshCachedTables( $db )
-    {
-        // let Yii clear out as much as it can (doesn't currently get each table schema for some reason)
-        $db->schema->refresh();
-
-        $_tables = array();
-        foreach ( $db->getSchema()->getTableNames() as $_table )
-        {
-            $_tables[$_table] = $_table;
-            // lookup by lowercase
-            $_tables[strtolower( $_table )] = $_table;
-
-            // get each tables schema, to be ready for next call
-            $db->getSchema()->getTable( $_table, true );
-        }
-
-        // make a quick lookup for table names for this db
-        $_hash = spl_object_hash( $db );
-        static::$_tableNameCache[$_hash] = $_tables;
-        unset( $_tables );
     }
 }

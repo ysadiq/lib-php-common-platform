@@ -356,8 +356,6 @@ class Packager
                                 $msg = $_result[0]['error']['message'];
                                 throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
                             }
-
-                            $_db->refreshSchemaCache();
                         }
                     }
                 }
@@ -383,8 +381,6 @@ class Packager
                         $msg = $_result[0]['error']['message'];
                         throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
                     }
-
-                    $_db->refreshSchemaCache();
                 }
                 $_zip->deleteName( 'schema.json' );
             }
