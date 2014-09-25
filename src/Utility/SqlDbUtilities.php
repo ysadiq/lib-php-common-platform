@@ -492,9 +492,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         if ( !empty( $field_names ) )
         {
             $field_names = static::validateAsArray( $field_names, ',', true, 'No valid field names given.' );
+            $extras = static::getSchemaExtrasForFields( $service_id, $table_name, $field_names );
+        }
+        else
+        {
+            $extras = static::getSchemaExtrasForTables( $service_id, $table_name );
         }
 
-        $extras = static::getSchemaExtrasForFields( $service_id, $table_name, $field_names );
         $extras = static::reformatFieldLabelArray( $extras );
 
         $_out = array();
