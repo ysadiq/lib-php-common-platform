@@ -585,6 +585,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     public function getSchema( $resource )
     {
         return SqlDbUtilities::describeTable(
+            null,
             $resource->getDb(),
             $resource->tableName(),
             $resource->tableNamePrefix()

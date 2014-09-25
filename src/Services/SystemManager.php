@@ -219,13 +219,7 @@ class SystemManager extends BaseSystemRestService
 
             Log::debug( 'Checking database schema' );
 
-            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
-            $_labels = Option::get( $_result, 'labels', true );
-
-            if ( !empty( $_labels ) )
-            {
-                SqlDbUtilities::setSchemaExtras( null, $_labels );
-            }
+            SqlDbUtilities::updateTables( null, $_db, $_tables, true );
 
             try
             {
@@ -291,13 +285,7 @@ class SystemManager extends BaseSystemRestService
             // create system tables
             Log::debug( 'Analyzing current schema for migration.' );
 
-            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
-            $_labels = Option::get( $_result, 'labels', true );
-
-            if ( !empty( $_labels ) )
-            {
-                SqlDbUtilities::setSchemaExtras( null, $_labels );
-            }
+            SqlDbUtilities::updateTables( null, $_db, $_tables, true );
 
             if ( !empty( $_currentVersion ) )
             {

@@ -23,7 +23,6 @@ use DreamFactory\Platform\Enums\DbFilterOperators;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Resources\User\Session;
@@ -270,40 +269,38 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return string
      */
-    public function correctTableName( $name )
+    public function correctTableName( &$name )
     {
         return $name;
     }
 
     /**
-     * @param string $resource
-     * @param string $resource_id
-     * @param string $action
-     *
-     * @internal param string $resourceId
+     * @param string $main Main resource or empty for service
+     * @param string $sub  Subtending resources if applicable
+     * @param string $action Action to validate permission
      */
-    protected function validateResourceAccess( $resource, $resource_id, $action )
+    protected function validateResourceAccess( &$main, &$sub, $action )
     {
-        if ( !empty( $resource ) )
+        $_resource = null;
+        if ( !empty( $main ) )
         {
-            switch ( $resource )
+            switch ( $main )
             {
                 case static::SCHEMA_RESOURCE:
-                    $resource = rtrim( $resource, '/' ) . '/';
-                    if ( !empty( $resource_id ) )
+                    $_resource = rtrim( $main, '/' ) . '/';
+                    if ( !empty( $sub ) )
                     {
-                        $resource_id = $this->correctTableName( $resource_id );
-                        $resource .= $resource_id;
+                        $_resource .= $this->correctTableName( $sub );
                     }
                     break;
                 default:
-                    $resource = $this->correctTableName( $resource );
+                    $_resource = $this->correctTableName( $main );
                     break;
             }
 
         }
 
-        $this->checkPermission( $action, $resource );
+        $this->checkPermission( $action, $_resource );
     }
 
     /**
@@ -314,7 +311,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function validateSchemaAccess( $table = null, $action = null )
     {
-        $this->validateResourceAccess( static::SCHEMA_RESOURCE, $table, $action );
+        $_resource = static::SCHEMA_RESOURCE;
+        $this->validateResourceAccess( $_resource, $table, $action );
     }
 
     /**
@@ -331,7 +329,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
 
         // finally check that the current user has privileges to access this table
-        $this->validateResourceAccess( $table, null, $action );
+        $_sub = null;
+        $this->validateResourceAccess( $table, $_sub, $action );
     }
 
     /**

@@ -283,11 +283,11 @@ class SqlDbSvc extends BaseDbSvc
      *
      * {@InheritDoc}
      */
-    public function correctTableName( $name )
+    public function correctTableName( &$name )
     {
         $this->checkForNativeSystemTable( $name );
 
-        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
+        return $name = SqlDbUtilities::correctTableName( $this->_dbConn, $name );
     }
 
     protected function checkForNativeSystemTable( $name, $for_query = true )
@@ -319,26 +319,26 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@InheritDoc}
      */
-    protected function validateResourceAccess( $resource, $resource_id, $action )
+    protected function validateResourceAccess( &$main, &$sub, $action )
     {
-        if ( !empty( $resource ) )
+        if ( !empty( $main ) )
         {
-            switch ( $resource )
+            switch ( $main )
             {
                 case static::STORED_PROC_RESOURCE:
-                    $resource = rtrim( $resource, '/' ) . '/';
-                    if ( !empty( $resource_id ) )
+                    $_resource = rtrim( $main, '/' ) . '/';
+                    if ( !empty( $sub ) )
                     {
-                        $resource .= $resource_id;
+                        $_resource .= $sub;
                     }
 
-                    $this->checkPermission( $action, $resource );
+                    $this->checkPermission( $action, $_resource );
 
                     return;
             }
         }
 
-        parent::validateResourceAccess( $resource, $resource_id, $action );
+        parent::validateResourceAccess( $main, $sub, $action );
     }
 
     /**
@@ -350,7 +350,8 @@ class SqlDbSvc extends BaseDbSvc
     protected function validateStoredProcedureAccess( &$procedure, $action = null )
     {
         // finally check that the current user has privileges to access this table
-        $this->validateResourceAccess( static::STORED_PROC_RESOURCE, $procedure, $action );
+        $_resource = static::STORED_PROC_RESOURCE;
+        $this->validateResourceAccess( $_resource, $procedure, $action );
     }
 
     /**
@@ -967,8 +968,7 @@ class SqlDbSvc extends BaseDbSvc
             return $this->_fieldCache[$name];
         }
 
-        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $name );
-        $_fields = SqlDbUtilities::describeTableFields( $this->_dbConn, $name, null, $_extras );
+        $_fields = SqlDbUtilities::describeTableFields( $this->getServiceId(), $this->_dbConn, $name );
         $this->_fieldCache[$name] = $_fields;
 
         return $_fields;
@@ -2990,8 +2990,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_name );
-                        $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name, null, $_extras, $refresh );
+                        $_result = SqlDbUtilities::describeTable( $this->getServiceId(), $this->_dbConn, $_name, null, $refresh );
                         $_result['access'] = $_access;
                         $_resources[] = $_result;
                     }
@@ -3025,8 +3024,7 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $table );
-            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table, null, $_extras, $refresh );
+            $_result = SqlDbUtilities::describeTable( $this->getServiceId(), $this->_dbConn, $table, null, $refresh );
             $_result['access'] = $this->getPermissions( $table );
 
             return $_result;
@@ -3056,8 +3054,7 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_extras = SqlDbUtilities::getSchemaExtrasForFields( $this->getServiceId(), $table, $field );
-            $_result = SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $field, $_extras );
+            $_result = SqlDbUtilities::describeTableFields( $this->getServiceId(), $this->_dbConn, $table, $field );
 
             return Option::get( $_result, 0 );
         }
@@ -3090,13 +3087,7 @@ class SqlDbSvc extends BaseDbSvc
             $this->checkForNativeSystemTable( $_name, false );
         }
 
-        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
+        $_result = SqlDbUtilities::updateTables( $this->getServiceId(), $this->_dbConn, $tables );
 
         //  Any changes here should refresh cached schema
         SqlDbUtilities::refreshCachedTables( $this->_dbConn );
@@ -3120,14 +3111,7 @@ class SqlDbSvc extends BaseDbSvc
         $properties['name'] = $table;
 
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
-        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
-
+        $_result = SqlDbUtilities::updateTables( $this->getServiceId(), $this->_dbConn, $_tables );
         $_result = Option::get( $_result, 0, array() );
 
         //  Any changes here should refresh cached schema
@@ -3153,13 +3137,7 @@ class SqlDbSvc extends BaseDbSvc
 
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
-        $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
+        $_result = SqlDbUtilities::updateFields( $this->getServiceId(), $this->_dbConn, $table, $_fields );
 
         //  Any changes here should refresh cached schema
         SqlDbUtilities::refreshCachedTables( $this->_dbConn );
@@ -3189,13 +3167,7 @@ class SqlDbSvc extends BaseDbSvc
             $this->checkForNativeSystemTable( $_name, false );
         }
 
-        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
+        $_result = SqlDbUtilities::updateTables( $this->getServiceId(), $this->_dbConn, $tables, true, $allow_delete_fields );
 
         //  Any changes here should refresh cached schema
         SqlDbUtilities::refreshCachedTables( $this->_dbConn );
@@ -3220,14 +3192,7 @@ class SqlDbSvc extends BaseDbSvc
 
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
-        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables, true, $allow_delete_fields );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
-
+        $_result = SqlDbUtilities::updateTables( $this->getServiceId(), $this->_dbConn, $_tables, true, $allow_delete_fields );
         $_result = Option::get( $_result, 0, array() );
 
         //  Any changes here should refresh cached schema
@@ -3258,13 +3223,7 @@ class SqlDbSvc extends BaseDbSvc
 
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
-        $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields, true );
-        $_labels = Option::get( $_result, 'labels', null, true );
-
-        if ( !empty( $_labels ) )
-        {
-            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
-        }
+        $_result = SqlDbUtilities::updateFields( $this->getServiceId(), $this->_dbConn, $table, $_fields, true );
 
         //  Any changes here should refresh cached schema
         SqlDbUtilities::refreshCachedTables( $this->_dbConn );

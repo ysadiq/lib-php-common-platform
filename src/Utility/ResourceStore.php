@@ -343,7 +343,7 @@ class ResourceStore implements UtilityLike
      */
     public static function getSchemaForPayload( $model )
     {
-        return SqlDbUtilities::describeTable( Pii::db(), $model->tableName(), SystemManager::SYSTEM_TABLE_PREFIX );
+        return SqlDbUtilities::describeTable( null, Pii::db(), $model->tableName(), SystemManager::SYSTEM_TABLE_PREFIX );
     }
 
     /**
