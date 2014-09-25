@@ -2425,7 +2425,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             }
                         }
                         $_options = array('options' => $_options, 'flags' => $_flags);
-                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_INT, $_options ) )
+                        if ( !is_null( $value ) && false===filter_var( $value, FILTER_VALIDATE_INT, $_options ) )
                         {
                             if ( $_throw )
                             {
