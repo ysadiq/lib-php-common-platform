@@ -38,6 +38,10 @@ class Fabric extends SeedUtility
     /**
      * @var string
      */
+    const DEFAULT_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+    /**
+     * @var string
+     */
     const DEFAULT_AUTH_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/instance/credentials';
     /**
      * @var string
@@ -141,11 +145,14 @@ class Fabric extends SeedUtility
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
             static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
-            throw new \CHttpException( HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').' );
+            throw new \CHttpException(
+                HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
+            );
         }
 
         //	What has it gots in its pocketses? Cookies first, then session
-        $_privateKey = FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
+        $_privateKey =
+            FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $_host );
 
         $_dbConfigFileName = str_ireplace(
@@ -172,8 +179,8 @@ class Fabric extends SeedUtility
             }
 
             if ( is_object(
-                     $_response
-                 ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
+                    $_response
+                ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
             )
             {
                 static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
@@ -331,6 +338,38 @@ class Fabric extends SeedUtility
     protected static function _errorLog( $message, $context = array() )
     {
         Log::error( $message, $context );
+    }
+
+    /**
+     * @return \stdClass|string
+     */
+    public static function getPlatformStates()
+    {
+        $_response = Curl::get( static::DEFAULT_ENDPOINT . '/instance/state/' . \Kisma::get( 'platform.dsp_name' ) );
+
+        Log::debug( 'Getting platform states: ' . print_r( $_response, true ) );
+
+        return $_response;
+    }
+
+    /**
+     * @param int $state The platform's ready state
+     *
+     * @return bool|mixed|\stdClass
+     */
+    public static function setPlatformReadyState( $state )
+    {
+        return Curl::post( static::DEFAULT_ENDPOINT . '/instance/readyState', array('state' => $state) );
+    }
+
+    /**
+     * @param int $state The platform's state (not_activated, activated, maintenance, etc.)
+     *
+     * @return bool|mixed|\stdClass
+     */
+    public static function setPlatformState( $state )
+    {
+        return Curl::post( static::DEFAULT_ENDPOINT . '/instance/platformState', array('state' => $state) );
     }
 }
 
