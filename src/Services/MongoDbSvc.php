@@ -167,7 +167,7 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_coll;
     }
 
-    public function correctTableName( $name )
+    public function correctTableName( &$name )
     {
         static $_existing = null;
 

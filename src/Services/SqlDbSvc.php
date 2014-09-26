@@ -3226,7 +3226,13 @@ class SqlDbSvc extends BaseDbSvc
 
         $this->checkForNativeSystemTable( $table );
 
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+
         SqlDbUtilities::dropTable( $this->_dbConn, $table );
+
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
 
         SqlDbUtilities::removeSchemaExtrasForTables( $this->getServiceId(), $table );
     }
@@ -3244,6 +3250,9 @@ class SqlDbSvc extends BaseDbSvc
         $this->checkForNativeSystemTable( $table );
 
         SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
+
+        //  Any changes here should refresh cached schema
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
 
         SqlDbUtilities::removeSchemaExtrasForFields( $this->getServiceId(), $table, $field );
     }

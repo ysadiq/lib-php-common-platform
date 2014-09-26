@@ -174,7 +174,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function correctTableName( $name  )
+    public function correctTableName( &$name  )
     {
         static $_existing = null;
 

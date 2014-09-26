@@ -136,7 +136,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@InheritDoc}
      */
-    public function correctTableName( $name )
+    public function correctTableName( &$name )
     {
         static $_existing = null;
 
