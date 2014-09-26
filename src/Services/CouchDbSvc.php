@@ -207,7 +207,7 @@ class CouchDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $table, $properties = array(), $check_exist = false )
+    public function createTable( $table, $properties = array(), $check_exist = false, $return_schema = false )
     {
         if ( empty( $table ) )
         {
@@ -233,7 +233,7 @@ class CouchDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false, $return_schema = false )
     {
         if ( empty( $table ) )
         {

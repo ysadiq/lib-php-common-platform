@@ -67,7 +67,7 @@ abstract class NoSqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    public function createField( $table, $field, $properties = array(), $check_exist = false, $return_schema = false )
     {
         throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
     }
@@ -75,7 +75,7 @@ abstract class NoSqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false, $return_schema = false )
     {
         throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
     }
