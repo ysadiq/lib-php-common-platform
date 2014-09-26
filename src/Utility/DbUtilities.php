@@ -502,6 +502,7 @@ class DbUtilities
                 return 'float';
 
             case 'string':
+            case 'text':
                 return 'string';
         }
 
@@ -563,6 +564,9 @@ class DbUtilities
             case 'boolean':
             case 'bool':
                 return Scalar::boolval( $value );
+
+            case 'string':
+                return strval( $value );
         }
 
         return $value;

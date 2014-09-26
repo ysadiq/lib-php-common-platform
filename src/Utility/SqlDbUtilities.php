@@ -822,9 +822,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
             case 'string':
                 return \PDO::PARAM_STR;
-
-            case 'decimal':
-            case 'float':
                 break;
         }
 
@@ -1120,6 +1117,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
                 break;
             case 'user_id':
+                $definition = 'int';
+                break;
             case 'user_id_on_create':
             case 'user_id_on_update':
                 $definition = 'int';

@@ -137,8 +137,7 @@ class SqlDbSvc extends BaseDbSvc
                     'enableProfiling'       => defined( YII_DEBUG ),
                     'enableParamLogging'    => defined( YII_DEBUG ),
                     'schemaCachingDuration' => 3600,
-                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE )
-                            ? static::REMOTE_CACHE_ID : 'cache',
+                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
                 )
             );
 
@@ -309,9 +308,7 @@ class SqlDbSvc extends BaseDbSvc
                     throw new NotFoundException( "Table '$name' not found." );
                 }
 
-                throw new BadRequestException( "Use of the prefix '" .
-                                               SystemManager::SYSTEM_TABLE_PREFIX .
-                                               "' is not allowed." );
+                throw new BadRequestException( "Use of the prefix '" . SystemManager::SYSTEM_TABLE_PREFIX . "' is not allowed." );
             }
         }
     }
@@ -397,8 +394,7 @@ class SqlDbSvc extends BaseDbSvc
                         {
                             $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
                             $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
-                            $_relations[] =
-                                array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
+                            $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
                         }
 
                         $this->_requestPayload['related'] = $_relations;
@@ -422,8 +418,7 @@ class SqlDbSvc extends BaseDbSvc
         $_exclude = ( $this->_isNative ) ? SystemManager::SYSTEM_TABLE_PREFIX : null;
 
         $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
-        $_extras =
-            SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
+        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
 
         $_tables = array();
         foreach ( $_names as $name )
@@ -612,8 +607,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -893,9 +887,9 @@ class SqlDbSvc extends BaseDbSvc
                 $_name = Option::get( $_binding, 'name' );
                 $_type = Option::get( $_binding, 'php_type' );
                 $_value = Option::get( $_dummy, $_name );
-                if ( 'float' == $_type )
+                if ( !is_null( $_type ) && !is_null( $_value ) )
                 {
-                    $_value = floatval( $_value );
+                    $_value = SqlDbUtilities::formatValue( $_value, $_type );
                 }
                 $_temp[$_name] = $_value;
             }
@@ -1160,7 +1154,7 @@ class SqlDbSvc extends BaseDbSvc
                         /** validations **/
 
                         $_validations = Option::get( $_fieldInfo, 'validation' );
-                        if ( !empty($_validations) && is_string( $_validations ) )
+                        if ( !empty( $_validations ) && is_string( $_validations ) )
                         {
                             // backwards compatible with old strings
                             $_validations = array_map( 'trim', explode( ',', $_validations ) );
@@ -1417,14 +1411,13 @@ class SqlDbSvc extends BaseDbSvc
             }
             // find the type
             $field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
-            $dbType = Option::get( $field_info, 'db_type', '' );
-            $type = Option::get( $field_info, 'type', '' );
+            $dbType = Option::get( $field_info, 'db_type' );
+            $type = Option::get( $field_info, 'type' );
+            $allowsNull = Option::getBool( $field_info, 'allow_null' );
+            $pdoType = ( $allowsNull ) ? null : SqlDbUtilities::determinePdoBindingType( $type );
+            $phpType = ( is_null( $pdoType ) ) ? SqlDbUtilities::determinePhpConversionType( $type ) : null;
 
-            $bindArray[] = array(
-                'name'     => $field,
-                'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type ),
-                'php_type' => SqlDbUtilities::determinePhpConversionType( $type ),
-            );
+            $bindArray[] = array('name' => $field, 'pdo_type' => $pdoType, 'php_type' => $phpType);
 
             // todo fix special cases - maybe after retrieve
             switch ( $dbType )
@@ -1597,8 +1590,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = Option::get( $_criteria, 'where' );
                 $_params = Option::get( $_criteria, 'params', array() );
 
-                $relatedRecords =
-                    $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $relatedRecords = $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( !empty( $relatedRecords ) )
                 {
                     return Option::get( $relatedRecords, 0 );
@@ -1967,8 +1959,7 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
             $_params[":f_$one_field"] = $one_id;
-            $maps =
-                $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            $maps = $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
             unset( $maps['meta'] );
 
             $createMap = array(); // map records to create
@@ -2147,8 +2138,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage(
-            )}" );
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -2181,7 +2171,7 @@ class SqlDbSvc extends BaseDbSvc
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
             }
 
-            switch ($_op)
+            switch ( $_op )
             {
                 case 'is null':
                 case 'is not null':
@@ -2531,9 +2521,7 @@ class SqlDbSvc extends BaseDbSvc
                         );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" .
-                                                         print_r( $id, true ) .
-                                                         "' not found." );
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
                         }
                     }
                 }
@@ -2584,9 +2572,7 @@ class SqlDbSvc extends BaseDbSvc
                     );
                     if ( empty( $_result ) )
                     {
-                        throw new NotFoundException( "Record with identifier '" .
-                                                     print_r( $id, true ) .
-                                                     "' not found." );
+                        throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
                     }
 
                     $_out = $_result[0];
@@ -2614,9 +2600,7 @@ class SqlDbSvc extends BaseDbSvc
                         );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" .
-                                                         print_r( $id, true ) .
-                                                         "' not found." );
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
                         }
                     }
                 }
@@ -2640,8 +2624,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result =
-                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2741,8 +2724,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result =
-                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2862,8 +2844,7 @@ class SqlDbSvc extends BaseDbSvc
                                 if ( !$_found )
                                 {
                                     $_errors[] = $_index;
-                                    $_out[$_index] =
-                                        "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                    $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                                 }
                             }
                         }
@@ -3005,8 +2986,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database tables.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database tables.\n" . $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -3035,8 +3015,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database table '$table'.\n" . $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -3064,8 +3043,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" . $ex->getMessage(), $ex->getCode() );
         }
     }
 

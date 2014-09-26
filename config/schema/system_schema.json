@@ -232,7 +232,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "SET NULL",
 					"allow_null":    true
 				},
@@ -241,7 +240,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_role",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "SET NULL",
 					"allow_null":    true
 				},
@@ -352,7 +350,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "SET NULL",
 					"allow_null":    true
 				},
@@ -586,7 +583,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_service",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "SET NULL",
 					"allow_null":    true
 				},
@@ -729,7 +725,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -738,7 +733,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app_group",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				}
@@ -756,7 +750,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -765,7 +758,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_role",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				}
@@ -783,7 +775,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_app",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -792,7 +783,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_service",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -815,7 +805,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_role",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -824,7 +813,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_service",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    true
 				},
@@ -886,7 +874,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_role",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -948,7 +935,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_role",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    true
 				},
@@ -957,7 +943,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_user",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    true
 				},
@@ -999,7 +984,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_service",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    true
 				},
@@ -1282,8 +1266,7 @@
 					"ref_table":     "df_sys_provider",
 					"ref_fields":    "id",
 					"validation":    "api_read_only",
-					"ref_on_delete": "CASCADE",
-					"ref_on_update": "CASCADE"
+					"ref_on_delete": "CASCADE"
 				},
 				{
 					"name":       "is_active",
@@ -1364,7 +1347,6 @@
 					"type":          "integer",
 					"ref_table":     "df_sys_user",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -1373,7 +1355,6 @@
 					"type":          "integer",
 					"ref_table":     "df_sys_provider",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -1429,7 +1410,6 @@
 					"type":          "integer",
 					"ref_table":     "df_sys_user",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    false
 				},
@@ -1552,7 +1532,6 @@
 					"type":          "reference",
 					"ref_table":     "df_sys_service",
 					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
 					"ref_on_delete": "CASCADE",
 					"allow_null":    true
 				},
