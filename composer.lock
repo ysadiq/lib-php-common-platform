@@ -269,9 +269,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -679,16 +679,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.62",
+            "version": "0.2.63",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "9218cbdcf6ea2016c1575e4abfa81595b33be85b"
+                "reference": "67e8fe6b3aaeca170a3149dac69fda7e104e86f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/9218cbdcf6ea2016c1575e4abfa81595b33be85b",
-                "reference": "9218cbdcf6ea2016c1575e4abfa81595b33be85b",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/67e8fe6b3aaeca170a3149dac69fda7e104e86f7",
+                "reference": "67e8fe6b3aaeca170a3149dac69fda7e104e86f7",
                 "shasum": ""
             },
             "require": {
@@ -733,7 +733,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-09-10 17:47:55"
+            "time": "2014-09-26 15:26:23"
         },
         {
             "name": "monolog/monolog",
