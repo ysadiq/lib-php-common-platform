@@ -38,6 +38,15 @@ use Kisma\Core\Utility\Scalar;
  */
 class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 {
+    //******************************************************************************
+    //* Constants
+    //******************************************************************************
+
+    /**
+     * @type int The default string length for new columns
+     */
+    const DEFAULT_STRING_LENGTH = 255;
+
     //*************************************************************************
     //	Members
     //*************************************************************************
@@ -1031,6 +1040,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         if ( !empty( $old_field ) )
         {
             $_same = true;
+
             foreach ( $field as $_key => $_value )
             {
                 switch ( strtolower( $_key ) )
@@ -1051,6 +1061,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         break;
                 }
             }
+
             if ( $_same )
             {
                 return null;
@@ -1087,10 +1098,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             case 'pk':
             case 'id':
                 return 'pk'; // simple primary key, bail here
-                break;
+
             case 'reference':
                 $definition = 'int';
                 break;
+
             case 'timestamp_on_create':
             case 'timestamp_on_update':
                 $definition = 'timestamp';
@@ -1111,11 +1123,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                             break;
                     }
                 }
+
                 if ( !isset( $field['allow_null'] ) )
                 {
                     $allowNull = false;
                 }
                 break;
+
             case 'user_id':
                 $definition = 'int';
                 break;
@@ -1127,6 +1141,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $allowNull = false;
                 }
                 break;
+
             case 'boolean':
                 if ( isset( $default ) )
                 {
@@ -1192,52 +1207,45 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $default = floatval( $default );
                 }
                 break;
+
             case 'string':
                 $length = Option::get( $field, 'length', Option::get( $field, 'size' ) );
-                $fixed = Option::getBool( $field, 'fixed_length' );
+
+                if ( !$length && !( $fixed = Option::getBool( $field, 'fixed_length' ) ) )
+                {
+                    $length = static::DEFAULT_STRING_LENGTH;
+                }
+
                 $national = Option::getBool( $field, 'supports_multibyte' );
-                if ( $fixed )
+
+                switch ( $driver_type )
                 {
-                    switch ( $driver_type )
-                    {
-                        case SqlDbUtilities::DRV_SQLSRV:
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_MYSQL:
-                        case SqlDbUtilities::DRV_OCSQL:
-                            $definition = ( $national ) ? 'nchar' : 'char';
-                            break;
-                        case SqlDbUtilities::DRV_PGSQL:
-                            $definition = ( $national ) ? 'national char' : 'char';
-                            break;
-                        default:
-                            break;
-                    }
+                    case SqlDbUtilities::DRV_MYSQL:
+                        $definition = ( $national ) ? 'nvarchar' : 'varchar';
+                        break;
+
+                    case SqlDbUtilities::DRV_SQLSRV:
+                    case SqlDbUtilities::DRV_DBLIB:
+                    case SqlDbUtilities::DRV_OCSQL:
+                        $definition = ( $national ) ? 'nchar' : 'char';
+                        break;
+
+                    case SqlDbUtilities::DRV_PGSQL:
+                        $definition = ( $national ) ? 'national char' : 'char';
+                        break;
+
+                    default:
+                        break;
                 }
-                elseif ( $national )
-                {
-                    switch ( $driver_type )
-                    {
-                        case SqlDbUtilities::DRV_SQLSRV:
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_MYSQL:
-                            $definition = 'nvarchar';
-                            break;
-                        case SqlDbUtilities::DRV_PGSQL:
-                            $definition = 'national varchar';
-                            break;
-                        case SqlDbUtilities::DRV_OCSQL:
-                            $definition = 'nvarchar2';
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                if ( isset( $length ) )
+
+                if ( !empty( $length ) )
                 {
                     $definition .= "($length)";
                 }
+
                 $quoteDefault = true;
                 break;
+
             case 'binary':
                 $length = Option::get( $field, 'length', Option::get( $field, 'size' ) );
                 $fixed = Option::getBool( $field, 'fixed_length' );
@@ -1260,24 +1268,28 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 break;
         }
 
-        // additional properties
+        //  Additional properties
+        $_props = array('default' => false, 'null' => false, 'pk' => false);
+
         if ( isset( $default ) )
         {
             if ( $quoteDefault )
             {
                 $default = "'" . $default . "'";
             }
-            $definition .= ' DEFAULT ' . $default;
+
+            $_props['default'] = 'DEFAULT ' . $default;
         }
+
         if ( $isPrimaryKey )
         {
-            $definition .= ' PRIMARY KEY';
+            $_props['pk'] = 'PRIMARY KEY';
         }
-        if ( !Scalar::boolval( $allowNull ) )
-        {
-            $definition .= ' NOT';
-        }
-        $definition .= ' NULL';
+
+        $_props['null'] = Scalar::boolval( $allowNull ) ? 'NULL' : 'NOT NULL';
+
+        //  Build the column properties
+        $definition .= ' ' . trim( ( $_props['null'] ?: null ) . ' ' . ( $_props['default'] ?: null ) . ' ' . ( $_props['pk'] ?: null ) );
 
         return $definition;
     }
@@ -1366,7 +1378,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $_oldForeignKey = Option::get( $_oldField, 'is_foreign_key', false );
             $_temp = array();
 
-            if ( null !== $_sql = Option::get( $field, 'sql', null, false, true ) )
+            if ( null !== ( $_sql = Option::get( $field, 'sql', null, false, true ) ) )
             {
                 // raw sql definition, just passing it on
                 if ( $_isAlter )
@@ -1394,88 +1406,88 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         $_columns[$_name] = $_definition;
                     }
 
-                $_type = strtolower( Option::get( $_field, 'type', '' ) );
+                    $_type = strtolower( Option::get( $_field, 'type', '' ) );
 
-                if ( ( 'id' == $_type ) || ( 'pk' == $_type ) || Option::getBool( $_field, 'is_primary_key' ) )
-                {
-                    if ( !empty( $_primaryKey ) && ( 0 != strcasecmp( $_primaryKey, $_name ) ) )
+                    if ( ( 'id' == $_type ) || ( 'pk' == $_type ) || Option::getBool( $_field, 'is_primary_key' ) )
                     {
-                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-                    }
+                        if ( !empty( $_primaryKey ) && ( 0 != strcasecmp( $_primaryKey, $_name ) ) )
+                        {
+                            throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
+                        }
 
-                    $_primaryKey = $_name;
-                }
-                elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
-                {
-                    // special case for references because the table referenced may not be created yet
-                    $refTable = Option::get( $_field, 'ref_table' );
-                    if ( empty( $refTable ) )
-                    {
-                        throw new BadRequestException( "Invalid schema detected - no table element for reference type of $_name." );
+                        $_primaryKey = $_name;
                     }
-                    $refColumns = Option::get( $_field, 'ref_fields', 'id' );
-                    $refOnDelete = Option::get( $_field, 'ref_on_delete' );
-                    $refOnUpdate = Option::get( $_field, 'ref_on_update' );
+                    elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
+                    {
+                        // special case for references because the table referenced may not be created yet
+                        $refTable = Option::get( $_field, 'ref_table' );
+                        if ( empty( $refTable ) )
+                        {
+                            throw new BadRequestException( "Invalid schema detected - no table element for reference type of $_name." );
+                        }
+                        $refColumns = Option::get( $_field, 'ref_fields', 'id' );
+                        $refOnDelete = Option::get( $_field, 'ref_on_delete' );
+                        $refOnUpdate = Option::get( $_field, 'ref_on_update' );
 
-                    // will get to it later, $refTable may not be there
-                    $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
-                    if ( !$_isAlter || !$_oldForeignKey )
-                    {
-                        $_references[] = array(
-                            'name'       => $_keyName,
-                            'table'      => $table_name,
-                            'column'     => $_name,
-                            'ref_table'  => $refTable,
-                            'ref_fields' => $refColumns,
-                            'delete'     => $refOnDelete,
-                            'update'     => $refOnUpdate
-                        );
+                        // will get to it later, $refTable may not be there
+                        $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
+                        if ( !$_isAlter || !$_oldForeignKey )
+                        {
+                            $_references[] = array(
+                                'name'       => $_keyName,
+                                'table'      => $table_name,
+                                'column'     => $_name,
+                                'ref_table'  => $refTable,
+                                'ref_fields' => $refColumns,
+                                'delete'     => $refOnDelete,
+                                'update'     => $refOnUpdate
+                            );
+                        }
                     }
-                }
-                elseif ( ( 'user_id_on_create' == $_type ) || ( 'user_id_on_update' == $_type ) )
-                { // && static::is_local_db()
-                    // special case for references because the table referenced may not be created yet
-                    $_temp['user_id_on_update'] = ( 'user_id_on_update' == $_type ) ? true : false;
-                    $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
-                    if ( !$_isAlter || !$_oldForeignKey )
-                    {
-                        $_references[] = array(
-                            'name'       => $_keyName,
-                            'table'      => $table_name,
-                            'column'     => $_name,
-                            'ref_table'  => 'df_sys_user',
-                            'ref_fields' => 'id',
-                            'delete'     => null,
-                            'update'     => null
-                        );
+                    elseif ( ( 'user_id_on_create' == $_type ) || ( 'user_id_on_update' == $_type ) )
+                    { // && static::is_local_db()
+                        // special case for references because the table referenced may not be created yet
+                        $_temp['user_id_on_update'] = ( 'user_id_on_update' == $_type ) ? true : false;
+                        $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
+                        if ( !$_isAlter || !$_oldForeignKey )
+                        {
+                            $_references[] = array(
+                                'name'       => $_keyName,
+                                'table'      => $table_name,
+                                'column'     => $_name,
+                                'ref_table'  => 'df_sys_user',
+                                'ref_fields' => 'id',
+                                'delete'     => null,
+                                'update'     => null
+                            );
+                        }
                     }
-                }
-                elseif ( 'user_id' == $_type )
-                { // && static::is_local_db()
-                    // special case for references because the table referenced may not be created yet
-                    $_temp['user_id'] = true;
-                    $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
-                    if ( !$_isAlter || !$_oldForeignKey )
-                    {
-                        $_references[] = array(
-                            'name'       => $_keyName,
-                            'table'      => $table_name,
-                            'column'     => $_name,
-                            'ref_table'  => 'df_sys_user',
-                            'ref_fields' => 'id',
-                            'delete'     => null,
-                            'update'     => null
-                        );
+                    elseif ( 'user_id' == $_type )
+                    { // && static::is_local_db()
+                        // special case for references because the table referenced may not be created yet
+                        $_temp['user_id'] = true;
+                        $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
+                        if ( !$_isAlter || !$_oldForeignKey )
+                        {
+                            $_references[] = array(
+                                'name'       => $_keyName,
+                                'table'      => $table_name,
+                                'column'     => $_name,
+                                'ref_table'  => 'df_sys_user',
+                                'ref_fields' => 'id',
+                                'delete'     => null,
+                                'update'     => null
+                            );
+                        }
                     }
-                }
-                elseif ( 'timestamp_on_create' == $_type )
-                {
-                    $_temp['timestamp_on_update'] = false;
-                }
-                elseif ( 'timestamp_on_update' == $_type )
-                {
-                    $_temp['timestamp_on_update'] = true;
-                }
+                    elseif ( 'timestamp_on_create' == $_type )
+                    {
+                        $_temp['timestamp_on_update'] = false;
+                    }
+                    elseif ( 'timestamp_on_update' == $_type )
+                    {
+                        $_temp['timestamp_on_update'] = true;
+                    }
                 }
             }
 
@@ -1513,7 +1525,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             {
                 $_values = array_map( 'trim', explode( ',', trim( $_values, ',' ) ) );
             }
-            if ( !empty( $_values ) && ($_values != Option::get( $_oldField, 'value')))
+            if ( !empty( $_values ) && ( $_values != Option::get( $_oldField, 'value' ) ) )
             {
                 $_picklist = '';
                 foreach ( $_values as $_value )
@@ -1532,13 +1544,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
             // labels
             $_label = Option::get( $_field, 'label' );
-            if ( !empty( $_label ) && ($_label != Option::get( $_oldField, 'label')))
+            if ( !empty( $_label ) && ( $_label != Option::get( $_oldField, 'label' ) ) )
             {
                 $_temp['label'] = $_label;
             }
 
             $_validation = Option::get( $_field, 'validation' );
-            if ( !empty( $_validation )  && ($_validation != Option::get( $_oldField, 'validation')))
+            if ( !empty( $_validation ) && ( $_validation != Option::get( $_oldField, 'validation' ) ) )
             {
                 $_temp['validation'] = json_encode( $_validation );
             }
@@ -1778,8 +1790,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $_plural = Option::get( $data, 'plural' );
         if ( !is_null( $_label ) || !is_null( $_plural ) )
         {
-            if ( ( $_label != Option::get( $old_schema, 'label' ) ) &&
-                 ( $_plural != Option::get( $old_schema, 'plural' ) ) )
+            if ( ( $_label != Option::get( $old_schema, 'label' ) ) && ( $_plural != Option::get( $old_schema, 'plural' ) ) )
             {
                 $_labels[] = array(
                     'table'  => $table_name,
@@ -1805,7 +1816,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     protected static function determineGenericType( $column )
     {
         $_simpleType = strstr( $column->dbType, '(', true );
-        $_simpleType = strtolower( $_simpleType ? : $column->dbType );
+        $_simpleType = strtolower( $_simpleType ?: $column->dbType );
 
         switch ( $_simpleType )
         {

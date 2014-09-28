@@ -151,7 +151,7 @@ class SystemManager extends BaseSystemRestService
     /**
      * Determines the current state of the system
      *
-     * @return string
+     * @return int
      */
     public static function getSystemState()
     {

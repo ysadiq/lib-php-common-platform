@@ -16,6 +16,8 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Interfaces\PlatformStates;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpResponse;
@@ -130,15 +132,15 @@ class Fabric extends SeedUtility
     }
 
     /**
+     * Initialization for hosted DSPs
+     *
      * @throws \CHttpException
      * @return array|mixed
-     * @throws RuntimeException
-     * @throws CHttpException
+     * @throws \RuntimeException
+     * @throws \CHttpException
      */
     public static function initialize()
     {
-        global $_dbName, $_instance, $_dspName;
-
         //	If this isn't a cloud request, bail
         $_host = static::getHostName();
 
@@ -150,124 +152,23 @@ class Fabric extends SeedUtility
             );
         }
 
-        //	What has it gots in its pocketses? Cookies first, then session
-        $_privateKey =
-            FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
-        $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $_host );
-
-        $_dbConfigFileName = str_ireplace(
-            '%%INSTANCE_NAME%%',
-            $_dspName,
-            static::DSP_DB_CONFIG_FILE_NAME_PATTERN
-        );
-
-        //	Try and get them from server...
-        if ( false === ( list( $_settings, $_instance ) = static::_checkCache( $_host ) ) )
-        {
-            //	Otherwise we need to build it.
-            $_parts = explode( '.', $_host );
-            $_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
-
-            //	Otherwise, get the credentials from the auth server...
-            $_response = Curl::get( static::DEFAULT_AUTH_ENDPOINT . '/' . $_dspName . '/database' );
-
-            if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
-            {
-                static::_errorLog( 'DB Credential pull failure. Redirecting to df.com: ' . $_host );
-                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
-                exit();
-            }
-
-            if ( is_object(
-                    $_response
-                ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
-            )
-            {
-                static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
-                throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
-            }
-
-            if ( !$_response || !is_object( $_response ) || false == $_response->success )
-            {
-                static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
-                throw new \CHttpException( HttpResponse::InternalServerError, 'Cannot connect to authentication service' );
-            }
-
-            $_instance = $_cache = $_response->details;
-            $_dbName = $_instance->db_name;
-            $_dspName = $_instance->instance->instance_name_text;
-
-            $_privatePath = $_cache->private_path;
-            $_privateKey = basename( dirname( $_privatePath ) );
-
-            //	Stick this in persistent storage
-            \Kisma::set(
-                array(
-                    'dsp.credentials'              => $_cache,
-                    'platform.dsp_name'            => $_dspName,
-                    'platform.private_path'        => $_privatePath,
-                    'platform.storage_key'         => $_instance->storage_key,
-                    'platform.private_storage_key' => $_privateKey,
-                    'platform.db_config_file'      => $_privatePath . '/' . $_dbConfigFileName,
-                    'platform.db_config_file_name' => $_dbConfigFileName,
-                )
-            );
-
-            /** @noinspection PhpIncludeInspection */
-            //	File should be there from provisioning... If not, tenemos una problema!
-            $_settings = require( $_privatePath . '/' . $_dbConfigFileName );
-
-            if ( !empty( $_settings ) )
-            {
-                setcookie( static::FigNewton, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
-                $_settings = static::_cacheSettings( $_host, $_settings, $_instance );
-            }
-        }
-
-        //	Save it for later (don't run away and let me down <== extra points if you get the reference)
-        setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
+        $_settings = static::_getDatabaseConfig( $_host );
 
         if ( !empty( $_settings ) )
         {
             return $_settings;
         }
 
+        setcookie( static::PrivateFigNewton, '', 0, '/' );
         throw new \CHttpException( HttpResponse::BadRequest, 'Unable to find database configuration' );
-    }
-
-    /**
-     * @param string $host
-     *
-     * @return bool|mixed
-     */
-    protected static function _checkCache( $host )
-    {
-        //	See if file is available and return it, or expire it...
-        if ( file_exists( $_cacheFile = static::_cacheFileName( $host ) ) )
-        {
-            //	No session or expired?
-            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
-            {
-                @unlink( $_cacheFile );
-
-                return false;
-            }
-
-            if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
-            {
-                return array($_data['settings'], $_data['instance']);
-            }
-        }
-
-        return false;
     }
 
     /**
      * Writes the cache file out to disk
      *
-     * @param string   $host
-     * @param array    $settings
-     * @param stdClass $instance
+     * @param string    $host
+     * @param array     $settings
+     * @param \stdClass $instance
      *
      * @return mixed
      */
@@ -341,35 +242,210 @@ class Fabric extends SeedUtility
     }
 
     /**
+     * @param string $host
+     *
+     * @return mixed|string
+     * @throws \CHttpException
+     */
+    protected static function _getDatabaseConfig( $host )
+    {
+        //	What has it gots in its pocketses? Cookies first, then session
+        $_privateKey =
+            FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
+        $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $host );
+
+        $_dbConfigFileName = str_ireplace(
+            '%%INSTANCE_NAME%%',
+            $_dspName,
+            static::DSP_DB_CONFIG_FILE_NAME_PATTERN
+        );
+
+        //	Try and get them from server...
+        if ( false === ( list( $_settings, $_instance ) = static::_checkCache( $host ) ) )
+        {
+            //	Otherwise we need to build it.
+            $_parts = explode( '.', $host );
+            $_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
+
+            //	Otherwise, get the credentials from the auth server...
+            $_response = Curl::get( static::DEFAULT_AUTH_ENDPOINT . '/' . $_dspName . '/database' );
+
+            if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
+            {
+                static::_errorLog( 'DB Credential pull failure. Redirecting to df.com: ' . $host );
+                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
+                exit( 1 );
+            }
+
+            if ( is_object( $_response ) &&
+                isset( $_response->details, $_response->details->code ) &&
+                HttpResponse::NotFound == $_response->details->code
+            )
+            {
+                static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
+                throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
+            }
+
+            if ( !$_response || !is_object( $_response ) || false == $_response->success )
+            {
+                static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
+                throw new \CHttpException( HttpResponse::InternalServerError, 'Cannot connect to authentication service' );
+            }
+
+            $_instance = $_cache = $_response->details;
+            $_dbName = $_instance->db_name;
+            $_dspName = $_instance->instance->instance_name_text;
+
+            $_privatePath = $_cache->private_path;
+            $_privateKey = basename( dirname( $_privatePath ) );
+            $_dbConfigFile = $_privatePath . '/' . $_dbConfigFileName;
+
+            //	Stick this in persistent storage
+            $_systemOptions = array(
+                'dsp.credentials'              => $_cache,
+                'dsp.db_name'                  => $_dbName,
+                'platform.dsp_name'            => $_dspName,
+                'platform.private_path'        => $_privatePath,
+                'platform.storage_key'         => $_instance->storage_key,
+                'platform.private_storage_key' => $_privateKey,
+                'platform.db_config_file'      => $_dbConfigFile,
+                'platform.db_config_file_name' => $_dbConfigFileName,
+                PlatformStates::STATE_KEY      => SystemManager::getSystemState( false ),
+            );
+
+            \Kisma::set( $_systemOptions );
+
+            //	File should be there from provisioning... If not, tenemos una problema!
+            if ( !file_exists( $_dbConfigFile ) )
+            {
+                static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
+                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
+                exit( 1 );
+            }
+
+            /** @noinspection PhpIncludeInspection */
+            $_settings = require( $_dbConfigFile );
+
+            if ( !empty( $_settings ) )
+            {
+                //	Save it for later (don't run away and let me down <== extra points if you get the reference)
+                setcookie( static::FigNewton, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
+                setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
+
+                $_settings = static::_cacheSettings( $host, $_settings, $_instance );
+            }
+            else
+            {
+                //  Clear cookies
+                setcookie( static::FigNewton, '', 0, '/' );
+                setcookie( static::PrivateFigNewton, '', 0, '/' );
+            }
+        }
+
+        return $_settings;
+    }
+
+    /**
+     * @param string $host
+     *
+     * @return bool|mixed
+     */
+    protected static function _checkCache( $host )
+    {
+        //	See if file is available and return it, or expire it...
+        if ( file_exists( $_cacheFile = static::_cacheFileName( $host ) ) )
+        {
+            //	No session or expired?
+            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
+            {
+                @unlink( $_cacheFile );
+
+                return false;
+            }
+
+            if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
+            {
+                return array($_data['settings'], $_data['instance']);
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $dspName
+     *
      * @return \stdClass|string
      */
-    public static function getPlatformStates()
+    public static function getPlatformStates( $dspName = null )
     {
-        $_response = Curl::get( static::DEFAULT_ENDPOINT . '/instance/state/' . \Kisma::get( 'platform.dsp_name' ) );
+        $dspName = $dspName ?: \Kisma::get( 'platform.dsp_name' );
 
-        Log::debug( 'Getting platform states: ' . print_r( $_response, true ) );
+        if ( false === ( $_response = Curl::get( static::DEFAULT_ENDPOINT . '/instance/state/' . $dspName ) ) )
+        {
+            return false;
+        }
 
-        return $_response;
+        Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
+
+        return $_response->details;
     }
 
     /**
-     * @param int $state The platform's ready state
+     * @param string $stateName The state to change
+     * @param int    $state     The state value
      *
      * @return bool|mixed|\stdClass
      */
-    public static function setPlatformReadyState( $state )
+    public static function setInstanceState( $stateName, $state )
     {
-        return Curl::post( static::DEFAULT_ENDPOINT . '/instance/readyState', array('state' => $state) );
-    }
+        //  We do nothing on private installs
+        if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
+        {
+            return true;
+        }
 
-    /**
-     * @param int $state The platform's state (not_activated, activated, maintenance, etc.)
-     *
-     * @return bool|mixed|\stdClass
-     */
-    public static function setPlatformState( $state )
-    {
-        return Curl::post( static::DEFAULT_ENDPOINT . '/instance/platformState', array('state' => $state) );
+        $stateName = trim( strtolower( $stateName ) );
+
+        if ( 'ready' != $stateName && 'platform' != $stateName )
+        {
+            throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
+        }
+
+        //  Don't make unnecessary calls
+        if ( \Kisma::get( 'platform.' . $stateName ) == $state )
+        {
+            return true;
+        }
+
+        try
+        {
+            //  Called before DSP name is set
+            if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
+            {
+                return false;
+            }
+
+            $_result = Curl::post(
+                static::DEFAULT_ENDPOINT . '/state/' . $_instanceId,
+                array('instance_id' => $_instanceId, 'state_name' => $stateName, 'state' => $state)
+            );
+
+            if ( !$_result->success )
+            {
+                throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
+            }
+
+            \Kisma::set( 'platform.' . $stateName, $_result->details->{$stateName} );
+
+            return true;
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( $_ex->getMessage() );
+
+            return false;
+        }
     }
 }
 
@@ -377,7 +453,7 @@ class Fabric extends SeedUtility
 //* Check for maintenance mode...
 //********************************************************************************
 
-if ( Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) && is_file( Fabric::FABRIC_MARKER ) && is_file( Fabric::MAINTENANCE_MARKER ) )
+if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/ )
 {
     header( 'Location: ' . Fabric::MAINTENANCE_URI );
     die();

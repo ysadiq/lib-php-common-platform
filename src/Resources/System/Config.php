@@ -225,7 +225,7 @@ class Config extends BaseSystemRestResource
                 'upgrade_available'         => version_compare( $_currentVersion, $_latestVersion, '<' ),
                 //  CORS Support
                 'allowed_hosts'             => SystemManager::getAllowedHosts(),
-                //'states'                    => Fabric::getPlatformStates(),
+                'states'                    => Fabric::getPlatformStates(),
             );
 
             //  Get the login provider array
