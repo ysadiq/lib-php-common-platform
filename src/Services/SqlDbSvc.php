@@ -656,7 +656,7 @@ class SqlDbSvc extends BaseDbSvc
             $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
 
             // build filter string if necessary, add server-side filters if necessary
-            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters, $_fieldsInfo );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -767,7 +767,7 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             // build filter string if necessary, add server-side filters if necessary
-            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters, $_fieldsInfo );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -806,7 +806,7 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             // build filter string if necessary, add server-side filters if necessary
-            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters, $_fieldsInfo );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -879,14 +879,14 @@ class SqlDbSvc extends BaseDbSvc
         }
         $_reader->setFetchMode( \PDO::FETCH_BOUND );
         $_row = 0;
-        while ( false !== $_reader->read() )
+        while ( false !== $_read = $_reader->read() )
         {
             $_temp = array();
             foreach ( $bind_columns as $_binding )
             {
                 $_name = Option::get( $_binding, 'name' );
                 $_type = Option::get( $_binding, 'php_type' );
-                $_value = Option::get( $_dummy, $_name );
+                $_value = Option::get( $_dummy, $_name, Option::get( $_read, $_name ) );
                 if ( !is_null( $_type ) && !is_null( $_value ) )
                 {
                     $_value = SqlDbUtilities::formatValue( $_value, $_type );
@@ -1004,20 +1004,21 @@ class SqlDbSvc extends BaseDbSvc
      * @param string | array $filter     SQL WHERE clause filter string
      * @param array          $params     Array of substitution values
      * @param array          $ss_filters Server-side filters to apply
+     * @param array          $avail_fields All available fields for the table
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return mixed
      */
-    protected function _convertFilterToNative( $filter, $params = array(), $ss_filters = array() )
+    protected function _convertFilterToNative( $filter, $params = array(), $ss_filters = array(), $avail_fields = array() )
     {
         // interpret any parameter values as lookups
         $params = static::interpretRecordValues( $params );
+        $_fields = SqlDbUtilities::listAllFieldsFromDescribe( $avail_fields );
 
         if ( !is_array( $filter ) )
         {
-            // todo parse client filter?
             Session::replaceLookupsInStrings( $filter );
-            $_filterString = $filter;
+            $_filterString = $this->parseFilterString( $filter, $_fields );
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
             {
@@ -1054,6 +1055,85 @@ class SqlDbSvc extends BaseDbSvc
 
             return array('where' => $_filterArray, 'params' => $params);
         }
+    }
+
+    protected function parseFilterString( $filter, $field_list = null )
+    {
+        if ( empty( $filter ) )
+        {
+            return $filter;
+        }
+
+        $_search = array(' or ', ' and ', ' nor ');
+        $_replace = array(' OR ', ' AND ', ' NOR ');
+        $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
+
+        // handle logical operators first
+        $_ops = array_map( 'trim', explode( ' OR ', $filter ) );
+        if ( count( $_ops ) > 1 )
+        {
+            $_parts = array();
+            foreach ( $_ops as $_op )
+            {
+                $_parts[] = static::parseFilterString( $_op, $field_list );
+            }
+
+            return implode( ' OR ', $_parts );
+        }
+
+        $_ops = array_map( 'trim', explode( ' NOR ', $filter ) );
+        if ( count( $_ops ) > 1 )
+        {
+            $_parts = array();
+            foreach ( $_ops as $_op )
+            {
+                $_parts[] = static::parseFilterString( $_op, $field_list );
+            }
+
+            return implode( ' NOR ', $_parts );
+        }
+
+        $_ops = array_map( 'trim', explode( ' AND ', $filter ) );
+        if ( count( $_ops ) > 1 )
+        {
+            $_parts = array();
+            foreach ( $_ops as $_op )
+            {
+                $_parts[] = static::parseFilterString( $_op, $field_list );
+            }
+
+            return implode( ' AND ', $_parts );
+        }
+
+        // handle negation operator, i.e. starts with NOT?
+        if ( 0 == substr_compare( $filter, 'not ', 0, 4, true ) )
+        {
+//            $_parts = trim( substr( $filter, 4 ) );
+        }
+
+        // the rest should be comparison operators
+        $_search = array(' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ');
+        $_replace = array('=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=');
+        $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
+
+        // Note: order matters, watch '='
+        $_sqlOperators = array('!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ');
+        foreach ( $_sqlOperators as $_sqlOp )
+        {
+            $_ops = explode( $_sqlOp, $filter );
+            if ( count( $_ops ) > 1 )
+            {
+                $_field = trim( $_ops[0] );
+                if ( false !== array_search( $_field, $field_list ) )
+                {
+                    $_ops[0] = $this->_dbConn->quoteColumnName($_field) . ' ';
+                }
+
+                $filter = implode( $_sqlOp, $_ops );
+            }
+        }
+
+        return $filter;
     }
 
     /**
@@ -1093,6 +1173,9 @@ class SqlDbSvc extends BaseDbSvc
                             case SqlDbUtilities::DRV_SQLSRV:
                                 $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                                 break;
+                            case SqlDbUtilities::DRV_OCSQL:
+                                $_parsed[$_name] = new \CDbExpression( '(CURRENT_TIMESTAMP)' );
+                                break;
                             default:
                                 $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                                 break;
@@ -1105,6 +1188,9 @@ class SqlDbSvc extends BaseDbSvc
                         case SqlDbUtilities::DRV_DBLIB:
                         case SqlDbUtilities::DRV_SQLSRV:
                             $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
+                            break;
+                        case SqlDbUtilities::DRV_OCSQL:
+                            $_parsed[$_name] = new \CDbExpression( '(CURRENT_TIMESTAMP)' );
                             break;
                         default:
                             $_parsed[$_name] = new \CDbExpression( '(NOW())' );
@@ -1413,21 +1499,20 @@ class SqlDbSvc extends BaseDbSvc
             $field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
             $dbType = Option::get( $field_info, 'db_type' );
             $type = Option::get( $field_info, 'type' );
-            $allowsNull = Option::getBool( $field_info, 'allow_null' );
-            $pdoType = ( $allowsNull ) ? null : SqlDbUtilities::determinePdoBindingType( $type );
-            $phpType = ( is_null( $pdoType ) ) ? SqlDbUtilities::determinePhpConversionType( $type ) : null;
+            $pdoType = SqlDbUtilities::determinePdoBindingType( $type );
+            $phpType = SqlDbUtilities::determinePhpConversionType( $type );
 
             $bindArray[] = array('name' => $field, 'pdo_type' => $pdoType, 'php_type' => $phpType);
 
             // todo fix special cases - maybe after retrieve
-            switch ( $dbType )
+            switch ( $this->_driverType )
             {
-                case 'datetime':
-                case 'datetimeoffset':
-                    switch ( $this->_driverType )
+                case SqlDbUtilities::DRV_DBLIB:
+                case SqlDbUtilities::DRV_SQLSRV:
+                    switch ( $dbType )
                     {
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_SQLSRV:
+                        case 'datetime':
+                        case 'datetimeoffset':
                             if ( !$as_quoted_string )
                             {
                                 $context = $this->_dbConn->quoteColumnName( $context );
@@ -1435,18 +1520,9 @@ class SqlDbSvc extends BaseDbSvc
                             }
                             $out = "(CONVERT(nvarchar(30), $context, 127)) AS $out_as";
                             break;
-                        default:
-                            $out = $context;
-                            break;
-                    }
-                    break;
-                case 'geometry':
-                case 'geography':
-                case 'hierarchyid':
-                    switch ( $this->_driverType )
-                    {
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_SQLSRV:
+                        case 'geometry':
+                        case 'geography':
+                        case 'hierarchyid':
                             if ( !$as_quoted_string )
                             {
                                 $context = $this->_dbConn->quoteColumnName( $context );
@@ -1454,16 +1530,26 @@ class SqlDbSvc extends BaseDbSvc
                             }
                             $out = "($context.ToString()) AS $out_as";
                             break;
-                        default:
+                        default :
                             $out = $context;
+                            if ( !empty( $as ) )
+                            {
+                                $out .= ' AS ' . $out_as;
+                            }
                             break;
                     }
                     break;
-                default :
-                    $out = $context;
-                    if ( !empty( $as ) )
+                case SqlDbUtilities::DRV_OCSQL:
+                default:
+                    switch ( $dbType )
                     {
-                        $out .= ' AS ' . $out_as;
+                        default :
+                            $out = $context;
+                            if ( !empty( $as ) )
+                            {
+                                $out .= ' AS ' . $out_as;
+                            }
+                            break;
                     }
                     break;
             }
@@ -1586,7 +1672,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                 // build filter string if necessary, add server-side filters if necessary
-                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters );
+                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters, $_fieldsInfo );
                 $_where = Option::get( $_criteria, 'where' );
                 $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1606,7 +1692,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                 // build filter string if necessary, add server-side filters if necessary
-                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters );
+                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters, $_fieldsInfo );
                 $_where = Option::get( $_criteria, 'where' );
                 $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1627,7 +1713,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                     // build filter string if necessary, add server-side filters if necessary
-                    $_criteria = $this->_convertFilterToNative( "$joinLeftField = '$fieldVal'" );
+                    $_criteria = $this->_convertFilterToNative( "$joinLeftField = '$fieldVal'", array(), array(), $_fieldsInfo );
                     $_where = Option::get( $_criteria, 'where' );
                     $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1815,7 +1901,7 @@ class SqlDbSvc extends BaseDbSvc
                     // update existing and adopt new children
                     $_where = array();
                     $_params = array();
-                    $_where[] = "$_pkField = :f_$_pkField";
+                    $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) ." = :f_$_pkField";
 
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
@@ -1959,7 +2045,8 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
             $_params[":f_$one_field"] = $one_id;
-            $maps = $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            $_where = $this->_dbConn->quoteColumnName( $one_field ) . " = :f_$one_field";
+            $maps = $this->_recordQuery( $map_table, $_fields, $_where, $_params, $_bindings, null );
             unset( $maps['meta'] );
 
             $createMap = array(); // map records to create
@@ -2048,7 +2135,7 @@ class SqlDbSvc extends BaseDbSvc
 
                 $_where = array();
                 $_params = array();
-                $_where[] = "$pkManyField = :f_$pkManyField";
+                $_where[] = $this->_dbConn->quoteColumnName($pkManyField) . " = :f_$pkManyField";
 
                 $_serverFilter = $this->buildQueryStringFromData( $_ssManyFilters, true );
                 if ( !empty( $_serverFilter ) )
@@ -2111,7 +2198,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_ssMapFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $map_table );
                 $_where = array();
                 $_params = array();
-                $_where[] = "$one_field = '$one_id'";
+                $_where[] = $this->_dbConn->quoteColumnName( $one_field ) . " = '$one_id'";
                 $_where[] = array('in', $many_field, $deleteMap);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssMapFilters, true );
                 if ( !empty( $_serverFilter ) )
@@ -2397,14 +2484,14 @@ class SqlDbSvc extends BaseDbSvc
         {
             foreach ( $_idFields as $_name )
             {
-                $_where[] = "$_name = :f_$_name";
+                $_where[] = $this->_dbConn->quoteColumnName( $_name ) . " = :f_$_name";
                 $_params[":f_$_name"] = Option::get( $id, $_name );
             }
         }
         else
         {
             $_name = Option::get( $_idFields, 0 );
-            $_where[] = "$_name = :f_$_name";
+            $_where[] = $this->_dbConn->quoteColumnName( $_name ) . " = :f_$_name";
             $_params[":f_$_name"] = $id;
         }
 
