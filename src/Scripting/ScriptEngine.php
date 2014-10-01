@@ -25,7 +25,6 @@ use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
@@ -432,7 +431,7 @@ class ScriptEngine
     public static function enrobeScript( $engine, $script, array $exposedEvent = array(), array $exposedPlatform = array() )
     {
         $exposedEvent['__tag__'] = 'exposed_event';
-        $exposedPlatform['api'] = static::_getExposedApi( $engine );
+        $exposedPlatform['api'] = static::_getExposedApi();
 
         $engine->event = $exposedEvent;
         $engine->platform = $exposedPlatform;
@@ -440,16 +439,17 @@ class ScriptEngine
         $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
         $_enrobedScript = <<<JS
-        
+
 _wrapperResult = (function() {
 
     var _event = {$_jsonEvent};
 
 	try	{
             _event.script_result = (function(event, platform) {
-		
-			{$script};
-			
+
+            {$script}
+            ;
+
 		})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
@@ -562,7 +562,7 @@ JS;
         try
         {
             $_request = new Request( array(), array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
-            $_request->query->set( 'app_name', SystemManager::getCurrentAppName() );
+            $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
             $_request->server->set( 'REQUEST_METHOD', $method );
             $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
@@ -593,11 +593,9 @@ JS;
     }
 
     /**
-     * @param ScriptEngine $engine
-     *
      * @return \stdClass
      */
-    protected static function _getExposedApi( $engine = null )
+    protected static function _getExposedApi()
     {
         static $_api;
 
@@ -607,7 +605,6 @@ JS;
         }
 
         $_api = new \stdClass();
-        $_api->engine = $engine;
 
         $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
         {
@@ -644,7 +641,7 @@ JS;
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
         };
 
-        $_api->require = function ( $fileName )
+        $_api->includeUserScript = function ( $fileName )
         {
             $_fileName = Platform::getPrivatePath( '/scripts.user' ) . DIRECTORY_SEPARATOR . $fileName;
 
@@ -653,10 +650,7 @@ JS;
                 return false;
             }
 
-            if ( false !== ( $_contents = file_get_contents( Platform::getPrivatePath( '/scripts.user' ) . DIRECTORY_SEPARATOR . $fileName ) ) )
-            {
-                return $_contents;
-            }
+            return file_get_contents( Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts.user' ) . DIRECTORY_SEPARATOR . $fileName );
         };
 
         return $_api;
