@@ -25,6 +25,7 @@ use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
@@ -561,7 +562,7 @@ JS;
         try
         {
             $_request = new Request( array(), array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
-            $_request->query->set( 'app_name', 'dsp.scripting' );
+            $_request->query->set( 'app_name', SystemManager::getCurrentAppName() );
             $_request->query->set( 'path', $path );
             $_request->server->set( 'REQUEST_METHOD', $method );
             $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
