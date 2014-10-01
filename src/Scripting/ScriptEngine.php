@@ -432,7 +432,7 @@ class ScriptEngine
     public static function enrobeScript( $engine, $script, array $exposedEvent = array(), array $exposedPlatform = array() )
     {
         $exposedEvent['__tag__'] = 'exposed_event';
-        $exposedPlatform['api'] = static::_getExposedApi();
+        $exposedPlatform['api'] = static::_getExposedApi( $engine );
 
         $engine->event = $exposedEvent;
         $engine->platform = $exposedPlatform;
@@ -593,9 +593,11 @@ JS;
     }
 
     /**
+     * @param ScriptEngine $engine
+     *
      * @return \stdClass
      */
-    protected static function _getExposedApi()
+    protected static function _getExposedApi( $engine = null )
     {
         static $_api;
 
@@ -605,6 +607,7 @@ JS;
         }
 
         $_api = new \stdClass();
+        $_api->engine = $engine;
 
         $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
         {
@@ -639,6 +642,21 @@ JS;
         $_api->patch = function ( $path, $payload = null, $curlOptions = array() )
         {
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
+        };
+
+        $_api->require = function ( $fileName )
+        {
+            $_fileName = Platform::getPrivatePath( '/scripts.user' ) . DIRECTORY_SEPARATOR . $fileName;
+
+            if ( !file_exists( $_fileName ) )
+            {
+                return false;
+            }
+
+            if ( false !== ( $_contents = file_get_contents( Platform::getPrivatePath( '/scripts.user' ) . DIRECTORY_SEPARATOR . $fileName ) ) )
+            {
+                return $_contents;
+            }
         };
 
         return $_api;
