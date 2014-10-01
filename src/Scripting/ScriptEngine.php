@@ -25,7 +25,6 @@ use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
@@ -440,17 +439,26 @@ class ScriptEngine
         $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
         $_enrobedScript = <<<JS
-        
+
 _wrapperResult = (function() {
 
     var _event = {$_jsonEvent};
 
 	try	{
-            _event.script_result = (function(event, platform) {
-		
-			{$script};
-			
-		})(_event, DSP.platform);
+        _event.script_result = (function(event, platform) {
+
+            var include = function( fileName ) {
+                var _contents;
+
+                if ( false === ( _contents = platform.api.includeUserScript(fileName) ) ) {
+                    throw 'User script "' + fileName + '" not found.';
+                }
+
+                return _contents;
+            };
+
+            {$script};
+    	})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
 		_event.script_result = {error:_ex.message};
@@ -562,7 +570,7 @@ JS;
         try
         {
             $_request = new Request( array(), array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
-            $_request->query->set( 'app_name', SystemManager::getCurrentAppName() );
+            $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
             $_request->server->set( 'REQUEST_METHOD', $method );
             $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
@@ -639,6 +647,18 @@ JS;
         $_api->patch = function ( $path, $payload = null, $curlOptions = array() )
         {
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
+        };
+
+        $_api->includeUserScript = function ( $fileName )
+        {
+            $_fileName = Platform::getPrivatePath( '/scripts.user' ) . DIRECTORY_SEPARATOR . $fileName;
+
+            if ( !file_exists( $_fileName ) )
+            {
+                return false;
+            }
+
+            return file_get_contents( Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts.user' ) . DIRECTORY_SEPARATOR . $fileName );
         };
 
         return $_api;
