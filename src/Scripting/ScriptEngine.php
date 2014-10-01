@@ -445,12 +445,20 @@ _wrapperResult = (function() {
     var _event = {$_jsonEvent};
 
 	try	{
-            _event.script_result = (function(event, platform) {
+        _event.script_result = (function(event, platform) {
 
-            {$script}
-            ;
+            var include = function( fileName ) {
+                var _contents;
 
-		})(_event, DSP.platform);
+                if ( false === ( _contents = platform.api.includeUserScript(fileName) ) ) {
+                    throw 'User script "' + fileName + '" not found.';
+                }
+
+                return _contents;
+            };
+
+            {$script};
+    	})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
 		_event.script_result = {error:_ex.message};
