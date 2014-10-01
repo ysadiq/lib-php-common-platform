@@ -151,6 +151,16 @@ class Session extends BasePlatformRestResource
      */
     protected static function _getSession( $ticket = null )
     {
+        $_result = static::getSessionData( $ticket );
+        static::$_cache = Option::get( $_result, 'cached' );
+        Pii::setState( 'cached', static::$_cache );
+
+        //	Additional stuff for session - launchpad mainly
+        return static::addSessionExtras( $_result, true );
+    }
+
+    public static function getSessionData( $ticket = null )
+    {
         try
         {
             $_user = null;
@@ -165,12 +175,7 @@ class Session extends BasePlatformRestResource
                 $_userId = static::validateSession();
             }
 
-            $_result = static::generateSessionDataFromUser( $_userId, $_user );
-            static::$_cache = Option::get( $_result, 'cached' );
-            Pii::setState( 'cached', static::$_cache );
-
-            //	Additional stuff for session - launchpad mainly
-            return static::addSessionExtras( $_result, true );
+            return static::generateSessionDataFromUser( $_userId, $_user );
         }
         catch ( \Exception $_ex )
         {
@@ -190,10 +195,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( $_config->allow_guest_user )
                 {
-                    $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
-
-                    // additional stuff for session - launchpad mainly
-                    return static::addSessionExtras( $_result, true );
+                    return static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
                 }
             }
 
