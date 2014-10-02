@@ -269,9 +269,9 @@
             ],
             "authors": [
                 {
-                    "name": "Sykes, Jason",
+                    "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -327,12 +327,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer, server-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer, server-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -461,16 +461,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.4",
+            "version": "1.1.13.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "649563fbb1e0a361c525bfab023c3ac2744c0611"
+                "reference": "0bb211d26a92e5239e1d2dc85b7eb55b82004977"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/649563fbb1e0a361c525bfab023c3ac2744c0611",
-                "reference": "649563fbb1e0a361c525bfab023c3ac2744c0611",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/0bb211d26a92e5239e1d2dc85b7eb55b82004977",
+                "reference": "0bb211d26a92e5239e1d2dc85b7eb55b82004977",
                 "shasum": ""
             },
             "require": {
@@ -535,7 +535,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-08-29 15:57:29"
+            "time": "2014-10-02 21:02:37"
         },
         {
             "name": "guzzle/guzzle",
