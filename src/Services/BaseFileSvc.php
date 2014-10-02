@@ -162,25 +162,38 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             $data = Option::clean( RestData::getPostedData( false, true ) );
             $data = array_merge( $data, $_REQUEST );
 
-            // no resource
-            if ( !Option::getBool( $data, 'include_properties' ) )
-            {
-                if ( Option::getBool( $data, 'as_access_components' ) )
-                {
-                    $tmp = array('', '*');
-                    $result = $this->listContainers();
-                    foreach ( $result as $each )
-                    {
-                        $tmp[] = Option::get( $each, 'name' );
-                    }
+            $includeProps = Option::getBool( $data, 'include_properties' );
+            $result = $this->listContainers($includeProps);
 
-                    return array('resource' => $tmp);
+                $resources = array();
+                if ( $asComponents = Option::getBool( $data, 'as_access_components' ) )
+                {
+                    $resources = array('', '*');
+                }
+                foreach ( $result as $container )
+                {
+                    $name = Option::get( $container, 'name' );
+                    $access = $this->getPermissions( $name );
+                    if ( !empty( $access ) )
+                    {
+                        if ( $asComponents )
+                        {
+                            $resources[] = $name;
+                        }
+                        else
+                        {
+                            $container['access'] = $access;
+                            $resources[] = $container;
+                        }
+                    }
                 }
 
-                return $this->_listResources();
+            if ( !$includeProps )
+            {
+                return array('resource' => $resources);
             }
-            $result = $this->listContainers( true );
-            $result = array('container' => $result);
+
+            $result = array('container' => $resources);
         }
         else if ( empty( $this->_folderPath ) )
         {
