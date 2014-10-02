@@ -889,7 +889,15 @@ class SqlDbSvc extends BaseDbSvc
                 $_value = Option::get( $_dummy, $_name, Option::get( $_read, $_name ) );
                 if ( !is_null( $_type ) && !is_null( $_value ) )
                 {
-                    $_value = SqlDbUtilities::formatValue( $_value, $_type );
+                    if (('int' === $_type) && ('' === $_value))
+                    {
+                        // Postgresql strangely returns "" for null integers
+                        $_value = null;
+                    }
+                    else
+                    {
+                        $_value = SqlDbUtilities::formatValue( $_value, $_type );
+                    }
                 }
                 $_temp[$_name] = $_value;
             }
