@@ -442,6 +442,7 @@ class ScriptEngine
 
 _wrapperResult = (function() {
 
+
     var _event = {$_jsonEvent};
 
 	try	{
