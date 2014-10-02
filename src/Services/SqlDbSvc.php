@@ -1499,8 +1499,9 @@ class SqlDbSvc extends BaseDbSvc
             $field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
             $dbType = Option::get( $field_info, 'db_type' );
             $type = Option::get( $field_info, 'type' );
-            $pdoType = SqlDbUtilities::determinePdoBindingType( $type );
-            $phpType = SqlDbUtilities::determinePhpConversionType( $type );
+            $allowsNull = Option::getBool( $field_info, 'allow_null' );
+            $pdoType = ( $allowsNull ) ? null : SqlDbUtilities::determinePdoBindingType( $type );
+            $phpType = ( is_null( $pdoType ) ) ? SqlDbUtilities::determinePhpConversionType( $type ) : null;
 
             $bindArray[] = array('name' => $field, 'pdo_type' => $pdoType, 'php_type' => $phpType);
 
