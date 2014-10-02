@@ -26,6 +26,7 @@ use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -66,6 +67,10 @@ class Platform
      * @type string The default date() format (YYYY-MM-DD HH:MM:SS)
      */
     const DEFAULT_TIMESTAMP_FORMAT = 'Y-m-d H:i:s';
+    /**
+     * @var string
+     */
+    const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
 
     //*************************************************************************
     //	Members
@@ -368,9 +373,7 @@ class Platform
     {
         return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
             ? $_SERVER['REMOTE_ADDR']
-            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] )
-                ? $_SERVER['HTTP_HOST']
-                :
+            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
                 gethostname() . ( $addendum ? '.' . $addendum : null );
     }
 
@@ -632,4 +635,100 @@ class Platform
 
         return date( $_format );
     }
+
+    /**
+     * Retrieve platform states from the mothership
+     *
+     * @param string $dspName
+     *
+     * @return \stdClass|bool
+     */
+    public static function getPlatformStates( $dspName = null )
+    {
+        //  We do nothing on private installs
+        if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
+        {
+            return array();
+        }
+
+        $dspName = $dspName ?: Pii::getParam( 'dsp_name' );
+
+        if ( empty( $dspName ) )
+        {
+            $dspName = gethostname();
+        }
+
+        if ( false === ( $_response = Fabric::api( HttpMethod::GET, '/state/' . $dspName ) ) )
+        {
+            return false;
+        }
+
+        Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
+
+        return $_response->details;
+    }
+
+    /**
+     * @param string $stateName The state to change
+     * @param int    $state     The state value
+     *
+     * @return bool|mixed|\stdClass
+     */
+    public static function setPlatformState( $stateName, $state )
+    {
+        //  We do nothing on private installs
+        if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
+        {
+            return true;
+        }
+
+        $stateName = trim( strtolower( $stateName ) );
+
+        if ( 'ready' != $stateName && 'platform' != $stateName )
+        {
+            throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
+        }
+
+        //  Don't make unnecessary calls
+        if ( \Kisma::get( 'platform.' . $stateName ) == $state )
+        {
+            return true;
+        }
+
+        try
+        {
+            //  Called before DSP name is set
+            if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
+            {
+                return false;
+            }
+
+            $_result = Fabric::api(
+                HttpMethod::POST,
+                '/state/' . $_instanceId,
+                array(
+                    'instance_id' => $_instanceId,
+                    'state_name'  => $stateName,
+                    'state'       => $state
+                )
+            );
+
+            if ( !$_result->success )
+            {
+                throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
+            }
+
+            \Kisma::set( 'platform.' . $stateName, $_result->details->{$stateName} );
+
+            return true;
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( $_ex->getMessage() );
+
+            return false;
+        }
+    }
+
 }
+
