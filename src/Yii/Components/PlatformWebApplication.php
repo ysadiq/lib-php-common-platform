@@ -508,11 +508,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
-        if ( 'file://' == $_origin || empty( $_origin ) )
+        if ( 'file://' == $_origin || !isset( $_SERVER['HTTP_ORIGIN'] ) )
         {
             if ( !empty( $_origin ) )
             {
-                Log::info( 'Local file resource origin received: ' . $_origin );
+                Log::info( 'Local file/empty resource origin received: ' . $_origin );
             }
 
             return true;
@@ -533,7 +533,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_originParts = $_origin;
         }
 
-        $_originUri = trim( $this->_normalizeUri( $_originParts ) );
+        $_originUri = true !== $_originParts ? trim( $this->_normalizeUri( $_originParts ) ) : '*';
         $_key = sha1( $_requestUri . $_originUri );
         $_isStar = false;
 
@@ -558,10 +558,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                  */
                 header( 'HTTP/1.1 403 Forbidden' );
 
-                Pii::end();
-
-                //	If end fails for some unknown impossible reason...
-                return false;
+                return Pii::end();
             }
 
             $_cache[$_key] = $_originUri;
@@ -731,6 +728,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _parseUri( $uri, $normalize = false )
     {
+        //  Don't parse empty uris
+        if ( empty( $uri ) )
+        {
+            return true;
+        }
+
         if ( false === ( $_parts = parse_url( $uri ) ) || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
         {
             return false;
@@ -784,10 +787,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return !is_array( $parts )
             ? $parts
             :
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) .
-            '://' .
+            ( !empty( $parts['host'] ) && isset( $parts['scheme'] ) ? $parts['scheme'] . '://' : 'http://' ) .
             $parts['host'] .
-            ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+            ( !empty( $parts['host'] ) && isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
