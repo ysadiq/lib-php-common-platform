@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "efd510eee08802c92ad7c6daa7d6cd7d",
+    "hash": "fdb5963ffa27f6a4016b80ed7d11e089",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -269,9 +269,9 @@
             ],
             "authors": [
                 {
-                    "name": "Sykes, Jason",
+                    "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -412,27 +412,32 @@
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.13",
+            "version": "0.4.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "9990f10cf20333b65277de6ed2a9608503e960f1"
+                "reference": "b089d592de41b1cac9ae61827e46703dd2f41df2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/9990f10cf20333b65277de6ed2a9608503e960f1",
-                "reference": "9990f10cf20333b65277de6ed2a9608503e960f1",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/b089d592de41b1cac9ae61827e46703dd2f41df2",
+                "reference": "b089d592de41b1cac9ae61827e46703dd2f41df2",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
-                "kisma/kisma": "~0.2.37@stable",
-                "php": ">=5.3.18"
+                "kisma/kisma": "~0.2",
+                "php": "~5.3"
             },
             "require-dev": {
-                "phpunit/phpunit": "~3.7@stable"
+                "phpunit/phpunit": "~3.7"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "0.4.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "DreamFactory\\Oasys\\": "src/"
@@ -449,7 +454,7 @@
                 }
             ],
             "description": "DreamFactory Oasys(tm) Open Authentication System",
-            "homepage": "http://dreamfactorysoftware.github.io",
+            "homepage": "https://www.dreamfactory.com/",
             "keywords": [
                 "OpenId",
                 "ldap",
@@ -457,20 +462,20 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-08-14 05:56:33"
+            "time": "2014-10-03 15:08:28"
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.4",
+            "version": "1.1.13.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "649563fbb1e0a361c525bfab023c3ac2744c0611"
+                "reference": "0bb211d26a92e5239e1d2dc85b7eb55b82004977"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/649563fbb1e0a361c525bfab023c3ac2744c0611",
-                "reference": "649563fbb1e0a361c525bfab023c3ac2744c0611",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/0bb211d26a92e5239e1d2dc85b7eb55b82004977",
+                "reference": "0bb211d26a92e5239e1d2dc85b7eb55b82004977",
                 "shasum": ""
             },
             "require": {
@@ -535,7 +540,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-08-29 15:57:29"
+            "time": "2014-10-02 21:02:37"
         },
         {
             "name": "guzzle/guzzle",
@@ -679,27 +684,27 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.63",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "67e8fe6b3aaeca170a3149dac69fda7e104e86f7"
+                "reference": "ce4c753e688725ec19238bb8620b79434cd838a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/67e8fe6b3aaeca170a3149dac69fda7e104e86f7",
-                "reference": "67e8fe6b3aaeca170a3149dac69fda7e104e86f7",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/ce4c753e688725ec19238bb8620b79434cd838a8",
+                "reference": "ce4c753e688725ec19238bb8620b79434cd838a8",
                 "shasum": ""
             },
             "require": {
-                "doctrine/cache": "~1.3@stable",
-                "monolog/monolog": "@stable",
-                "php": ">=5.3.18,<5.6",
-                "symfony/event-dispatcher": "~2.4@stable",
-                "symfony/http-foundation": "~2.4@stable"
+                "doctrine/cache": "*",
+                "monolog/monolog": "*",
+                "php": "~5.3",
+                "symfony/event-dispatcher": "~2.4",
+                "symfony/http-foundation": "~2.4"
             },
             "require-dev": {
-                "phpunit/phpunit": "~3.7@stable"
+                "phpunit/phpunit": "~3.7"
             },
             "type": "library",
             "extra": {
@@ -733,7 +738,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-09-26 15:26:23"
+            "time": "2014-09-29 15:26:31"
         },
         {
             "name": "monolog/monolog",
@@ -741,12 +746,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "b3f039339d7a8173c7b441dbaa572ccacb712b54"
+                "reference": "ec3961874c43840e96da3a8a1ed20d8c73d7e5aa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/b3f039339d7a8173c7b441dbaa572ccacb712b54",
-                "reference": "b3f039339d7a8173c7b441dbaa572ccacb712b54",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/ec3961874c43840e96da3a8a1ed20d8c73d7e5aa",
+                "reference": "ec3961874c43840e96da3a8a1ed20d8c73d7e5aa",
                 "shasum": ""
             },
             "require": {
@@ -805,7 +810,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-09-10 15:41:01"
+            "time": "2014-09-30 13:30:58"
         },
         {
             "name": "nikic/php-parser",
@@ -1345,12 +1350,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "ea86d91a10c5737a1e043aa29fe05837f942d163"
+                "reference": "93d237c3da7565a9ad2b4b6a74af73f4e3c0c305"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/ea86d91a10c5737a1e043aa29fe05837f942d163",
-                "reference": "ea86d91a10c5737a1e043aa29fe05837f942d163",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/93d237c3da7565a9ad2b4b6a74af73f4e3c0c305",
+                "reference": "93d237c3da7565a9ad2b4b6a74af73f4e3c0c305",
                 "shasum": ""
             },
             "require": {
@@ -1394,7 +1399,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-09-28 16:15:31"
+            "time": "2014-10-01 05:53:11"
         },
         {
             "name": "symfony/http-foundation",
@@ -1403,12 +1408,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "7a48358fb3521cb3a5a56af08bc7968aa44f66ed"
+                "reference": "8f39f4c3a2903883898d1026f781f0f42672f9bc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/7a48358fb3521cb3a5a56af08bc7968aa44f66ed",
-                "reference": "7a48358fb3521cb3a5a56af08bc7968aa44f66ed",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/8f39f4c3a2903883898d1026f781f0f42672f9bc",
+                "reference": "8f39f4c3a2903883898d1026f781f0f42672f9bc",
                 "shasum": ""
             },
             "require": {
@@ -1447,7 +1452,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-09-25 19:49:28"
+            "time": "2014-10-03 05:26:43"
         }
     ],
     "packages-dev": [
@@ -2222,12 +2227,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "6644c5c6b395e63a55186dea1817eed0ceb1c075"
+                "reference": "656e03eeedc827e4830ac43547eae10bacaa1bbb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/6644c5c6b395e63a55186dea1817eed0ceb1c075",
-                "reference": "6644c5c6b395e63a55186dea1817eed0ceb1c075",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/656e03eeedc827e4830ac43547eae10bacaa1bbb",
+                "reference": "656e03eeedc827e4830ac43547eae10bacaa1bbb",
                 "shasum": ""
             },
             "require": {
@@ -2260,7 +2265,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-09-22 11:59:59"
+            "time": "2014-10-01 05:53:11"
         }
     ],
     "aliases": [
@@ -2273,7 +2278,6 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
@@ -2290,7 +2294,7 @@
     },
     "prefer-stable": false,
     "platform": {
-        "php": ">=5.3.18,<5.6"
+        "php": "~5.3,<5.6"
     },
     "platform-dev": [
 
