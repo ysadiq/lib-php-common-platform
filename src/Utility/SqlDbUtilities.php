@@ -38,15 +38,6 @@ use Kisma\Core\Utility\Scalar;
  */
 class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 {
-    //******************************************************************************
-    //* Constants
-    //******************************************************************************
-
-    /**
-     * @type int The default string length for new columns
-     */
-    const DEFAULT_STRING_LENGTH = 255;
-
     //*************************************************************************
     //	Members
     //*************************************************************************
@@ -738,7 +729,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $_results = array('references' => $_references, 'indexes' => $_indexes);
         static::createFieldExtras( $db, $_results );
 
-        $_out['labels'] = $_labels;
         if ( !empty( $_labels ) )
         {
             static::setSchemaExtras( $service_id, $_labels );
@@ -875,6 +865,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
         $validation = json_decode( Option::get( $label_info, 'validation' ), true );
+        if ( !empty( $validation ) && is_string( $validation ) )
+        {
+            // backwards compatible with old strings
+            $validation = array_map( 'trim', explode( ',', $validation ) );
+            $validation = array_flip( $validation );
+        }
         $picklist = Option::get( $label_info, 'picklist' );
         $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
         $refTable = '';
@@ -889,13 +885,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         return array(
             'name'               => $column->name,
             'label'              => $label,
-            'type'               => static::_determineDfType( $column, $label_info ),
+            'type'               => static::determineDfType( $column, $label_info ),
             'db_type'            => $column->dbType,
             'length'             => intval( $column->size ),
             'precision'          => intval( $column->precision ),
             'scale'              => intval( $column->scale ),
             'default'            => $column->defaultValue,
-            'required'           => static::determineRequired( $column ),
+            'required'           => static::determineRequired( $column, $validation ),
             'allow_null'         => $column->allowNull,
             'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
             'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
@@ -915,7 +911,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      *
      * @return string
      */
-    protected static function _determineDfType( $column, $label_info = null )
+    protected static function determineDfType( $column, $label_info = null )
     {
         $_simpleType = static::determineGenericType( $column );
 
@@ -951,15 +947,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 break;
         }
 
-        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) )
-        )
-        {
-            if ( isset( $label_info['timestamp_on_update'] ) )
-            {
-                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-            }
-        }
-
         return $_simpleType;
     }
 
@@ -972,9 +959,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         switch ( $type )
         {
-            case 'nchar':
-            case 'nvarchar':
-            case 'nvarchar2':
+            case ( false !== strpos( $type, 'national' ) ):
+            case ( false !== strpos( $type, 'nchar' ) ):
+            case ( false !== strpos( $type, 'nvarchar' ) ):
                 return true;
             // todo mysql shows these are varchar with a utf8 character set, not in column data
             default:
@@ -991,8 +978,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         switch ( $type )
         {
-            case 'char':
-            case 'nchar':
+            case ( ( false !== strpos( $type, 'char' ) ) && ( false === strpos( $type, 'var' ) ) ):
             case 'binary':
                 return true;
             default:
@@ -1002,12 +988,18 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
     /**
      * @param $column
+     * @param array|null $validations
      *
      * @return bool
      */
-    protected static function determineRequired( $column )
+    protected static function determineRequired( $column, $validations = null )
     {
         if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
+        {
+            return false;
+        }
+
+        if ( is_array( $validations ) && isset( $validations['api_read_only'] ) )
         {
             return false;
         }
@@ -1030,10 +1022,14 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             throw new BadRequestException( "No field given." );
         }
 
-        $type = strtolower( Option::get( $field, 'type', '' ) );
+        $type = strtolower( Option::get( $field, 'type' ) );
         if ( empty( $type ) )
         {
-            throw new BadRequestException( "Invalid schema detected - no type element." );
+            $type = Option::get( $field, 'db_type' );
+            if ( empty( $type ) )
+            {
+                throw new BadRequestException( "Invalid schema detected - no type or db_type element." );
+            }
         }
 
         // if same as old, don't bother
@@ -1157,6 +1153,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                 }
                 break;
+
             case 'integer':
                 $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
                 if ( !empty( $length ) )
@@ -1168,6 +1165,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $default = intval( $default );
                 }
                 break;
+
             case 'decimal':
                 $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
                 if ( !empty( $length ) )
@@ -1180,6 +1178,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $default = floatval( $default );
                 }
                 break;
+
             case 'float':
             case 'double':
                 $length = Option::get( $field, 'length', Option::get( $field, 'precision' ) );
@@ -1201,6 +1200,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $default = floatval( $default );
                 }
                 break;
+
             case 'money':
                 if ( isset( $default ) )
                 {
@@ -1210,35 +1210,40 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
             case 'string':
                 $length = Option::get( $field, 'length', Option::get( $field, 'size' ) );
-
-                if ( !$length && !( $fixed = Option::getBool( $field, 'fixed_length' ) ) )
-                {
-                    $length = static::DEFAULT_STRING_LENGTH;
-                }
-
+                $fixed = Option::getBool( $field, 'fixed_length' );
                 $national = Option::getBool( $field, 'supports_multibyte' );
-
-                switch ( $driver_type )
+                if ( $fixed )
                 {
-                    case SqlDbUtilities::DRV_MYSQL:
-                        $definition = ( $national ) ? 'nvarchar' : 'varchar';
-                        break;
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_PGSQL:
+                            $definition = ( $national ) ? 'national char' : 'char';
+                            break;
 
-                    case SqlDbUtilities::DRV_SQLSRV:
-                    case SqlDbUtilities::DRV_DBLIB:
-                    case SqlDbUtilities::DRV_OCSQL:
-                        $definition = ( $national ) ? 'nchar' : 'char';
-                        break;
+                        default:
+                            $definition = ( $national ) ? 'nchar' : 'char';
+                            break;
+                    }
+                }
+                elseif ( $national )
+                {
+                    switch ( $driver_type )
+                    {
+                        case SqlDbUtilities::DRV_PGSQL:
+                            $definition = 'national varchar';
+                            break;
 
-                    case SqlDbUtilities::DRV_PGSQL:
-                        $definition = ( $national ) ? 'national char' : 'char';
-                        break;
+                        case SqlDbUtilities::DRV_OCSQL:
+                            $definition = 'nvarchar2';
+                            break;
 
-                    default:
-                        break;
+                        default:
+                            $definition = 'nvarchar';
+                            break;
+                    }
                 }
 
-                if ( !empty( $length ) )
+                if ( isset( $length ) )
                 {
                     $definition .= "($length)";
                 }
@@ -1256,12 +1261,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
                 $quoteDefault = true;
                 break;
+
             case 'text':
                 $quoteDefault = true;
                 break;
-            case 'blob':
-                $quoteDefault = true;
-                break;
+
             case 'datetime':
             case 'date':
             case 'time':
@@ -1278,18 +1282,26 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 $default = "'" . $default . "'";
             }
 
-            $_props['default'] = 'DEFAULT ' . $default;
+            $_props['default'] = ' DEFAULT ' . $default;
         }
 
         if ( $isPrimaryKey )
         {
-            $_props['pk'] = 'PRIMARY KEY';
+            $_props['pk'] = ' PRIMARY KEY';
         }
 
-        $_props['null'] = Scalar::boolval( $allowNull ) ? 'NULL' : 'NOT NULL';
+        $_props['null'] = Scalar::boolval( $allowNull ) ? ' NULL' : ' NOT NULL';
 
-        //  Build the column properties
-        $definition .= ' ' . trim( ( $_props['null'] ?: null ) . ' ' . ( $_props['default'] ?: null ) . ' ' . ( $_props['pk'] ?: null ) );
+        //  Build the column properties, order matters here
+        switch ( $driver_type )
+        {
+            case static::DRV_OCSQL:
+                $definition .= ( $_props['default'] ? : null ) . ( $_props['pk'] ? : null ) . ( $_props['null'] ? : null );
+                break;
+            default:
+                $definition .= ( $_props['null'] ? : null ) . ( $_props['default'] ? : null ) . ( $_props['pk'] ? : null );
+                break;
+        }
 
         return $definition;
     }
@@ -1332,9 +1344,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $_references = array();
         $_indexes = array();
         $_labels = array();
-        $_primaryKey = Option::get( $schema, 'primary_key', '' );
         $_dropColumns = array();
         $_oldFields = array();
+        $_extraCommands = array();
         foreach ( Option::clean( Option::get( $schema, 'field' ) ) as $_old )
         {
             $_old = array_change_key_case( $_old, CASE_LOWER );
@@ -1408,14 +1420,36 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
                     $_type = strtolower( Option::get( $_field, 'type', '' ) );
 
-                    if ( ( 'id' == $_type ) || ( 'pk' == $_type ) || Option::getBool( $_field, 'is_primary_key' ) )
+                    if ( ( 'id' == $_type ) || ( 'pk' == $_type ) )
                     {
-                        if ( !empty( $_primaryKey ) && ( 0 != strcasecmp( $_primaryKey, $_name ) ) )
+                        switch ( $_driverType )
                         {
-                            throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-                        }
+                            case SqlDbUtilities::DRV_OCSQL:
+                                if ( !$_isAlter )
+                                {
+                                    // pre 12c versions need sequences and trigger to accomplish autoincrement
+                                    $_seq = strtoupper( $table_name ) . '_' . strtoupper( $_name );
+                                    $_trigTable = $db->quoteTableName( $table_name );
+                                    $_trigField = $db->quoteColumnName( $_name );
 
-                        $_primaryKey = $_name;
+                                    $_extraCommands[] = "CREATE SEQUENCE $_seq";
+                                    $_extraCommands[] = <<<SQL
+CREATE OR REPLACE TRIGGER {$_seq}
+BEFORE INSERT ON {$_trigTable}
+FOR EACH ROW
+BEGIN
+  IF :new.{$_trigField} IS NOT NULL THEN
+    RAISE_APPLICATION_ERROR(-20000, 'ID cannot be specified');
+  ELSE
+    SELECT {$_seq}.NEXTVAL
+    INTO   :new.{$_trigField}
+    FROM   dual;
+  END IF;
+END;
+SQL;
+                                }
+                                break;
+                        }
                     }
                     elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
                     {
@@ -1569,7 +1603,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             'drop_columns'  => $_dropColumns,
             'references'    => $_references,
             'indexes'       => $_indexes,
-            'labels'        => $_labels
+            'labels'        => $_labels,
+            'extras'        => $_extraCommands
         );
     }
 
@@ -1680,7 +1715,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         try
         {
             $_results = static::buildTableFields( $db, $table_name, $_fields );
-            $_columns = Option::get( $_results, 'columns', array() );
+            $_columns = Option::get( $_results, 'columns' );
 
             if ( empty( $_columns ) )
             {
@@ -1688,6 +1723,22 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
 
             $db->createCommand()->createTable( $table_name, $_columns );
+
+            $_extras = Option::get( $_results, 'extras', null, true );
+            if ( !empty( $_extras ) )
+            {
+                foreach ( $_extras as $_extraCommand )
+                {
+                    try
+                    {
+                        $db->createCommand()->setText( $_extraCommand )->execute();
+                    }
+                    catch ( \Exception $_ex )
+                    {
+                        // oh well, we tried.
+                    }
+                }
+            }
 
             $_labels = Option::get( $_results, 'labels', array() );
             // add table labels
@@ -1816,13 +1867,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     protected static function determineGenericType( $column )
     {
         $_simpleType = strstr( $column->dbType, '(', true );
-        $_simpleType = strtolower( $_simpleType ?: $column->dbType );
+        $_simpleType = strtolower( $_simpleType ? : $column->dbType );
 
         switch ( $_simpleType )
         {
             case 'bit':
-            case 'bool':
-            case 'boolean':
+            case ( false !== strpos( $_simpleType, 'bool' ) ):
                 return 'boolean';
 
             case 'number': // Oracle for boolean, integers and decimals
@@ -1842,14 +1892,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             case 'percent':
                 return 'decimal';
 
-            case 'double':
-            case 'double precision':
-            case 'binary_double': // oracle
+            case ( false !== strpos( $_simpleType, 'double' ) ):
                 return 'double';
 
-            case 'float':
             case 'real':
-            case 'binary_float': // oracle
+            case ( false !== strpos( $_simpleType, 'float' ) ):
                 if ( $column->size == 53 )
                 {
                     return 'double';
@@ -1857,8 +1904,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
                 return 'float';
 
-            case 'money':
-            case 'smallmoney':
+            case ( false !== strpos( $_simpleType, 'money' ) ):
                 return 'money';
 
             case 'tinyint':
@@ -1867,6 +1913,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             case 'bigint':
             case 'int':
             case 'integer':
+                // watch out for point here!
                 if ( $column->size == 1 )
                 {
                     return 'boolean';
@@ -1874,34 +1921,26 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
                 return 'integer';
 
-            case 'timestamp':
-            case 'timestamp with time zone': //  PGSQL
-            case 'timestamp without time zone': //  PGSQL
+            case ( false !== strpos( $_simpleType, 'timestamp' ) ):
             case 'datetimeoffset': //  MSSQL
                 return 'timestamp';
 
-            case 'datetime':
-            case 'datetime2':
+            case ( false !== strpos( $_simpleType, 'datetime' ) ):
                 return 'datetime';
 
             case 'date':
                 return 'date';
-            case 'time':
+
+            case ( false !== strpos( $_simpleType, 'time' ) ):
                 return 'time';
 
-            case 'binary':
-            case 'varbinary':
-            case 'blob':
-            case 'mediumblob':
-            case 'largeblob':
+            case ( false !== strpos( $_simpleType, 'binary' ) ):
+            case ( false !== strpos( $_simpleType, 'blob' ) ):
                 return 'binary';
 
             //	String types
-            case 'text':
-            case 'mediumtext':
-            case 'longtext':
-            case 'clob':
-            case 'nclob':
+            case ( false !== strpos( $_simpleType, 'clob' ) ):
+            case ( false !== strpos( $_simpleType, 'text' ) ):
                 return 'text';
 
             case 'varchar':
@@ -1913,13 +1952,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 return 'string';
 
             case 'string':
-            case 'varchar2':
-            case 'char':
-            case 'character':
-            case 'character varying':
-            case 'nchar':
-            case 'nvarchar':
-            case 'nvarchar2':
+            case ( false !== strpos( $_simpleType, 'char' ) ):
             default:
                 return 'string';
         }

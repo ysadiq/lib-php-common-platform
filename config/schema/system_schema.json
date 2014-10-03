@@ -233,7 +233,6 @@
                     "ref_table": "df_sys_app",
                     "ref_fields": "id",
                     "ref_on_delete": "SET NULL",
-                    "is_index": true,
                     "allow_null": true
                 },
                 {
@@ -352,7 +351,6 @@
                     "ref_table": "df_sys_app",
                     "ref_fields": "id",
                     "ref_on_delete": "SET NULL",
-                    "is_index": true,
                     "allow_null": true
                 },
                 {
@@ -1299,7 +1297,11 @@
                     "type": "reference",
                     "ref_table": "df_sys_provider",
                     "ref_fields": "id",
-                    "validation": "api_read_only",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					},
                     "ref_on_delete": "CASCADE"
                 },
                 {

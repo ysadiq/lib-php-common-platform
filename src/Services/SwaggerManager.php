@@ -318,6 +318,7 @@ SQL;
     protected static function _parseSwaggerEvents( $apiName, &$data )
     {
         $_eventMap = array();
+        $_eventCount = 0;
 
         foreach ( Option::get( $data, 'apis', array() ) as $_ixApi => $_api )
         {
@@ -392,7 +393,7 @@ SQL;
                         //  Set actual name in swagger file
                         $data['apis'][$_ixApi]['operations'][$_ixOps]['event_name'][$_ixEventNames] = $_eventName;
 
-                        Log::debug( '  * Found event "' . $_eventName . '"' );
+                        $_eventCount++;
                     }
 
                     $_events[$_method] = array(
@@ -408,6 +409,8 @@ SQL;
 
             unset( $_scripts, $_events, $_api );
         }
+
+        Log::debug( '  * Discovered ' . $_eventCount . ' event(s).' );
 
         return $_eventMap;
     }

@@ -20,6 +20,7 @@ use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Curl;
@@ -40,7 +41,7 @@ class Fabric extends SeedUtility
     /**
      * @var string
      */
-    const DEFAULT_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+    const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
     /**
      * @var string
      */
@@ -268,7 +269,7 @@ class Fabric extends SeedUtility
             $_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
 
             //	Otherwise, get the credentials from the auth server...
-            $_response = Curl::get( static::DEFAULT_AUTH_ENDPOINT . '/' . $_dspName . '/database' );
+            $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
 
             if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
             {
@@ -373,76 +374,32 @@ class Fabric extends SeedUtility
     }
 
     /**
-     * @param string $dspName
+     * @param string $method
+     * @param string $uri
+     * @param array  $payload
+     * @param array  $curlOptions
      *
-     * @return \stdClass|string
+     * @return bool
      */
-    public static function getPlatformStates( $dspName = null )
+    public static function api( $method, $uri, $payload = array(), $curlOptions = array() )
     {
-        $dspName = $dspName ?: \Kisma::get( 'platform.dsp_name' );
-
-        if ( false === ( $_response = Curl::get( static::DEFAULT_ENDPOINT . '/instance/state/' . $dspName ) ) )
+        if ( !HttpMethod::contains( strtoupper( $method ) ) )
         {
-            return false;
-        }
-
-        Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
-
-        return $_response->details;
-    }
-
-    /**
-     * @param string $stateName The state to change
-     * @param int    $state     The state value
-     *
-     * @return bool|mixed|\stdClass
-     */
-    public static function setInstanceState( $stateName, $state )
-    {
-        //  We do nothing on private installs
-        if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
-        {
-            return true;
-        }
-
-        $stateName = trim( strtolower( $stateName ) );
-
-        if ( 'ready' != $stateName && 'platform' != $stateName )
-        {
-            throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
-        }
-
-        //  Don't make unnecessary calls
-        if ( \Kisma::get( 'platform.' . $stateName ) == $state )
-        {
-            return true;
+            throw new \InvalidArgumentException( 'The method "' . $method . '" is invalid.' );
         }
 
         try
         {
-            //  Called before DSP name is set
-            if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
+            if ( false === ( $_result = Curl::request( $method, static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ), $payload, $curlOptions ) ) )
             {
-                return false;
+                throw new \RuntimeException( 'Failed to contact API server.' );
             }
 
-            $_result = Curl::post(
-                static::DEFAULT_ENDPOINT . '/state/' . $_instanceId,
-                array('instance_id' => $_instanceId, 'state_name' => $stateName, 'state' => $state)
-            );
-
-            if ( !$_result->success )
-            {
-                throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
-            }
-
-            \Kisma::set( 'platform.' . $stateName, $_result->details->{$stateName} );
-
-            return true;
+            return $_result;
         }
         catch ( \Exception $_ex )
         {
-            Log::error( $_ex->getMessage() );
+            Log::error( 'Fabric::api error: ' . $_ex->getMessage() );
 
             return false;
         }
@@ -458,4 +415,3 @@ if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option:
     header( 'Location: ' . Fabric::MAINTENANCE_URI );
     die();
 }
-
