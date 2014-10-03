@@ -261,10 +261,10 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_requestPayload );
+                return $this->updateTable( $this->_requestPayload, false );
             }
 
-            return array('table' => $this->updateTables( $this->_tables ));
+            return array('table' => $this->updateTables( $this->_tables, false ));
         }
 
         if ( empty( $this->_fields ) )
@@ -581,7 +581,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    public function updateTables( $tables, $allow_merge = false, $allow_delete = false )
+    public function updateTables( $tables, $allow_merge = true, $allow_delete = false )
     {
         $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
@@ -617,7 +617,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      *
      * @return array
      */
-    public function updateTable( $table, $allow_merge = false, $allow_delete = false )
+    public function updateTable( $table, $allow_merge = true, $allow_delete = false )
     {
         $_tables = SqlDbUtilities::validateAsArray( $table, null, true, 'Bad data format in request.' );
 
