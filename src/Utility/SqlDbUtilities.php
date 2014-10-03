@@ -865,6 +865,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
         $validation = json_decode( Option::get( $label_info, 'validation' ), true );
+        if ( !empty( $validation ) && is_string( $validation ) )
+        {
+            // backwards compatible with old strings
+            $validation = array_map( 'trim', explode( ',', $validation ) );
+            $validation = array_flip( $validation );
+        }
         $picklist = Option::get( $label_info, 'picklist' );
         $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
         $refTable = '';
@@ -879,13 +885,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         return array(
             'name'               => $column->name,
             'label'              => $label,
-            'type'               => static::_determineDfType( $column, $label_info ),
+            'type'               => static::determineDfType( $column, $label_info ),
             'db_type'            => $column->dbType,
             'length'             => intval( $column->size ),
             'precision'          => intval( $column->precision ),
             'scale'              => intval( $column->scale ),
             'default'            => $column->defaultValue,
-            'required'           => static::determineRequired( $column ),
+            'required'           => static::determineRequired( $column, $validation ),
             'allow_null'         => $column->allowNull,
             'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
             'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
@@ -905,7 +911,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      *
      * @return string
      */
-    protected static function _determineDfType( $column, $label_info = null )
+    protected static function determineDfType( $column, $label_info = null )
     {
         $_simpleType = static::determineGenericType( $column );
 
@@ -941,15 +947,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 break;
         }
 
-        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) )
-        )
-        {
-            if ( isset( $label_info['timestamp_on_update'] ) )
-            {
-                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-            }
-        }
-
         return $_simpleType;
     }
 
@@ -962,9 +959,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         switch ( $type )
         {
-            case 'nchar':
-            case 'nvarchar':
-            case 'nvarchar2':
+            case ( false !== strpos( $type, 'national' ) ):
+            case ( false !== strpos( $type, 'nchar' ) ):
+            case ( false !== strpos( $type, 'nvarchar' ) ):
                 return true;
             // todo mysql shows these are varchar with a utf8 character set, not in column data
             default:
@@ -981,8 +978,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         switch ( $type )
         {
-            case 'char':
-            case 'nchar':
+            case ( ( false !== strpos( $type, 'char' ) ) && ( false === strpos( $type, 'var' ) ) ):
             case 'binary':
                 return true;
             default:
@@ -992,12 +988,18 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
     /**
      * @param $column
+     * @param array|null $validations
      *
      * @return bool
      */
-    protected static function determineRequired( $column )
+    protected static function determineRequired( $column, $validations = null )
     {
         if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
+        {
+            return false;
+        }
+
+        if ( is_array( $validations ) && isset( $validations['api_read_only'] ) )
         {
             return false;
         }
@@ -1020,10 +1022,14 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             throw new BadRequestException( "No field given." );
         }
 
-        $type = strtolower( Option::get( $field, 'type', '' ) );
+        $type = strtolower( Option::get( $field, 'type' ) );
         if ( empty( $type ) )
         {
-            throw new BadRequestException( "Invalid schema detected - no type element." );
+            $type = Option::get( $field, 'db_type' );
+            if ( empty( $type ) )
+            {
+                throw new BadRequestException( "Invalid schema detected - no type or db_type element." );
+            }
         }
 
         // if same as old, don't bother
@@ -1257,10 +1263,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 break;
 
             case 'text':
-                $quoteDefault = true;
-                break;
-
-            case 'blob':
                 $quoteDefault = true;
                 break;
 
@@ -1870,8 +1872,7 @@ SQL;
         switch ( $_simpleType )
         {
             case 'bit':
-            case 'bool':
-            case 'boolean':
+            case ( false !== strpos( $_simpleType, 'bool' ) ):
                 return 'boolean';
 
             case 'number': // Oracle for boolean, integers and decimals
@@ -1891,14 +1892,11 @@ SQL;
             case 'percent':
                 return 'decimal';
 
-            case 'double':
-            case 'double precision':
-            case 'binary_double': // oracle
+            case ( false !== strpos( $_simpleType, 'double' ) ):
                 return 'double';
 
-            case 'float':
             case 'real':
-            case 'binary_float': // oracle
+            case ( false !== strpos( $_simpleType, 'float' ) ):
                 if ( $column->size == 53 )
                 {
                     return 'double';
@@ -1906,8 +1904,7 @@ SQL;
 
                 return 'float';
 
-            case 'money':
-            case 'smallmoney':
+            case ( false !== strpos( $_simpleType, 'money' ) ):
                 return 'money';
 
             case 'tinyint':
@@ -1916,6 +1913,7 @@ SQL;
             case 'bigint':
             case 'int':
             case 'integer':
+                // watch out for point here!
                 if ( $column->size == 1 )
                 {
                     return 'boolean';
@@ -1923,34 +1921,26 @@ SQL;
 
                 return 'integer';
 
-            case 'timestamp':
-            case 'timestamp with time zone': //  PGSQL
-            case 'timestamp without time zone': //  PGSQL
+            case ( false !== strpos( $_simpleType, 'timestamp' ) ):
             case 'datetimeoffset': //  MSSQL
                 return 'timestamp';
 
-            case 'datetime':
-            case 'datetime2':
+            case ( false !== strpos( $_simpleType, 'datetime' ) ):
                 return 'datetime';
 
             case 'date':
                 return 'date';
-            case 'time':
+
+            case ( false !== strpos( $_simpleType, 'time' ) ):
                 return 'time';
 
-            case 'binary':
-            case 'varbinary':
-            case 'blob':
-            case 'mediumblob':
-            case 'largeblob':
+            case ( false !== strpos( $_simpleType, 'binary' ) ):
+            case ( false !== strpos( $_simpleType, 'blob' ) ):
                 return 'binary';
 
             //	String types
-            case 'text':
-            case 'mediumtext':
-            case 'longtext':
-            case 'clob':
-            case 'nclob':
+            case ( false !== strpos( $_simpleType, 'clob' ) ):
+            case ( false !== strpos( $_simpleType, 'text' ) ):
                 return 'text';
 
             case 'varchar':
@@ -1962,13 +1952,7 @@ SQL;
                 return 'string';
 
             case 'string':
-            case 'varchar2':
-            case 'char':
-            case 'character':
-            case 'character varying':
-            case 'nchar':
-            case 'nvarchar':
-            case 'nvarchar2':
+            case ( false !== strpos( $_simpleType, 'char' ) ):
             default:
                 return 'string';
         }
