@@ -108,9 +108,33 @@ class RemoteWebSvc extends BasePlatformRestService
                 case 'path': //	Added by Yii router
                     break;
                 default:
-                    $param_str .= ( !empty( $param_str ) ) ? '&' : '';
-                    $param_str .= urlencode( $key );
-                    $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
+                    if ( is_array( $value ) )
+                    {
+                        foreach ( $value as $sub => $subValue )
+                        {
+                            if ( !empty( $param_str ) )
+                            {
+                                $param_str .= '&';
+                            }
+                            $param_str .= urlencode( $key . '[' . $sub . ']' );
+                            if ( !empty( $subValue ) )
+                            {
+                                $param_str .= '=' . urlencode( $subValue );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if ( !empty( $param_str ) )
+                        {
+                            $param_str .= '&';
+                        }
+                        $param_str .= urlencode( $key );
+                        if ( !empty( $value ) )
+                        {
+                            $param_str .= '=' . urlencode( $value );
+                        }
+                    }
                     break;
             }
         }
@@ -210,7 +234,7 @@ class RemoteWebSvc extends BasePlatformRestService
         $_result = Curl::request(
             $this->_action,
             $this->_url,
-            RestData::getPostedData() ?: array(),
+            RestData::getPostedData() ? : array(),
             $this->_curlOptions
         );
 
