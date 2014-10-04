@@ -17,7 +17,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpMethod;
@@ -311,7 +310,7 @@ class Fabric extends SeedUtility
                 'platform.private_storage_key' => $_privateKey,
                 'platform.db_config_file'      => $_dbConfigFile,
                 'platform.db_config_file_name' => $_dbConfigFileName,
-                PlatformStates::STATE_KEY      => SystemManager::getSystemState( false ),
+                PlatformStates::STATE_KEY      => null,
             );
 
             \Kisma::set( $_systemOptions );
@@ -379,7 +378,7 @@ class Fabric extends SeedUtility
      * @param array  $payload
      * @param array  $curlOptions
      *
-     * @return bool
+     * @return bool|\stdClass|array
      */
     public static function api( $method, $uri, $payload = array(), $curlOptions = array() )
     {

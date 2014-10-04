@@ -676,9 +676,13 @@ class Platform
      */
     public static function setPlatformState( $stateName, $state )
     {
+        static $_debug = true;
+
         //  We do nothing on private installs
         if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
         {
+            $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
+
             return true;
         }
 
@@ -686,12 +690,16 @@ class Platform
 
         if ( 'ready' != $stateName && 'platform' != $stateName )
         {
+            $_debug && Log::error( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): invalid state name"' . $stateName . '"' );
+
             throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
         }
 
         //  Don't make unnecessary calls
         if ( \Kisma::get( 'platform.' . $stateName ) == $state )
         {
+            $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
+
             return true;
         }
 
@@ -700,6 +708,8 @@ class Platform
             //  Called before DSP name is set
             if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
             {
+                $_debug && Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
+
                 return false;
             }
 
@@ -715,10 +725,13 @@ class Platform
 
             if ( !$_result->success )
             {
+                $_debug &&
+                Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): error saving state: ' . print_r( $_result, true ) );
+
                 throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
             }
 
-            \Kisma::set( 'platform.' . $stateName, $_result->details->{$stateName} );
+            \Kisma::set( 'platform.' . $stateName, $_result->details->state );
 
             return true;
         }

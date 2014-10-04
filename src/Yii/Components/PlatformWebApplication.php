@@ -57,6 +57,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
+     * @var string Indicates all is allowed
+     */
+    const CORS_STAR = '*';
+    /**
      * @var string The HTTP Option method
      */
     const CORS_OPTION_METHOD = 'OPTIONS';
@@ -498,34 +502,36 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_cache = array();
             $_cacheVerbs = array();
 
-            if ( $this->_logCorsInfo )
-            {
-                Log::debug( 'CORS internal cache reset.' );
-            }
+            $this->_logCorsInfo && Log::debug( 'CORS internal cache reset.' );
 
             return true;
         }
-
-        $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
-        if ( 'file://' == $_origin || !isset( $_SERVER['HTTP_ORIGIN'] ) )
+        if ( !isset( $_SERVER ) || empty( $_SERVER ) || !array_key_exists( 'HTTP_ORIGIN', $_SERVER ) || empty( $_SERVER['HTTP_ORIGIN'] ) )
         {
-            if ( !empty( $_origin ) )
-            {
-                Log::info( 'Local file/empty resource origin received: ' . $_origin );
-            }
-
-            return true;
+            //  No origin header, no CORS...
+            return $returnHeaders ? array() : false;
         }
 
-        $_originUri = null;
+        //  Only bail if origin == 'file://'. Ya know, for Javascript!
+        if ( 'file://' == ( $_origin = $_SERVER['HTTP_ORIGIN'] ) )
+        {
+            $this->_logCorsInfo && Log::debug( 'Local file/empty resource origin received: ' . $_origin );
+
+            return $returnHeaders ? array() : true;
+        }
+
+        //  empty origin received. Treat like a star...
+        if ( empty( $_origin ) )
+        {
+            $_origin = static::CORS_STAR;
+        }
+
+        $_isStar = false;
         $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS origin received: ' . $_origin );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS origin received: ' . $_origin );
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
         {
@@ -534,14 +540,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_originParts = $_origin;
         }
 
-        $_originUri = true !== $_originParts ? trim( $this->_normalizeUri( $_originParts ) ) : '*';
+        $_originUri = ( $_origin != static::CORS_STAR && true !== $_originParts ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
         $_key = sha1( $_requestUri . $_originUri );
-        $_isStar = false;
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
 
         //	Not in cache, check it out...
         if ( !in_array( $_key, $_cache ) )
@@ -616,10 +618,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_out .= $_key . ': ' . $_value . PHP_EOL;
             }
 
-            if ( $this->_logCorsInfo )
-            {
-                Log::debug( 'CORS headers sent: ' . $_out );
-            }
+            $this->_logCorsInfo && Log::debug( 'CORS headers sent: ' . $_out );
         }
 
         return true;
@@ -669,7 +668,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
 
             //	All allowed?
-            if ( '*' == $_whiteGuy )
+            if ( static::CORS_STAR == $_whiteGuy )
             {
                 $isStar = true;
 
@@ -682,10 +681,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 continue;
             }
 
-            if ( $this->_logCorsInfo )
-            {
-                Log::debug( 'CORS whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
-            }
+            $this->_logCorsInfo && Log::debug( 'CORS whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
 
             //	Check for un-parsed origin, 'null' sent when testing js files locally
             if ( is_array( $origin ) )
@@ -750,10 +746,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_parts['port'] = null;
         }
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS parsed inbound URI "' . $uri . '": ' . print_r( $_parts, true ) );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS parsed inbound URI "' . $uri . '": ' . print_r( $_parts, true ) );
 
         if ( isset( $_parts['path'] ) && !isset( $_parts['host'] ) )
         {
@@ -830,20 +823,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                         );
                     }
 
-                    if ( $this->_logCorsInfo )
-                    {
-                        Log::debug( 'CORS configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
-                    }
+                    $this->_logCorsInfo && Log::debug( 'CORS configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
                 }
             }
 
-            if ( Pii::appStoreSet( 'cors.whitelist', $_whitelist ) )
-            {
-                if ( $this->_logCorsInfo )
-                {
-                    Log::debug( 'CORS whitelist cached' );
-                }
-            }
+            Pii::appStoreSet( 'cors.whitelist', $_whitelist ) && $this->_logCorsInfo && Log::debug( 'CORS whitelist cached' );
         }
 
         //  Don't reset if they're the same.
