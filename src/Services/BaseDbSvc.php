@@ -275,8 +275,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     * @param string $main Main resource or empty for service
-     * @param string $sub  Subtending resources if applicable
+     * @param string $main   Main resource or empty for service
+     * @param string $sub    Subtending resources if applicable
      * @param string $action Action to validate permission
      */
     protected function validateResourceAccess( &$main, &$sub, $action )
@@ -2425,7 +2425,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             }
                         }
                         $_options = array('options' => $_options, 'flags' => $_flags);
-                        if ( !is_null( $value ) && false===filter_var( $value, FILTER_VALIDATE_INT, $_options ) )
+                        if ( !is_null( $value ) && false === filter_var( $value, FILTER_VALIDATE_INT, $_options ) )
                         {
                             if ( $_throw )
                             {
@@ -3205,6 +3205,30 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
+     * Check if the table exists in the database
+     *
+     * @param string $table_name Table name
+     *
+     * @return boolean
+     * @throws \Exception
+     */
+    public function doesTableExist( $table_name )
+    {
+        try
+        {
+            $this->correctTableName( $table_name );
+
+            return true;
+        }
+        catch ( \Exception $ex )
+        {
+
+        }
+
+        return false;
+    }
+
+    /**
      * @param array | null $options
      * @param bool         $refresh Force a refresh of the schema from the database
      *
@@ -3278,7 +3302,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
+            $this->validateSchemaAccess( $_name );
 
             $_out[] = $this->describeTable( $_table, $refresh );
         }
@@ -3377,12 +3401,21 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             'The request contains no valid table properties.'
         );
 
+        // update tables allows for create as well
         $_out = array();
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-            $_out[] = $this->updateTable( $_name, $_table, $allow_delete_fields, $return_schema );
+            if ( $this->doesTableExist( $_name ) )
+            {
+                $this->validateSchemaAccess( $_name, static::PATCH );
+                $_out[] = $this->updateTable( $_name, $_table, $allow_delete_fields, $return_schema );
+            }
+            else
+            {
+                $this->validateSchemaAccess( null, static::POST );
+                $_out[] = $this->createTable( $_name, $_table, false, $return_schema );
+            }
         }
 
         return $_out;
@@ -3437,7 +3470,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
+            $this->validateSchemaAccess( $_name );
             $_out[] = $this->deleteTable( $_table, $check_empty );
         }
 
