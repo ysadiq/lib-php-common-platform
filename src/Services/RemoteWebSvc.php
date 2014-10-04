@@ -88,6 +88,30 @@ class RemoteWebSvc extends BasePlatformRestService
         }
     }
 
+    protected static function parseArrayParameter( &$output, $name, $value )
+    {
+        if ( is_array( $value ) )
+        {
+            foreach ( $value as $sub => $subValue )
+            {
+                static::parseArrayParameter( $output, $name . '[' . $sub . ']', $subValue );
+            }
+        }
+        else
+        {
+            if ( !empty( $output ) )
+            {
+                $output .= '&';
+            }
+            $output .= urlencode( $name );
+            if ( !empty( $value ) )
+            {
+                $output .= '=' . urlencode( $value );
+            }
+        }
+    }
+
+
     /**
      * @param $action
      *
@@ -108,33 +132,7 @@ class RemoteWebSvc extends BasePlatformRestService
                 case 'path': //	Added by Yii router
                     break;
                 default:
-                    if ( is_array( $value ) )
-                    {
-                        foreach ( $value as $sub => $subValue )
-                        {
-                            if ( !empty( $param_str ) )
-                            {
-                                $param_str .= '&';
-                            }
-                            $param_str .= urlencode( $key . '[' . $sub . ']' );
-                            if ( !empty( $subValue ) )
-                            {
-                                $param_str .= '=' . urlencode( $subValue );
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if ( !empty( $param_str ) )
-                        {
-                            $param_str .= '&';
-                        }
-                        $param_str .= urlencode( $key );
-                        if ( !empty( $value ) )
-                        {
-                            $param_str .= '=' . urlencode( $value );
-                        }
-                    }
+                    static::parseArrayParameter( $param_str, $key, $value );
                     break;
             }
         }
