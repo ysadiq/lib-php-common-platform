@@ -327,12 +327,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -688,12 +688,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "ce4c753e688725ec19238bb8620b79434cd838a8"
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/ce4c753e688725ec19238bb8620b79434cd838a8",
-                "reference": "ce4c753e688725ec19238bb8620b79434cd838a8",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/eea48a0189839a3e7b878b802d1837b4ea9d5241",
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241",
                 "shasum": ""
             },
             "require": {
@@ -738,7 +738,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-09-29 15:26:31"
+            "time": "2014-10-05 22:12:45"
         },
         {
             "name": "monolog/monolog",
@@ -2227,12 +2227,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "656e03eeedc827e4830ac43547eae10bacaa1bbb"
+                "reference": "499f7d7aa96747ad97940089bd7a1fb24ad8182a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/656e03eeedc827e4830ac43547eae10bacaa1bbb",
-                "reference": "656e03eeedc827e4830ac43547eae10bacaa1bbb",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/499f7d7aa96747ad97940089bd7a1fb24ad8182a",
+                "reference": "499f7d7aa96747ad97940089bd7a1fb24ad8182a",
                 "shasum": ""
             },
             "require": {
@@ -2265,7 +2265,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-10-01 05:53:11"
+            "time": "2014-10-05 13:53:50"
         }
     ],
     "aliases": [
@@ -2296,7 +2296,5 @@
     "platform": {
         "php": "~5.3,<5.6"
     },
-    "platform-dev": [
-
-    ]
+    "platform-dev": []
 }
