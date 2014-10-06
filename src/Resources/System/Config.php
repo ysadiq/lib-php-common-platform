@@ -225,6 +225,7 @@ class Config extends BaseSystemRestResource
                 'upgrade_available'         => version_compare( $_currentVersion, $_latestVersion, '<' ),
                 //  CORS Support
                 'allowed_hosts'             => SystemManager::getAllowedHosts(),
+                'states'                    => Platform::getPlatformStates(),
             );
 
             //  Get the login provider array
@@ -512,7 +513,7 @@ class Config extends BaseSystemRestResource
      *
      * @return array
      */
-    public static function getCurrentConfig( $flush = false )
+    public static function getCurrentConfig( $flush = true )
     {
         return Platform::storeGet( static::CACHE_KEY, null, $flush, static::CONFIG_CACHE_TTL );
     }

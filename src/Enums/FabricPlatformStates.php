@@ -17,50 +17,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Enums;
+
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * PlatformStates
- * Defines the various states in which a platform may exist
+ * The states in which a platform may reside
  */
-interface PlatformStates
+class FabricPlatformStates extends SeedEnum
 {
     //*************************************************************************
     //* Constants
     //*************************************************************************
 
     /**
-     * @var int
+     * @type int Set by the Fabric system when needed before it's been set
      */
-    const ADMIN_REQUIRED = 0;
+    const UNKNOWN = -1;
+    /**
+     * @var int The default for newly provisioned DSPs
+     */
+    const NOT_ACTIVATED = 0;
     /**
      * @var int
      */
-    const DATA_REQUIRED = 1;
+    const ACTIVATED = 1;
     /**
      * @var int
      */
-    const INIT_REQUIRED = 2;
+    const LOCKED = 2;
     /**
      * @var int
      */
-    const READY = 3;
+    const MAINTENANCE = 3;
     /**
      * @var int
      */
-    const SCHEMA_REQUIRED = 4;
-    /**
-     * @var int
-     */
-    const UPGRADE_REQUIRED = 5;
-    /**
-     * @var int
-     */
-    const WELCOME_REQUIRED = 6;
-    /** @var int Indicates that the database is in place and the schema has been created */
-    const DATABASE_READY = 7;
-    /**
-     * @type string The config key that holds this value
-     */
-    const STATE_KEY = 'platform.ready_state';
+    const TOS_VIOLATION = 4;
 }

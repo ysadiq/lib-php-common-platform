@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Scripting;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Resources\System\Config;
-use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Yii\Models\App;
@@ -235,7 +234,7 @@ class ScriptEvent
             return false;
         }
 
-        $_session = Session::generateSessionDataFromUser( Session::getCurrentUserId() );
+        $_session = Session::getSessionData();
 
         if ( isset( $_session, $_session['allowed_apps'] ) )
         {

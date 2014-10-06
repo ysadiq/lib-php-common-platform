@@ -27,6 +27,7 @@ use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -150,6 +151,16 @@ class Session extends BasePlatformRestResource
      */
     protected static function _getSession( $ticket = null )
     {
+        $_result = static::getSessionData( $ticket );
+        static::$_cache = Option::get( $_result, 'cached' );
+        Pii::setState( 'cached', static::$_cache );
+
+        //	Additional stuff for session - launchpad mainly
+        return static::addSessionExtras( $_result, true );
+    }
+
+    public static function getSessionData( $ticket = null )
+    {
         try
         {
             $_user = null;
@@ -164,12 +175,7 @@ class Session extends BasePlatformRestResource
                 $_userId = static::validateSession();
             }
 
-            $_result = static::generateSessionDataFromUser( $_userId, $_user );
-            static::$_cache = Option::get( $_result, 'cached' );
-            Pii::setState( 'cached', static::$_cache );
-
-            //	Additional stuff for session - launchpad mainly
-            return static::addSessionExtras( $_result, true );
+            return static::generateSessionDataFromUser( $_userId, $_user );
         }
         catch ( \Exception $_ex )
         {
@@ -189,10 +195,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( $_config->allow_guest_user )
                 {
-                    $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
-
-                    // additional stuff for session - launchpad mainly
-                    return static::addSessionExtras( $_result, true );
+                    return static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
                 }
             }
 
@@ -294,7 +297,7 @@ class Session extends BasePlatformRestResource
         static::$_ownerId = sha1( $_user->email );
 
         // write back login datetime
-        $_user->update( array('last_login_date' => date( 'c' )) );
+        $_user->update( array('last_login_date' => Platform::getSystemTimestamp()) );
 
         if ( $return_extras )
         {
@@ -360,7 +363,7 @@ class Session extends BasePlatformRestResource
 
         /** @var User $_user */
         $_user = $user
-            ? : ResourceStore::model( 'user' )->with(
+            ?: ResourceStore::model( 'user' )->with(
                 'role.role_service_accesses',
                 'role.role_system_accesses',
                 'role.apps',
@@ -467,7 +470,7 @@ class Session extends BasePlatformRestResource
 
         /** @var Role $_role */
         $_role = $role
-            ? : ResourceStore::model( 'role' )->with(
+            ?: ResourceStore::model( 'role' )->with(
                 'role_service_accesses',
                 'role_system_accesses',
                 'apps',
@@ -935,7 +938,14 @@ class Session extends BasePlatformRestResource
             return false;
         }
 
-        static::_checkCache();
+        try
+        {
+            static::_checkCache();
+        }
+        catch ( \Exception $ex )
+        {
+            // ignore session exception, return lookups if we find them
+        }
 
         $_parts = explode( '.', $lookup );
         if ( count( $_parts ) > 1 )
@@ -1116,7 +1126,7 @@ class Session extends BasePlatformRestResource
             return static::$_userId = Pii::user()->getId();
         }
 
-        return static::$_userId = $setToIfNull ? : null;
+        return static::$_userId = $setToIfNull ?: null;
     }
 
     /**

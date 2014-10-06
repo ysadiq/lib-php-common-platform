@@ -151,7 +151,7 @@ class SystemManager extends BaseSystemRestService
     /**
      * Determines the current state of the system
      *
-     * @return string
+     * @return int
      */
     public static function getSystemState()
     {
@@ -219,13 +219,7 @@ class SystemManager extends BaseSystemRestService
 
             Log::debug( 'Checking database schema' );
 
-            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
-            $_labels = Option::get( $_result, 'labels', true );
-
-            if ( !empty( $_labels ) )
-            {
-                SqlDbUtilities::setSchemaExtras( null, $_labels );
-            }
+            SqlDbUtilities::updateTables( null, $_db, $_tables, true );
 
             try
             {
@@ -291,13 +285,7 @@ class SystemManager extends BaseSystemRestService
             // create system tables
             Log::debug( 'Analyzing current schema for migration.' );
 
-            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
-            $_labels = Option::get( $_result, 'labels', true );
-
-            if ( !empty( $_labels ) )
-            {
-                SqlDbUtilities::setSchemaExtras( null, $_labels );
-            }
+            SqlDbUtilities::updateTables( null, $_db, $_tables, true );
 
             if ( !empty( $_currentVersion ) )
             {
@@ -465,7 +453,7 @@ SQL;
     {
         // Create and login first admin user
         // Use the model attributes, or check system state variables
-        $_email =  Option::get( $attributes, 'email', Pii::getState( 'email' ) );
+        $_email = Option::get( $attributes, 'email', Pii::getState( 'email' ) );
         $_password = Option::get( $attributes, 'password', Pii::getState( 'password' ) );
 
         if ( empty( $_email ) || empty( $_password ) )
@@ -512,7 +500,7 @@ SQL;
             $_user->setAttributes( $_fields );
 
             // write back login datetime
-            $_user->last_login_date = date( 'c' );
+            $_user->last_login_date = Platform::getSystemTimestamp();
             $_user->save();
 
             // update session with current real user
@@ -562,122 +550,6 @@ SQL;
             'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
             'name'
         );
-    }
-
-    /**
-     * Upgrades the DSP code base and runs the installer.
-     *
-     * @param string $version Version to upgrade to, should be a github tag identifier
-     *
-     * @throws \Exception
-     * @return void
-     */
-    public static function upgradeDsp( $version )
-    {
-        if ( empty( $version ) )
-        {
-            throw new \Exception( 'No version information in upgrade load.' );
-        }
-
-        $_versionUrl = 'https://github.com/dreamfactorysoftware/dsp-core/archive/' . $version . '.zip';
-
-        // copy current directory to backup
-        $_upgradeDir = Pii::getParam( 'base_path' ) . '/';
-        $_backupDir = Platform::getStoragePath( '/backups/' );
-
-        if ( !file_exists( $_backupDir ) )
-        {
-            @\mkdir( $_backupDir, 0777, true );
-        }
-
-        $_backupZipFile = $_backupDir . 'dsp_' . Pii::getParam( 'dsp.version' ) . '-' . time() . '.zip';
-        $_backupZip = new \ZipArchive();
-
-        if ( true !== $_backupZip->open( $_backupZipFile, \ZIPARCHIVE::CREATE ) )
-        {
-            throw new \Exception( 'Error opening zip file.' );
-        }
-
-        $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'storage');
-
-        try
-        {
-            FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
-        }
-        catch ( \Exception $ex )
-        {
-            throw new \Exception( "Error zipping contents to backup file - $_backupDir\n.{$ex->getMessage()}" );
-        }
-
-        if ( !$_backupZip->close() )
-        {
-            throw new \Exception( "Error writing backup file - $_backupZipFile." );
-        }
-
-        // need to download and extract zip file of latest version
-        $_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-        $_tempZip = null;
-
-        try
-        {
-            $_tempZip = FileUtilities::importUrlFileToTemp( $_versionUrl );
-            $zip = new \ZipArchive();
-
-            if ( true !== $zip->open( $_tempZip ) )
-            {
-                throw new \Exception( 'Error opening zip file.' );
-            }
-
-            if ( !$zip->extractTo( $_tempDir ) )
-            {
-                throw new \Exception( "Error extracting zip contents to temp directory - $_tempDir." );
-            }
-
-            if ( false === @unlink( $_tempZip ) )
-            {
-                Log::error( 'Unable to remove zip file "' . $_tempZip . '"' );
-            }
-        }
-        catch ( \Exception $ex )
-        {
-            if ( !empty( $_tempZip ) && false === @unlink( $_tempZip ) )
-            {
-                Log::error( 'Unable to remove zip file "' . $_tempZip . '"' );
-            }
-
-            throw new \Exception( "Failed to import dsp package $_versionUrl.\n{$ex->getMessage()}" );
-        }
-
-        // now copy over
-        $_tempDir .= 'dsp-core-' . $version;
-
-        if ( !file_exists( $_tempDir ) )
-        {
-            throw new \Exception( "Failed to find new dsp package $_tempDir." );
-        }
-        // blindly, or are there things we shouldn't touch here?
-        FileUtilities::copyTree( $_tempDir, $_upgradeDir, false );
-
-        // now run installer script
-        $_oldWorkingDir = getcwd();
-        chdir( $_upgradeDir );
-
-        $_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cDf 2>&1';
-        exec( $_installCommand, $_installOut );
-        Log::info( implode( PHP_EOL, $_installOut ) );
-
-        // back to normal
-        chdir( $_oldWorkingDir );
-
-        //        //  Reload autoloader with new libraries...
-        //        /** @noinspection PhpIncludeInspection */
-        //        if ( true !== ( $_loader = require Pii::getParam( 'vendor_path' ) . '/autoload.php' ) )
-        //        {
-        //            \Kisma::set( CoreSettings::AUTO_LOADER, $_loader );
-        //        }
-
-        // clear out swagger cache
-        SwaggerManager::clearCache();
     }
 
     /**
@@ -1076,11 +948,11 @@ SQL
 
         if ( $_state )
         {
-			// cache it for later access
-			if ( false === Platform::storeSet( 'dsp.admin_activated', $_state ) )
-			{
-				Log::error( '  * System error caching admin activated state.' );
-			}
+            // cache it for later access
+            if ( false === Platform::storeSet( 'dsp.admin_activated', $_state ) )
+            {
+                Log::error( '  * System error caching admin activated state.' );
+            }
         }
 
         return $_state;

@@ -68,6 +68,10 @@ class ScriptEngine
         'lodash' => 'lodash.min.js',
     );
     /**
+     * @type array Any user-defined libraries to load
+     */
+    protected static $_userLibraries = array();
+    /**
      * @var array The currently supported scripting languages
      */
     protected static $_supportedLanguages = array(
@@ -103,6 +107,7 @@ class ScriptEngine
     //*************************************************************************
     //	Methods
     //*************************************************************************
+    /** @noinspection PhpUndefinedClassInspection */
 
     /**
      * Registers various available extensions to the v8 instance...
@@ -152,7 +157,7 @@ class ScriptEngine
         static::$_instances[spl_object_hash( $_engine )] = $_engine;
 
         return $_engine;
-    }
+    }/** @noinspection PhpUndefinedClassInspection */
 
     /**
      * Publically destroy engine
@@ -320,7 +325,7 @@ class ScriptEngine
 
         foreach ( static::$_supportedScriptPaths as $_key => $_path )
         {
-            $_checkScriptPath = $_path . '/' . $_script;
+            $_checkScriptPath = $_path . DIRECTORY_SEPARATOR . $_script;
 
             if ( is_file( $_checkScriptPath ) && is_readable( $_checkScriptPath ) )
             {
@@ -357,7 +362,7 @@ class ScriptEngine
         $_platformConfigPath = Platform::getPlatformConfigPath();
 
         //  Get our script path
-        static::$_libraryScriptPath = $libraryScriptPath ?: Platform::getLibraryConfigPath( '/scripts' );
+        static::$_libraryScriptPath = $libraryScriptPath ?: Platform::getLibraryConfigPath( DIRECTORY_SEPARATOR . 'scripts' );
 
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
@@ -368,16 +373,23 @@ class ScriptEngine
 
         static::$_logScriptMemoryUsage = Pii::getParam( 'dsp.log_script_memory_usage', false );
 
-        //  All the paths that we will check for scripts
+        //  Merge in user libraries...
+        static::$_userLibraries = array_merge( static::$_userLibraries, Pii::getParam( 'dsp.scripting.user_libraries', array() ) );
+
+        //  All the paths that we will check for scripts in order
         static::$_supportedScriptPaths = array(
-            //  This is ONLY the root of the app store
+            //  This is ONLY the root of the app store (storage/applications)
             'app'      => Platform::getApplicationsPath(),
-            //  This is the user's private scripting area used by the admin console
-            'storage'  => Platform::getPrivatePath( '/scripts' ),
-            //  Scripts here override library scripts
-            'platform' => $_platformConfigPath . '/scripts',
-            //  Now check library distribution
+            //  Now check library distribution (vendor/dreamfactory/lib-php-common-platform/config/scripts)
             'library'  => static::$_libraryScriptPath,
+            //  This is the private event scripting area used by the admin console (storage/.private/scripts)
+            'storage'  => Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts' ),
+            //  This is the private user scripting area used by the admin console (storage/.private/scripts.user)
+            'user'     => Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts.user' ),
+            //  Scripts here override library scripts (config/scripts)
+            'platform' => $_platformConfigPath . DIRECTORY_SEPARATOR . 'scripts',
+            //  Static libraries included with the distribution (web/static)
+            'static'   => dirname( $_platformConfigPath ) . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'static',
         );
     }
 
@@ -419,7 +431,37 @@ class ScriptEngine
     }
 
     /**
+     * Locates and loads a library returning the contents
+     *
+     * @param string $id   The id of the library (i.e. "lodash", "underscore", etc.)
+     * @param string $file The relative path/name of the library file
+     *
+     * @return string
+     */
+    protected static function _getLibrary( $id, $file = null )
+    {
+        if ( null !== $file || array_key_exists( $id, static::$_userLibraries ) )
+        {
+            $_file = $file ?: static::$_userLibraries[$id];
+
+            //  Find the library
+            foreach ( static::$_supportedScriptPaths as $_name => $_path )
+            {
+                $_filePath = $_path . DIRECTORY_SEPARATOR . $_file;
+
+                if ( file_exists( $_filePath ) && is_readable( $_filePath ) )
+                {
+                    return file_get_contents( $_filePath, 'r' );
+                }
+            }
+        }
+
+        throw new \InvalidArgumentException( 'The library id "' . $id . '" could not be located.' );
+    }/** @noinspection PhpUndefinedClassInspection */
+
+    /**
      * @param \V8Js  $engine
+     *
      * @param string $script
      * @param array  $exposedEvent
      * @param array  $exposedPlatform
@@ -437,19 +479,38 @@ class ScriptEngine
 
         $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
+        //  Load user libraries
+        $_userLibraries = Platform::storeGet( 'scripting.libraries.user', static::_loadUserLibraries(), false, 3600 );
+
         $_enrobedScript = <<<JS
-        
+
+//noinspection BadExpressionStatementJS
+{$_userLibraries};
+
 _wrapperResult = (function() {
 
+    //noinspection JSUnresolvedVariable
     var _event = {$_jsonEvent};
 
 	try	{
-		_event.script_result = (function(event, platform) {
-		
-			{$script}
-			;
-			
-		})(_event, DSP.platform);
+        //noinspection JSUnresolvedVariable
+        _event.script_result = (function(event, platform) {
+
+            //noinspection CoffeeScriptUnusedLocalSymbols,JSUnusedLocalSymbols
+            var include = function( fileName ) {
+                var _contents;
+
+                //noinspection JSUnresolvedFunction
+            if ( false === ( _contents = platform.api.includeUserScript(fileName) ) ) {
+                    throw 'User script "' + fileName + '" not found.';
+                }
+
+                return _contents;
+            };
+
+            //noinspection BadExpressionStatementJS,JSUnresolvedVariable
+            {$script};
+    	})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
 		_event.script_result = {error:_ex.message};
@@ -464,12 +525,8 @@ JS;
 
         if ( !static::$_moduleLoaderAvailable )
         {
-            $_enrobedScript = Platform::mcGet(
-                    'scripting.modules.lodash',
-                    static::loadScriptingModule( 'lodash', false ),
-                    false,
-                    3600
-                ) . ';' . $_enrobedScript;
+            $_enrobedScript =
+                Platform::storeGet( 'scripting.modules.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
         }
 
         return $_enrobedScript;
@@ -550,8 +607,7 @@ JS;
             return null;
         }
 
-        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error()
-        )
+        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error() )
         {
             $_contentType = 'text/plain';
             $_payload = $payload;
@@ -593,10 +649,34 @@ JS;
     }
 
     /**
+     * Retrieves any user-defined libraries
+     *
+     * @return null|string
+     */
+    protected static function _loadUserLibraries()
+    {
+        $_code = null;
+
+        foreach ( static::$_userLibraries as $_id => $_library )
+        {
+            $_code .= static::_getLibrary( $_id, $_library ) . ';' . PHP_EOL;
+        }
+
+        return $_code;
+    }
+
+    /**
      * @return \stdClass
      */
     protected static function _getExposedApi()
     {
+        static $_api;
+
+        if ( null !== $_api )
+        {
+            return $_api;
+        }
+
         $_api = new \stdClass();
 
         $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
@@ -619,7 +699,7 @@ JS;
             return static::inlineRequest( HttpMethod::POST, $path, $payload, $curlOptions );
         };
 
-        $_api->delete = function ( $path, $payload = null, $curlOptions )
+        $_api->delete = function ( $path, $payload = null, $curlOptions = array() )
         {
             return static::inlineRequest( HttpMethod::DELETE, $path, $payload, $curlOptions );
         };
@@ -632,6 +712,18 @@ JS;
         $_api->patch = function ( $path, $payload = null, $curlOptions = array() )
         {
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
+        };
+
+        $_api->includeUserScript = function ( $fileName )
+        {
+            $_fileName = Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts.user' ) . DIRECTORY_SEPARATOR . $fileName;
+
+            if ( !file_exists( $_fileName ) )
+            {
+                return false;
+            }
+
+            return file_get_contents( Platform::getPrivatePath( DIRECTORY_SEPARATOR . 'scripts.user' ) . DIRECTORY_SEPARATOR . $fileName );
         };
 
         return $_api;
@@ -667,5 +759,37 @@ JS;
     public static function getSupportedExtensions()
     {
         return array_keys( static::$_supportedLanguages );
+    }
+
+    /**
+     * @return array
+     */
+    public static function getUserLibraries()
+    {
+        return static::$_userLibraries;
+    }
+
+    /**
+     * @param array $userLibraries
+     */
+    public static function setUserLibraries( $userLibraries )
+    {
+        static::$_userLibraries = $userLibraries;
+    }
+
+    /**
+     * @return boolean
+     */
+    public static function getLogScriptMemoryUsage()
+    {
+        return static::$_logScriptMemoryUsage;
+    }
+
+    /**
+     * @param boolean $logScriptMemoryUsage
+     */
+    public static function setLogScriptMemoryUsage( $logScriptMemoryUsage )
+    {
+        static::$_logScriptMemoryUsage = $logScriptMemoryUsage;
     }
 }

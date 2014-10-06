@@ -57,6 +57,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
+     * @var string Indicates all is allowed
+     */
+    const CORS_STAR = '*';
+    /**
      * @var string The HTTP Option method
      */
     const CORS_OPTION_METHOD = 'OPTIONS';
@@ -66,8 +70,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     const CORS_DEFAULT_ALLOWED_METHODS = 'GET, POST, PUT, DELETE, PATCH, MERGE, COPY, OPTIONS';
     /**
      * @var string The allowed HTTP headers
+     * Tunnelling verb overrides: X-HTTP-Method (Microsoft), X-HTTP-Method-Override (Google/GData), X-METHOD-OVERRIDE
+     * (IBM)
      */
-    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type, X-Requested-With, X-DreamFactory-Application-Name, X-Application-Name, X-DreamFactory-Session-Token';
+    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type,X-Requested-With,X-DreamFactory-Application-Name,X-Application-Name,X-DreamFactory-Session-Token,X-HTTP-Method,X-HTTP-Method-Override,X-METHOD-OVERRIDE';
     /**
      * @var int The default number of seconds to allow this to be cached. Default is 15 minutes.
      */
@@ -256,7 +262,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( null === ( $_autoloadPath = Pii::appStoreGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
-            $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+            $_path =
+                Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
 
             if ( !is_dir( $_path ) )
             {
@@ -494,53 +501,58 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Reset the cache before processing...
         if ( false === $whitelist )
         {
-            $_cache = array();
-            $_cacheVerbs = array();
-
-            if ( $this->_logCorsInfo )
+            if ( !empty( $_cache ) )
             {
-                Log::debug( 'CORS internal cache reset.' );
+                $_cache = array();
+                $_cacheVerbs = array();
+
+                $this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
             }
 
             return true;
         }
 
-        $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-
-        //	Was an origin header passed? If not, don't do CORS.
-        if ( 'file://' == $_origin || empty( $_origin ) )
+        //	Find out if we actually received an origin header
+        if ( !isset( $_SERVER, $_SERVER['HTTP_ORIGIN'] ) || !array_key_exists( 'HTTP_ORIGIN', $_SERVER ) )
         {
-            if ( !empty( $_origin ) )
-            {
-                Log::info( 'Local file resource origin received: ' . $_origin );
-            }
+            //  No origin header, no CORS...
+            $this->_logCorsInfo && Log::debug( 'CORS: no origin received.' );
 
-            return true;
+            return $returnHeaders ? array() : false;
         }
 
-        $_originUri = null;
+        $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
+
+        //  Only bail if origin == 'file://'. Ya know, for Javascript!
+        if ( 'file://' == $_origin )
+        {
+            $this->_logCorsInfo && Log::debug( 'CORS: local file/empty resource origin received: ' . $_origin );
+
+            return $returnHeaders ? array() : true;
+        }
+
+        //  empty origin received. Treat like a star...
+        if ( empty( $_origin ) )
+        {
+            return $returnHeaders ? array() : false;
+        }
+
+        $_isStar = false;
         $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS origin received: ' . $_origin );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
         {
             //	Not parse-able, set to itself, check later (testing from local files - no session)?
-            Log::warning( 'Unable to parse received origin: [' . $_origin . ']' );
+            Log::warning( 'CORS: unable to parse received origin: [' . $_origin . ']' );
             $_originParts = $_origin;
         }
 
-        $_originUri = trim( $this->_normalizeUri( $_originParts ) );
+        $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
         $_key = sha1( $_requestUri . $_originUri );
-        $_isStar = false;
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS: origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
 
         //	Not in cache, check it out...
         if ( !in_array( $_key, $_cache ) )
@@ -548,7 +560,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri, $_isStar ) ) )
             {
                 Log::error(
-                    'Unauthorized origin rejected via CORS > Source: ' . $_requestUri . ' > Origin: ' . $_originUri
+                    'CORS: unauthorized origin rejected > Source: ' . $_requestUri . ' > Origin: ' . $_originUri
                 );
 
                 /**
@@ -558,10 +570,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                  */
                 header( 'HTTP/1.1 403 Forbidden' );
 
-                Pii::end();
-
-                //	If end fails for some unknown impossible reason...
-                return false;
+                return Pii::end();
             }
 
             $_cache[$_key] = $_originUri;
@@ -573,26 +582,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_allowedMethods = $_cacheVerbs[$_key];
         }
 
-        $_headers = array();
-
-        if ( !empty( $_originUri ) )
-        {
-            $_headers['Access-Control-Allow-Origin'] = $_originUri;
-        }
-
-        $_headers['Access-Control-Allow-Credentials'] = 'true';
-        $_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
-        $_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
-        $_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
+        $_headers = array(
+            'Access-Control-Allow-Credentials' => 'true',
+            'Access-Control-Allow-Headers'     => static::CORS_DEFAULT_ALLOWED_HEADERS,
+            'Access-Control-Allow-Methods'     => $_allowedMethods,
+            'Access-Control-Allow-Origin'      => $_isStar ? static::CORS_STAR : $_originUri,
+            'Access-Control-Max-Age'           => static::CORS_DEFAULT_MAX_AGE,
+        );
 
         if ( $this->_extendedHeaders )
         {
             $_headers['X-DreamFactory-Source'] = $_requestUri;
-
-            if ( $_origin )
-            {
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
-            }
+            $_headers['X-DreamFactory-Origin-Whitelisted'] =
+                preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
         }
 
         //	Store in cache...
@@ -618,10 +620,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_out .= $_key . ': ' . $_value . PHP_EOL;
             }
 
-            if ( $this->_logCorsInfo )
-            {
-                Log::debug( 'CORS headers sent: ' . $_out );
-            }
+            $this->_logCorsInfo &&
+            Log::debug(
+                'CORS: headers sent' . PHP_EOL .
+                '*=== Headers Start ===*' . PHP_EOL .
+                $_out .
+                '*=== Headers End ===*' . PHP_EOL
+            );
         }
 
         return true;
@@ -650,7 +655,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
                 if ( null === ( $_whiteGuy = Option::get( $_hostInfo, 'host' ) ) )
                 {
-                    Log::error( 'CORS whitelist info does not contain a "host" parameter!' );
+                    Log::error( 'CORS: whitelist info does not contain a "host" parameter!' );
                     continue;
                 }
 
@@ -671,7 +676,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
 
             //	All allowed?
-            if ( '*' == $_whiteGuy )
+            if ( static::CORS_STAR == $_whiteGuy )
             {
                 $isStar = true;
 
@@ -680,14 +685,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
             {
-                Log::debug( 'CORS unable to parse "' . $_whiteGuy . '" whitelist entry' );
+                Log::error( 'CORS: unable to parse "' . $_whiteGuy . '" whitelist entry' );
                 continue;
             }
 
-            if ( $this->_logCorsInfo )
-            {
-                Log::debug( 'CORS whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
-            }
+            $this->_logCorsInfo &&
+            Log::debug( 'CORS: whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
 
             //	Check for un-parsed origin, 'null' sent when testing js files locally
             if ( is_array( $origin ) )
@@ -711,13 +714,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _compareUris( $first, $second )
     {
-        $_match = ( ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] ) );
+        $_match =
+            ( ( $first['scheme'] == $second['scheme'] ) &&
+                ( $first['host'] == $second['host'] ) &&
+                ( $first['port'] == $second['port'] ) );
 
         if ( $this->_logCorsInfo )
         {
-            Log::debug( 'CORS compare inbound origin to whitelisted host: ' . ( $_match ? 'Success' : 'FAIL' ) );
-            Log::debug( '  * ORIGIN: ' . print_r( $first, true ) );
-            Log::debug( '  *  WHITE: ' . print_r( $second, true ) );
+            Log::debug(
+                'CORS: compare inbound origin to whitelisted host: ' . ( $_match ? 'Success' : 'FAIL' ) . PHP_EOL .
+                '  * ORIGIN: ' . print_r( $first, true ) . PHP_EOL .
+                '  *  WHITE: ' . print_r( $second, true ) . PHP_EOL
+            );
         }
 
         return $_match;
@@ -731,25 +739,55 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _parseUri( $uri, $normalize = false )
     {
-        if ( false === ( $_parts = parse_url( $uri ) ) || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
+        //  Don't parse empty uris, nor should it get here...
+        if ( empty( $uri ) )
+        {
+            return true;
+        }
+
+        $_parts = parse_url( $uri );
+
+        if ( false === $_parts || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
         {
             return false;
         }
 
-        $_parts['scheme'] = Option::get( $_parts, 'scheme', 'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null ) );
-        $_parts['port'] = Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) );
+        $_parts['scheme'] = Option::get(
+            $_parts,
+            'scheme',
+            'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null )
+        );
+
+        $_parts['port'] = Option::get( $_parts, 'port' );
+
+        //  Set ports to defaults for scheme if empty
+        if ( empty( $_parts['port'] ) )
+        {
+            switch ( $_parts['scheme'] )
+            {
+                case 'http':
+                    $_parts['port'] = 80;
+                    break;
+
+                case 'https':
+                    $_parts['port'] = 443;
+                    break;
+
+                default:
+                    $_parts['port'] = null;
+                    break;
+            }
+        }
 
         //  If standard port 80 or 443 and there is no port in uri, clear from parse...
-        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) && false === strpos( $uri, ':' . $_parts['port'] )
+        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) &&
+            false === strpos( $uri, ':' . $_parts['port'] )
         )
         {
             $_parts['port'] = null;
         }
 
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug( 'CORS parsed inbound URI "' . $uri . '": ' . print_r( $_parts, true ) );
-        }
+        $this->_logCorsInfo && Log::debug( 'CORS: parsed inbound URI "' . $uri . '": ' . print_r( $_parts, true ) );
 
         if ( isset( $_parts['path'] ) && !isset( $_parts['host'] ) )
         {
@@ -763,10 +801,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             unset( $_parts['path'] );
         }
 
-        $_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-
         $_uri = array(
-            'scheme' => Option::get( $_parts, 'scheme', $_protocol ),
+            'scheme' => Option::get( $_parts, 'scheme' ),
             'host'   => Option::get( $_parts, 'host' ),
             'port'   => Option::get( $_parts, 'port' ),
         );
@@ -784,10 +820,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return !is_array( $parts )
             ? $parts
             :
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) .
-            '://' .
+            ( !empty( $parts['host'] ) && isset( $parts['scheme'] ) ? $parts['scheme'] . '://' : 'http://' ) .
             $parts['host'] .
-            ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+            ( !empty( $parts['host'] ) && isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -827,20 +862,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                         );
                     }
 
-                    if ( $this->_logCorsInfo )
-                    {
-                        Log::debug( 'CORS configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
-                    }
+                    $this->_logCorsInfo &&
+                    Log::debug( 'CORS: configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
                 }
             }
 
-            if ( Pii::appStoreSet( 'cors.whitelist', $_whitelist ) )
-            {
-                if ( $this->_logCorsInfo )
-                {
-                    Log::debug( 'CORS whitelist cached' );
-                }
-            }
+            Pii::appStoreSet( 'cors.whitelist', $_whitelist ) &&
+            $this->_logCorsInfo &&
+            Log::debug( 'CORS: whitelist cached' );
         }
 
         //  Don't reset if they're the same.

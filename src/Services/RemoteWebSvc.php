@@ -88,6 +88,30 @@ class RemoteWebSvc extends BasePlatformRestService
         }
     }
 
+    protected static function parseArrayParameter( &$output, $name, $value )
+    {
+        if ( is_array( $value ) )
+        {
+            foreach ( $value as $sub => $subValue )
+            {
+                static::parseArrayParameter( $output, $name . '[' . $sub . ']', $subValue );
+            }
+        }
+        else
+        {
+            if ( !empty( $output ) )
+            {
+                $output .= '&';
+            }
+            $output .= urlencode( $name );
+            if ( !empty( $value ) )
+            {
+                $output .= '=' . urlencode( $value );
+            }
+        }
+    }
+
+
     /**
      * @param $action
      *
@@ -108,9 +132,7 @@ class RemoteWebSvc extends BasePlatformRestService
                 case 'path': //	Added by Yii router
                     break;
                 default:
-                    $param_str .= ( !empty( $param_str ) ) ? '&' : '';
-                    $param_str .= urlencode( $key );
-                    $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
+                    static::parseArrayParameter( $param_str, $key, $value );
                     break;
             }
         }
@@ -185,11 +207,13 @@ class RemoteWebSvc extends BasePlatformRestService
         parent::_preProcess();
 
         $this->_query = $this->buildParameterString( $this->_action );
-        $this->_url =
-            rtrim( $this->_baseUrl, '/' ) .
-            ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) .
-            '?' .
-            $this->_query;
+        $this->_url = rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null );
+
+        if ( !empty( $this->_query ) )
+        {
+            $_splicer = ( false === strpos( $this->_baseUrl, '?' ) ) ? '?' : '&';
+            $this->_url .= $_splicer . $this->_query;
+        }
 
         //	set additional headers
         $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );

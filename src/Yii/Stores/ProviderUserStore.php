@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
 
@@ -138,7 +139,7 @@ class ProviderUserStore extends BaseOasysStore
 		}
 
 		$_creds->auth_text = array_merge( !is_array( $_creds->auth_text ) ? array() : $_creds->auth_text, $this->contents() );
-		$_creds->last_use_date = date( 'c' );
+		$_creds->last_use_date = Platform::getSystemTimestamp();
 
 		try
 		{

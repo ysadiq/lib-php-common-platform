@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
@@ -621,7 +622,7 @@ class User extends BasePlatformSystemModel
         $_user->user_data = $_data;
 
         //	Stamp it
-        $_user->last_login_date = date( 'c' );
+        $_user->last_login_date = Platform::getSystemTimestamp();
 
         try
         {

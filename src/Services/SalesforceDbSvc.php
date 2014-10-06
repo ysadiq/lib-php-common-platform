@@ -174,7 +174,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function correctTableName( $name  )
+    public function correctTableName( &$name  )
     {
         static $_existing = null;
 
@@ -243,7 +243,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $table, $properties = array(), $check_exist = false )
+    public function createTable( $table, $properties = array(), $check_exist = false, $return_schema = false )
     {
         throw new NotImplementedException( "Metadata actions currently not supported." );
     }
@@ -251,7 +251,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false, $return_schema = false )
     {
         throw new NotImplementedException( "Metadata actions currently not supported." );
     }
@@ -267,7 +267,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    public function createField( $table, $field, $properties = array(), $check_exist = false, $return_schema = false )
     {
         throw new NotImplementedException( "Metadata actions currently not supported." );
     }
@@ -275,7 +275,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false, $return_schema = false )
     {
         throw new NotImplementedException( "Metadata actions currently not supported." );
     }

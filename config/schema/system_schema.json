@@ -1,1573 +1,1588 @@
 {
-	"version": "1.7.0",
-	"scripts": {
-		"install": null,
-		"update":  "1.5.0-update.sql"
-	},
-	"table":   [
-		{
-			"name":  "df_sys_config",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "db_version",
-					"type":       "string",
-					"length":     32,
-					"allow_null": false
-				},
-				{
-					"name":       "allow_open_registration",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":          "open_reg_role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "open_reg_email_service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "open_reg_email_template_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_email_template",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "invite_email_service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "invite_email_template_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_email_template",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "password_email_service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "password_email_template_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_email_template",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":       "allow_guest_user",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":          "guest_role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":       "editable_profile_fields",
-					"type":       "string",
-					"default":    "email,display_name,first_name,last_name,phone,default_app_id,security_question,security_answer",
-					"length":     255,
-					"allow_null": false
-				},
-				{
-					"name":               "custom_settings",
-					"type":               "mediumtext",
-					"supports_multibyte": true,
-					"allow_null":         true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
+    "version": "1.7.0",
+    "scripts": {
+        "install": null,
+        "update": "1.5.0-update.sql"
+    },
+    "table": [
+        {
+            "name": "df_sys_config",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "db_version",
+                    "type": "string",
+                    "length": 32,
+                    "allow_null": false
+                },
+                {
+                    "name": "allow_open_registration",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "open_reg_role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "open_reg_email_service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "open_reg_email_template_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_email_template",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "invite_email_service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "invite_email_template_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_email_template",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "password_email_service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "password_email_template_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_email_template",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "allow_guest_user",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "guest_role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "editable_profile_fields",
+                    "type": "string",
+                    "default": "email,display_name,first_name,last_name,phone,default_app_id,security_question,security_answer",
+                    "length": 255,
+                    "allow_null": false
+                },
+                {
+                    "name": "custom_settings",
+                    "type": "mediumtext",
+                    "supports_multibyte": true,
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "allow_null": true,
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "allow_null": true,
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_user",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "email",
+                    "type": "string",
+                    "length": 255,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": {
+                        "not_empty": { },
+                        "email": { }
+                    }
+                },
+                {
+                    "name": "password",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false
+                },
+                {
+                    "name": "first_name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "last_name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "display_name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "allow_null": false,
+                    "is_index": true,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "phone",
+                    "type": "string",
+                    "length": 32,
+                    "allow_null": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "is_sys_admin",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "is_deleted",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "confirm_code",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "default_app_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "security_question",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "security_answer",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": true
+                },
+                {
+                    "name": "user_data",
+                    "type": "mediumtext",
+                    "supports_multibyte": true,
+                    "allow_null": true
+                },
+                {
+                    "name": "user_source",
+                    "type": "integer",
+                    "allow_null": false,
+                    "default": 0
+                },
+                {
+                    "name": "last_login_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "allow_null": true,
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "allow_null": true,
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_role",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "default_app_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_service",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "api_name",
+                    "type": "string",
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": {
+                        "not_empty": { }
+                    }
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "description",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "type",
+                    "type": "string",
+                    "length": 64,
+                    "allow_null": false
+                },
+                {
+                    "name": "type_id",
+                    "type": "integer",
+                    "allow_null": false,
+                    "default": 0
+                },
+                {
+                    "name": "storage_type",
+                    "type": "string",
+                    "length": 64,
+                    "allow_null": true
+                },
+                {
+                    "name": "storage_type_id",
+                    "type": "integer",
+                    "allow_null": true
+                },
+                {
+                    "name": "credentials",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "native_format",
+                    "type": "string",
+                    "length": 32,
+                    "allow_null": true
+                },
+                {
+                    "name": "native_format_id",
+                    "type": "integer",
+                    "allow_null": true
+                },
+                {
+                    "name": "base_url",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "parameters",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "headers",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_app",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "api_name",
+                    "type": "string",
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": {
+                        "not_empty": { }
+                    }
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "description",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "url",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "is_url_external",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "import_url",
+                    "type": "text",
+                    "allow_null": true,
+                    "validation": {
+                        "url": { }
+                    }
+                },
+                {
+                    "name": "storage_service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "SET NULL",
+                    "allow_null": true
+                },
+                {
+                    "name": "storage_container",
+                    "type": "string",
+                    "length": 255,
+                    "allow_null": true
+                },
+                {
+                    "name": "requires_fullscreen",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "allow_fullscreen_toggle",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "toggle_location",
+                    "type": "string",
+                    "length": 64,
+                    "default": "top",
+                    "allow_null": false
+                },
+                {
+                    "name": "requires_plugin",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_app_group",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_app_to_app_group",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "app_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "app_group_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app_group",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                }
+            ]
+        },
+        {
+            "name": "df_sys_app_to_role",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "app_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                }
+            ]
+        },
+        {
+            "name": "df_sys_app_to_service",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "app_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_app",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "component",
+                    "type": "text",
+                    "allow_null": true
+                }
+            ]
+        },
+        {
+            "name": "df_sys_role_service_access",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": true
+                },
+                {
+                    "name": "component",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "access",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "No Access",
+                        "Read Only",
+                        "Write Only",
+                        "Read and Write",
+                        "Full Access"
+                    ],
+                    "default": "No Access",
+                    "allow_null": false,
+                    "validation": {
+                        "picklist": { }
+                    }
+                },
+                {
+                    "name": "verbs",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "MERGE",
+                        "DELETE"
+                    ],
+                    "default": "",
+                    "allow_null": false,
+                    "validation": {
+                        "multi_picklist": { }
+                    }
+                },
+                {
+                    "name": "filters",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "filter_op",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "and",
+                        "or"
+                    ],
+                    "default": "and",
+                    "allow_null": false,
+                    "validation": {
+                        "picklist": { }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_role_system_access",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "component",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "access",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "No Access",
+                        "Read Only",
+                        "Write Only",
+                        "Read and Write",
+                        "Full Access"
+                    ],
+                    "default": "No Access",
+                    "allow_null": false,
+                    "validation": {
+                        "picklist": { }
+                    }
+                },
+                {
+                    "name": "verbs",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "MERGE",
+                        "DELETE"
+                    ],
+                    "default": "",
+                    "allow_null": false,
+                    "validation": {
+                        "multi_picklist": { }
+                    }
+                },
+                {
+                    "name": "filters",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "filter_op",
+                    "type": "string",
+                    "length": 64,
+                    "value": [
+                        "and",
+                        "or"
+                    ],
+                    "default": "and",
+                    "allow_null": false,
+                    "validation": {
+                        "picklist": { }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_lookup_key",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "role_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_role",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_user",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": true
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "length": 64,
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "value",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "private",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "allow_user_update",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                }
+            ]
+        },
+        {
+            "name": "df_sys_schema_extras",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": true
+                },
+                {
+                    "name": "table",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "default": "",
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "field",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "default": "",
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "name_field",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "default": "",
+                    "allow_null": false,
+                    "is_index": true
+                },
+                {
+                    "name": "label",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "plural",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "picklist",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "validation",
+                    "type": "text",
+                    "allow_null": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "boolean",
+                    "default": null,
+                    "allow_null": true
+                },
+                {
+                    "name": "user_id_on_update",
+                    "type": "boolean",
+                    "default": null,
+                    "allow_null": true
+                },
+                {
+                    "name": "timestamp_on_update",
+                    "type": "boolean",
+                    "default": null,
+                    "allow_null": true
+                }
+            ]
+        },
+        {
+            "name": "df_sys_email_template",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 64,
+                    "allow_null": false,
+                    "is_unique": true,
+                    "validation": "not_empty"
+                },
+                {
+                    "name": "description",
+                    "supports_multibyte": true,
+                    "type": "text"
+                },
+                {
+                    "name": "to",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "cc",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "bcc",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "subject",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 80
+                },
+                {
+                    "name": "body_text",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "body_html",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "from_name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 80
+                },
+                {
+                    "name": "from_email",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 255
+                },
+                {
+                    "name": "reply_to_name",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 80
+                },
+                {
+                    "name": "reply_to_email",
+                    "type": "string",
+                    "supports_multibyte": true,
+                    "length": 255
+                },
+                {
+                    "name": "defaults",
+                    "type": "text",
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_stat",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "type",
+                    "type": "int",
+                    "length": 11,
+                    "allow_null": false,
+                    "validation": {
+                        "not_empty": { }
+                    }
+                },
+                {
+                    "name": "user_id",
+                    "type": "int",
+                    "length": 11,
+                    "allow_null": false
+                },
+                {
+                    "name": "stat_date",
+                    "type": "datetime",
+                    "allow_null": false
+                },
+                {
+                    "name": "stat_data",
+                    "type": "text",
+                    "allow_null": false,
+                    "supports_multibyte": true
+                },
+                {
+                    "name": "reported_ind",
+                    "type": "integer",
+                    "allow_null": false,
+                    "length": 1,
+                    "default": 0
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_provider",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "provider_name",
+                    "type": "string",
+                    "allow_null": false,
+                    "is_unique": false,
+                    "length": 64
+                },
+                {
+                    "name": "api_name",
+                    "type": "string",
+                    "allow_null": false,
+                    "length": 64,
+                    "comment": "If this is a portal service, the api_name is the endpoint"
+                },
+                {
+                    "name": "base_provider_id",
+                    "allow_null": true,
+                    "is_unique": false,
+                    "type": "reference",
+                    "ref_table": "df_sys_provider",
+                    "ref_fields": "id",
 					"validation": {
 						"api_read_only": {
 							"on_fail": "ignore_field"
 						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"allow_null": true,
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"allow_null": true,
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_user",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "email",
-					"type":       "string",
-					"length":     255,
-					"allow_null": false,
-					"is_unique":  true,
-					"validation": {
-						"not_empty": {},
-						"email":     {}
-					}
-				},
-				{
-					"name":               "password",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false
-				},
-				{
-					"name":               "first_name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_index":           true
-				},
-				{
-					"name":               "last_name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_index":           true
-				},
-				{
-					"name":               "display_name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"allow_null":         false,
-					"is_index":           true,
-					"validation":         "not_empty"
-				},
-				{
-					"name":       "phone",
-					"type":       "string",
-					"length":     32,
-					"allow_null": true
-				},
-				{
-					"name":       "is_active",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":       "is_sys_admin",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "is_deleted",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "confirm_code",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":          "default_app_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":          "role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":               "security_question",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"allow_null":         true
-				},
-				{
-					"name":               "security_answer",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         true
-				},
-				{
-					"name":               "user_data",
-					"type":               "mediumtext",
-					"supports_multibyte": true,
-					"allow_null":         true
-				},
-				{
-					"name":       "user_source",
-					"type":       "integer",
-					"allow_null": false,
-					"default":    0
-				},
-				{
-					"name":       "last_login_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"allow_null": true,
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"allow_null": true,
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_role",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":               "name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_unique":          true,
-					"validation":         "not_empty"
-				},
-				{
-					"name":       "description",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "is_active",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":          "default_app_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_service",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "api_name",
-					"type":       "string",
-					"length":     64,
-					"allow_null": false,
-					"is_unique":  true,
-					"validation": {
-						"not_empty": {}
-					}
-				},
-				{
-					"name":               "name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_unique":          true,
-					"validation":         "not_empty"
-				},
-				{
-					"name":       "description",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "is_active",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":       "type",
-					"type":       "string",
-					"length":     64,
-					"allow_null": false
-				},
-				{
-					"name":       "type_id",
-					"type":       "integer",
-					"allow_null": false,
-					"default":    0
-				},
-				{
-					"name":       "storage_type",
-					"type":       "string",
-					"length":     64,
-					"allow_null": true
-				},
-				{
-					"name":       "storage_type_id",
-					"type":       "integer",
-					"allow_null": true
-				},
-				{
-					"name":       "credentials",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "native_format",
-					"type":       "string",
-					"length":     32,
-					"allow_null": true
-				},
-				{
-					"name":       "native_format_id",
-					"type":       "integer",
-					"allow_null": true
-				},
-				{
-					"name":       "base_url",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "parameters",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "headers",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_app",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "api_name",
-					"type":       "string",
-					"length":     64,
-					"allow_null": false,
-					"is_unique":  true,
-					"validation": {
-						"not_empty": {}
-					}
-				},
-				{
-					"name":               "name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_unique":          true,
-					"validation":         "not_empty"
-				},
-				{
-					"name":       "description",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "is_active",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":       "url",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "is_url_external",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "import_url",
-					"type":       "text",
-					"allow_null": true,
-					"validation": {
-						"url": {}
-					}
-				},
-				{
-					"name":          "storage_service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "SET NULL",
-					"allow_null":    true
-				},
-				{
-					"name":       "storage_container",
-					"type":       "string",
-					"length":     255,
-					"allow_null": true
-				},
-				{
-					"name":       "requires_fullscreen",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "allow_fullscreen_toggle",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":       "toggle_location",
-					"type":       "string",
-					"length":     64,
-					"default":    "top",
-					"allow_null": false
-				},
-				{
-					"name":       "requires_plugin",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_app_group",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":               "name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"validation":         "not_empty"
-				},
-				{
-					"name":       "description",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_app_to_app_group",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "app_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":          "app_group_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app_group",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				}
-			]
-		},
-		{
-			"name":  "df_sys_app_to_role",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "app_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":          "role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				}
-			]
-		},
-		{
-			"name":  "df_sys_app_to_service",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "app_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_app",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":          "service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":       "component",
-					"type":       "text",
-					"allow_null": true
-				}
-			]
-		},
-		{
-			"name":  "df_sys_role_service_access",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":          "service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    true
-				},
-				{
-					"name":       "component",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "access",
-					"type":       "string",
-					"length":     64,
-					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
-					"default":    "No Access",
-					"allow_null": false,
-					"validation": {
-						"picklist": {}
-					}
-				},
-				{
-					"name":       "verbs",
-					"type":       "string",
-					"length":     64,
-					"value":      ["GET", "POST", "PUT", "PATCH", "MERGE", "DELETE"],
-					"default":    "",
-					"allow_null": false,
-					"validation": {
-						"multi_picklist": {}
-					}
-				},
-				{
-					"name":       "filters",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "filter_op",
-					"type":       "string",
-					"length":     64,
-					"value":      ["and", "or"],
-					"default":    "and",
-					"allow_null": false,
-					"validation": {
-						"picklist": {}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_role_system_access",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":       "component",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "access",
-					"type":       "string",
-					"length":     64,
-					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
-					"default":    "No Access",
-					"allow_null": false,
-					"validation": {
-						"picklist": {}
-					}
-				},
-				{
-					"name":       "verbs",
-					"type":       "string",
-					"length":     64,
-					"value":      ["GET", "POST", "PUT", "PATCH", "MERGE", "DELETE"],
-					"default":    "",
-					"allow_null": false,
-					"validation": {
-						"multi_picklist": {}
-					}
-				},
-				{
-					"name":       "filters",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "filter_op",
-					"type":       "string",
-					"length":     64,
-					"value":      ["and", "or"],
-					"default":    "and",
-					"allow_null": false,
-					"validation": {
-						"picklist": {}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_lookup_key",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "role_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_role",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    true
-				},
-				{
-					"name":          "user_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_user",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    true
-				},
-				{
-					"name":       "name",
-					"type":       "string",
-					"length":     64,
-					"allow_null": false,
-					"is_index":   true
-				},
-				{
-					"name":       "value",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "private",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "allow_user_update",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				}
-			]
-		},
-		{
-			"name":  "df_sys_schema_extras",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    true
-				},
-				{
-					"name":               "table",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"default":            "",
-					"allow_null":         false,
-					"is_index":           true
-				},
-				{
-					"name":               "field",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"default":            "",
-					"allow_null":         false,
-					"is_index":           true
-				},
-				{
-					"name":               "name_field",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"default":            "",
-					"allow_null":         false,
-					"is_index":           true
-				},
-				{
-					"name":               "label",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"allow_null":         true
-				},
-				{
-					"name":               "plural",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             128,
-					"allow_null":         true
-				},
-				{
-					"name":       "picklist",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "validation",
-					"type":       "text",
-					"allow_null": true
-				},
-				{
-					"name":       "user_id",
-					"type":       "boolean",
-					"default":    null,
-					"allow_null": true
-				},
-				{
-					"name":       "user_id_on_update",
-					"type":       "boolean",
-					"default":    null,
-					"allow_null": true
-				},
-				{
-					"name":       "timestamp_on_update",
-					"type":       "boolean",
-					"default":    null,
-					"allow_null": true
-				}
-			]
-		},
-		{
-			"name":  "df_sys_email_template",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":               "name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             64,
-					"allow_null":         false,
-					"is_unique":          true,
-					"validation":         "not_empty"
-				},
-				{
-					"name":               "description",
-					"supports_multibyte": true,
-					"type":               "text"
-				},
-				{
-					"name":               "to",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":               "cc",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":               "bcc",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":               "subject",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             80
-				},
-				{
-					"name":               "body_text",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":               "body_html",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":               "from_name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             80
-				},
-				{
-					"name":               "from_email",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             255
-				},
-				{
-					"name":               "reply_to_name",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             80
-				},
-				{
-					"name":               "reply_to_email",
-					"type":               "string",
-					"supports_multibyte": true,
-					"length":             255
-				},
-				{
-					"name":               "defaults",
-					"type":               "text",
-					"supports_multibyte": true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_stat",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "type",
-					"type":       "int",
-					"length":     11,
-					"allow_null": false,
-					"validation": {
-						"not_empty": {}
-					}
-				},
-				{
-					"name":       "user_id",
-					"type":       "int",
-					"length":     11,
-					"allow_null": false
-				},
-				{
-					"name":       "stat_date",
-					"type":       "datetime",
-					"allow_null": false
-				},
-				{
-					"name":               "stat_data",
-					"type":               "text",
-					"allow_null":         false,
-					"supports_multibyte": true
-				},
-				{
-					"name":       "reported_ind",
-					"type":       "integer",
-					"allow_null": false,
-					"length":     1,
-					"default":    0
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_provider",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "provider_name",
-					"type":       "string",
-					"allow_null": false,
-					"is_unique":  false,
-					"length":     64
-				},
-				{
-					"name":       "api_name",
-					"type":       "string",
-					"allow_null": false,
-					"length":     64,
-					"comment":    "If this is a portal service, the api_name is the endpoint"
-				},
-				{
-					"name":          "base_provider_id",
-					"allow_null":    true,
-					"is_unique":     false,
-					"type":          "reference",
-					"ref_table":     "df_sys_provider",
-					"ref_fields":    "id",
-					"validation":    "api_read_only",
-					"ref_on_delete": "CASCADE",
-					"ref_on_update": "CASCADE"
-				},
-				{
-					"name":       "is_active",
-					"type":       "boolean",
-					"default":    true,
-					"allow_null": false
-				},
-				{
-					"name":       "is_system",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "is_login_provider",
-					"type":       "boolean",
-					"default":    false,
-					"allow_null": false
-				},
-				{
-					"name":       "config_text",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_provider_user",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "account_type",
-					"type":       "integer",
-					"allow_null": false,
-					"default":    0
-				},
-				{
-					"name":          "user_id",
-					"type":          "integer",
-					"ref_table":     "df_sys_user",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":          "provider_id",
-					"type":          "integer",
-					"ref_table":     "df_sys_provider",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":       "provider_user_id",
-					"type":       "string",
-					"length":     128,
-					"allow_null": false
-				},
-				{
-					"name":       "auth_text",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "last_use_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_device",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "user_id",
-					"type":          "integer",
-					"ref_table":     "df_sys_user",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    false
-				},
-				{
-					"name":       "uuid",
-					"type":       "string",
-					"length":     128,
-					"allow_null": false
-				},
-				{
-					"name":       "model",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "platform",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "version",
-					"type":       "string",
-					"length":     128,
-					"allow_null": true
-				},
-				{
-					"name":       "extra",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_event",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":       "event_name",
-					"type":       "string",
-					"length":     128,
-					"allow_null": false,
-					"is_unique":  true
-				},
-				{
-					"name":               "listeners",
-					"type":               "mediumtext",
-					"supports_multibyte": true,
-					"allow_null":         true
-				},
-				{
-					"name":       "created_date",
-					"type":       "datetime",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "created_by_id",
-					"type":       "user_id_on_create",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_date",
-					"type":       "timestamp_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				},
-				{
-					"name":       "last_modified_by_id",
-					"type":       "user_id_on_update",
-					"validation": {
-						"api_read_only": {
-							"on_fail": "ignore_field"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name":  "df_sys_service_doc",
-			"field": [
-				{
-					"name": "id",
-					"type": "id"
-				},
-				{
-					"name":          "service_id",
-					"type":          "reference",
-					"ref_table":     "df_sys_service",
-					"ref_fields":    "id",
-					"ref_on_update": "CASCADE",
-					"ref_on_delete": "CASCADE",
-					"allow_null":    true
-				},
-				{
-					"name":       "format",
-					"type":       "integer",
-					"default":    0,
-					"allow_null": false
-				},
-				{
-					"name":       "content",
-					"type":       "mediumtext",
-					"allow_null": true
-				}
-			]
-		}
-	]
+					},
+                    "ref_on_delete": "CASCADE"
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "allow_null": false
+                },
+                {
+                    "name": "is_system",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "is_login_provider",
+                    "type": "boolean",
+                    "default": false,
+                    "allow_null": false
+                },
+                {
+                    "name": "config_text",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_provider_user",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "account_type",
+                    "type": "integer",
+                    "allow_null": false,
+                    "default": 0
+                },
+                {
+                    "name": "user_id",
+                    "type": "integer",
+                    "ref_table": "df_sys_user",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "provider_id",
+                    "type": "integer",
+                    "ref_table": "df_sys_provider",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "provider_user_id",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": false
+                },
+                {
+                    "name": "auth_text",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "last_use_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_device",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "user_id",
+                    "type": "integer",
+                    "ref_table": "df_sys_user",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": false
+                },
+                {
+                    "name": "uuid",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": false
+                },
+                {
+                    "name": "model",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "platform",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "version",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": true
+                },
+                {
+                    "name": "extra",
+                    "type": "mediumtext",
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_event",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "event_name",
+                    "type": "string",
+                    "length": 128,
+                    "allow_null": false,
+                    "is_unique": true
+                },
+                {
+                    "name": "listeners",
+                    "type": "mediumtext",
+                    "supports_multibyte": true,
+                    "allow_null": true
+                },
+                {
+                    "name": "created_date",
+                    "type": "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "created_by_id",
+                    "type": "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_date",
+                    "type": "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name": "last_modified_by_id",
+                    "type": "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "df_sys_service_doc",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name": "service_id",
+                    "type": "reference",
+                    "ref_table": "df_sys_service",
+                    "ref_fields": "id",
+                    "ref_on_delete": "CASCADE",
+                    "allow_null": true
+                },
+                {
+                    "name": "format",
+                    "type": "integer",
+                    "default": 0,
+                    "allow_null": false
+                },
+                {
+                    "name": "content",
+                    "type": "mediumtext",
+                    "allow_null": true
+                }
+            ]
+        }
+    ]
 }

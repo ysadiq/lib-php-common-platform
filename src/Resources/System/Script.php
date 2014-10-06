@@ -505,7 +505,7 @@ class Script extends BaseSystemRestResource
         $_api = array(
             'api'     => Api::getScriptingObject(),
             'config'  => Config::getCurrentConfig(),
-            'session' => Session::generateSessionDataFromUser( Session::getCurrentUserId() )
+            'session' => Session::getSessionData()
         );
 
         $_result = ScriptEngine::runScript(
