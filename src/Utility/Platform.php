@@ -373,7 +373,9 @@ class Platform
     {
         return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
             ? $_SERVER['REMOTE_ADDR']
-            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
+            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] )
+                ? $_SERVER['HTTP_HOST']
+                :
                 gethostname() . ( $addendum ? '.' . $addendum : null );
     }
 
@@ -648,7 +650,7 @@ class Platform
         //  We do nothing on private installs
         if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
         {
-            return array();
+            return array('state' => 0, 'platform_state' => 0, 'ready_state' => 0);
         }
 
         $dspName = $dspName ?: Pii::getParam( 'dsp_name' );
@@ -676,64 +678,86 @@ class Platform
      */
     public static function setPlatformState( $stateName, $state )
     {
-        static $_debug = true;
-
-        //  We do nothing on private installs
-        if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
-        {
-            $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
-
-            return true;
-        }
-
-        $stateName = trim( strtolower( $stateName ) );
-
-        if ( 'ready' != $stateName && 'platform' != $stateName )
-        {
-            $_debug && Log::error( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): invalid state name"' . $stateName . '"' );
-
-            throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
-        }
-
-        //  Don't make unnecessary calls
-        if ( \Kisma::get( 'platform.' . $stateName ) == $state )
-        {
-            $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
-
-            return true;
-        }
+        static $_debug = false;
 
         try
         {
-            //  Called before DSP name is set
-            if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
+            //  We do nothing on private installs
+            if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
             {
-                $_debug && Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
+                $_debug &&
+                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
+
+                return true;
+            }
+
+            $stateName = trim( strtolower( $stateName ) );
+
+            if ( 'ready' != $stateName && 'platform' != $stateName )
+            {
+                $_debug &&
+                Log::error(
+                    'setPlatformState( "' . $stateName . '", ' . $state . ' ): invalid state name"' . $stateName . '"'
+                );
+
+                throw new \InvalidArgumentException( 'The state name "' . $stateName . '" is invalid.' );
+            }
+
+            //  Don't make unnecessary calls
+            if ( \Kisma::get( 'platform.' . $stateName ) == $state )
+            {
+                $_debug &&
+                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
+
+                return true;
+            }
+
+            try
+            {
+                //  Called before DSP name is set
+                if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
+                {
+                    $_debug &&
+                    Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
+
+                    return false;
+                }
+
+                $_result = Fabric::api(
+                    HttpMethod::POST,
+                    '/state/' . $_instanceId,
+                    array(
+                        'instance_id' => $_instanceId,
+                        'state_name'  => $stateName,
+                        'state'       => $state
+                    )
+                );
+
+                if ( !$_result->success )
+                {
+                    $_debug &&
+                    Log::notice(
+                        'setPlatformState( "' .
+                        $stateName .
+                        '", ' .
+                        $state .
+                        ' ): error saving state: ' .
+                        print_r( $_result, true )
+                    );
+
+                    throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
+                }
+
+                \Kisma::set( 'platform.' . $stateName, $_result->details->state );
+
+                return true;
+            }
+            catch ( \Exception $_ex )
+            {
+                Log::error( $_ex->getMessage() );
 
                 return false;
             }
-
-            $_result = Fabric::api(
-                HttpMethod::POST,
-                '/state/' . $_instanceId,
-                array(
-                    'instance_id' => $_instanceId,
-                    'state_name'  => $stateName,
-                    'state'       => $state
-                )
-            );
-
-            if ( !$_result->success )
-            {
-                $_debug &&
-                Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): error saving state: ' . print_r( $_result, true ) );
-
-                throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
-            }
-
-            \Kisma::set( 'platform.' . $stateName, $_result->details->state );
-
-            return true;
         }
         catch ( \Exception $_ex )
         {
@@ -742,6 +766,4 @@ class Platform
             return false;
         }
     }
-
 }
-
