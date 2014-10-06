@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "fdb5963ffa27f6a4016b80ed7d11e089",
+    "hash": "675b67a21b95527fb10c57e0678f4eff",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -327,12 +327,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer, server-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer, server-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -2296,5 +2296,7 @@
     "platform": {
         "php": "~5.3,<5.6"
     },
-    "platform-dev": []
+    "platform-dev": [
+
+    ]
 }
