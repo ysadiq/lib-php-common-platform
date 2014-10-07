@@ -1,4 +1,4 @@
-## DreamFactory Services Platform&trade; SDK For PHP v1.8.0
+## DreamFactory Services Platform&trade; SDK For PHP v1.8.1
 [![Latest Stable Version](https://poser.pugx.org/dreamfactory/lib-php-common-platform/v/stable.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![Total Downloads](https://poser.pugx.org/dreamfactory/lib-php-common-platform/downloads.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![Latest Unstable Version](https://poser.pugx.org/dreamfactory/lib-php-common-platform/v/unstable.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![License](https://poser.pugx.org/dreamfactory/lib-php-common-platform/license.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform)
 
 This library contains common components for interacting with the DreamFactory Services Platform&trade;.
@@ -12,7 +12,7 @@ Please visit our [wiki](https://github.com/dreamfactorysoftware/dsp-core/wiki) f
 Add a line to your "require" section in your composer configuration:
 
 	"require":           {
-		"dreamfactory/lib-php-common-platform": "~1.8.0"
+		"dreamfactory/lib-php-common-platform": "~1.8.1"
 	}
 
 Run a composer update:
