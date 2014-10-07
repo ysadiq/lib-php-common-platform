@@ -144,9 +144,13 @@ $_commonProperties = array(
         'type'        => 'boolean',
         'description' => 'True if this is a non-free DreamFactory hosted DSP.',
     ),
-    'is_guest' => array(
+    'is_guest'                   => array(
         'type'        => 'boolean',
         'description' => 'True if the current user has not logged in.',
+    ),
+    'states'                     => array(
+        'type'        => 'StateInfo',
+        'description' => 'An array of the current platform state from various perspectives.',
     ),
 );
 
@@ -188,6 +192,83 @@ $_config['models'] = array(
                 'items'       => array(
                     'type' => 'string',
                 ),
+            ),
+        ),
+    ),
+    'StateInfo'      => array(
+        'id'          => 'StateInfo',
+        'description' => 'An array of platform states from various perspectives.',
+        'required'    => true,
+        'properties'  => array(
+            'state'          => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'required'    => true,
+                'description' => <<<HTML
+<div>
+    <h3>The current state of platform provisioning. Valid  states are:</h3>
+    <table>
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td>0</td><td>Request queued</td></tr>
+            <tr><td>1</td><td>Provisioning in progress</td></tr>
+            <tr><td>2</td><td>Provisioning complete</td></tr>
+            <tr><td>3</td><td>Deprovisioning in progress</td></tr>
+            <tr><td>4</td><td>Deprovisioning complete</td></tr>
+            <tr><td>10</td><td>Error queuing request</td></tr>
+            <tr><td>12</td><td>Provisioning Error</td></tr>
+            <tr><td>14</td><td>Deprovisioning Error</td></tr>
+        </tbody>
+    </table>
+</div>
+HTML
+                ,
+            ),
+            'platform_state' => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'required'    => true,
+                'description' => <<<HTML
+<div>
+    <h3>The current enterprise/hosted platform state. Valid states are:</h3>
+    <table>
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td>-1</td><td>Unpublished, non-hosted, private or unknown</td></tr>
+            <tr><td>0</td><td>Ready but <strong>not activated</strong></td></tr>
+            <tr><td>1</td><td>Ready and <strong>activated</strong></td></tr>
+            <tr><td>2</td><td>Locked by provisioning manager</td></tr>
+            <tr><td>3</td><td>Maintenance Mode</td></tr>
+            <tr><td>4</td><td>Banned and not <strong>available</strong></td></tr>
+        </tbody>
+    </table>
+</div>
+HTML
+                ,
+            ),
+            'ready_state'    => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'required'    => true,
+                'description' => <<<HTML
+<div>
+    <h3>The current ready state of the DSP. Valid states are:</h3>
+    <table>
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td>0</td><td>Platform Administrator Missing</td></tr>
+            <tr><td>1</td><td>Default Platform Data Missing</td></tr>
+            <tr><td>2</td><td>Install/Migrate Platform Database Schema</td></tr>
+            <tr><td>3</td><td>Platform Ready</td></tr>
+            <tr><td>4</td><td>Default Platform Schema Missing</td></tr>
+            <tr><td>5</td><td>Platform Upgrade Required</td></tr>
+            <tr><td>6</td><td>Welcome Page Required</td></tr>
+            <tr><td>7</td><td>Platform Database Ready</td></tr>
+        </tbody>
+    </table>
+</div>
+HTML
+                ,
             ),
         ),
     ),
