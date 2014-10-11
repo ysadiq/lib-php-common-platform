@@ -142,10 +142,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      */
     public static function listTables( $db, $include = null, $exclude = null )
     {
-        //	Todo need to assess schemas in ms sql and load them separately.
         try
         {
-            $_names = $db->schema->getTableNames();
+            $_names = $db->schema->getTableNames(null, true);
             $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
             $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
             $temp = array();
@@ -361,7 +360,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         try
         {
-            $_names = $db->schema->getTableNames();
+            $_names = $db->schema->getTableNames(null, true);
             $temp = array();
             foreach ( $_names as $name )
             {
@@ -840,7 +839,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $db->schema->refresh();
 
         $_tables = array();
-        foreach ( $db->getSchema()->getTableNames() as $_table )
+        foreach ( $db->getSchema()->getTableNames(null, true) as $_table )
         {
             $_tables[$_table] = $_table;
             // lookup by lowercase
@@ -1985,7 +1984,7 @@ SQL;
             $_tables = array();
 
             //  Make a new column for the search version of the table name
-            foreach ( $db->getSchema()->getTableNames() as $_table )
+            foreach ( $db->getSchema()->getTableNames(null, true) as $_table )
             {
                 $_tables[strtolower( $_table )] = $_table;
             }
