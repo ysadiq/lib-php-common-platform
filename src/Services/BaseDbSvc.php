@@ -345,10 +345,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     * @throws \Exception
+     * @param bool $refresh
+     *
      * @return array
      */
-    protected function _listTables()
+    protected function _listTables( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
     {
         return array();
     }
@@ -666,6 +667,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function retrieveResources( $options = null )
     {
+        $_refresh = Option::getBool( $options, 'refresh' );
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_includeSchemas = Option::getBool( $options, 'include_schemas' );
         $_asComponents = Option::getBool( $options, 'as_access_components' );
@@ -677,7 +679,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
         try
         {
-            $_result = static::_listTables();
+            $_result = static::_listTables( $_refresh );
             foreach ( $_result as $_table )
             {
                 if ( null != $_name = Option::get( $_table, 'name' ) )
@@ -3237,16 +3239,14 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \DreamFactory\Platform\Exceptions\RestException
      * @throws \Exception
      */
-    public function describeDatabase( $options = null, /** @noinspection PhpUnusedParameterInspection */
-        $refresh = false )
+    public function describeDatabase( $options = null, $refresh = false )
     {
-
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_resources = array();
 
         try
         {
-            $_result = static::_listTables();
+            $_result = static::_listTables( $refresh );
             foreach ( $_result as $_table )
             {
                 if ( null != $_name = Option::get( $_table, 'name' ) )

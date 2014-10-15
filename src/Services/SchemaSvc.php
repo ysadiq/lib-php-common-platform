@@ -372,7 +372,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         try
         {
-            $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
+            $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, true, false, null, $_exclude );
             $_extras =
                 SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
 

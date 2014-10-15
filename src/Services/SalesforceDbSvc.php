@@ -161,10 +161,9 @@ class SalesforceDbSvc extends BaseDbSvc
     }
 
     /**
-     * @throws \Exception
-     * @return array
+     * {@inheritdoc}
      */
-    protected function _listTables()
+    protected function _listTables( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
     {
         return $this->_getSObjectsArray();
     }

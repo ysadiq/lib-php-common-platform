@@ -140,53 +140,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @return array
      * @throws \Exception
      */
-    public static function listTables( $db, $include = null, $exclude = null )
-    {
-        //	Todo need to assess schemas in ms sql and load them separately.
-        try
-        {
-            $_names = $db->schema->getTableNames();
-            $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
-            $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
-            $temp = array();
-
-            foreach ( $_names as $name )
-            {
-                if ( !empty( $include ) )
-                {
-                    if ( false === array_search( strtolower( $name ), $includeArray ) )
-                    {
-                        continue;
-                    }
-                }
-                elseif ( !empty( $exclude ) )
-                {
-                    if ( false !== array_search( strtolower( $name ), $excludeArray ) )
-                    {
-                        continue;
-                    }
-                }
-                $temp[] = $name;
-            }
-            $_names = $temp;
-            natcasesort( $_names );
-
-            return array_values( $_names );
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Failed to list database tables.\n{$ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param string         $include
-     * @param string         $exclude
-     *
-     * @return array
-     * @throws \Exception
-     */
     public static function listStoredProcedures( $db, $include = null, $exclude = null )
     {
         try
@@ -302,11 +255,31 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 {
                     if ( is_array( $_row ) )
                     {
-                        foreach ( $_row as $_key => $_value )
+                        if ( isset( $_row[0] ) )
                         {
-                            if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                            //  Multi-row set, dig a little deeper
+                            foreach ( $_row as &$_sub )
                             {
-                                $_row[$_key] = static::formatValue( $_value, $_type );
+                                if ( is_array( $_sub ) )
+                                {
+                                    foreach ( $_sub as $_key => $_value )
+                                    {
+                                        if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                                        {
+                                            $_sub[$_key] = static::formatValue( $_value, $_type );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach ( $_row as $_key => $_value )
+                            {
+                                if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                                {
+                                    $_row[$_key] = static::formatValue( $_value, $_type );
+                                }
                             }
                         }
                     }
@@ -351,17 +324,19 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
     /**
      * @param \CDbConnection $db
+     * @param bool           $include_views
+     * @param bool           $refresh
      * @param string         $include_prefix
      * @param string         $exclude_prefix
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array
      */
-    public static function describeDatabase( $db, $include_prefix = null, $exclude_prefix = null )
+    public static function describeDatabase( $db, $include_views = true, $refresh = false, $include_prefix = null, $exclude_prefix = null )
     {
         try
         {
-            $_names = $db->schema->getTableNames();
+            $_names = $db->schema->getTableNames( null, $include_views, $refresh );
             $temp = array();
             foreach ( $_names as $name )
             {
@@ -987,7 +962,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * @param $column
+     * @param            $column
      * @param array|null $validations
      *
      * @return bool
