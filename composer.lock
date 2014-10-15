@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f94be3b11a8f47a7813b17a5342d6162",
+    "hash": "ae3362219274a308d9f70271c768bea4",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -289,16 +289,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common",
-            "version": "1.5.3",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "e7a95c6c22c89a3f2be6fa6da0358b68a451b8b2"
+                "reference": "258fb7a4b741b28bb3d2a955ef4ccbef4396495e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/e7a95c6c22c89a3f2be6fa6da0358b68a451b8b2",
-                "reference": "e7a95c6c22c89a3f2be6fa6da0358b68a451b8b2",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/258fb7a4b741b28bb3d2a955ef4ccbef4396495e",
+                "reference": "258fb7a4b741b28bb3d2a955ef4ccbef4396495e",
                 "shasum": ""
             },
             "require": {
@@ -339,7 +339,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-10-07 06:19:12"
+            "time": "2014-10-07 23:59:45"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -410,16 +410,16 @@
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.14",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "b089d592de41b1cac9ae61827e46703dd2f41df2"
+                "reference": "5988ccfab42b26d644ef8d5ef48047d4004f11d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/b089d592de41b1cac9ae61827e46703dd2f41df2",
-                "reference": "b089d592de41b1cac9ae61827e46703dd2f41df2",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/5988ccfab42b26d644ef8d5ef48047d4004f11d2",
+                "reference": "5988ccfab42b26d644ef8d5ef48047d4004f11d2",
                 "shasum": ""
             },
             "require": {
@@ -460,7 +460,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-10-03 15:08:28"
+            "time": "2014-10-06 15:06:29"
         },
         {
             "name": "dreamfactory/yii",
@@ -682,16 +682,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.67",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349"
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
-                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/eea48a0189839a3e7b878b802d1837b4ea9d5241",
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241",
                 "shasum": ""
             },
             "require": {
@@ -736,7 +736,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-10-05 22:12:34"
+            "time": "2014-10-05 22:12:45"
         },
         {
             "name": "monolog/monolog",
@@ -1805,7 +1805,7 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "3.7.x-dev",
+            "version": "3.7.37",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
@@ -2276,15 +2276,11 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
-        "dreamfactory/yii": 0,
-        "dreamfactory/lib-php-common": 0,
-        "dreamfactory/lib-php-common-yii": 0,
-        "dreamfactory/oasys": 0,
         "dreamfactory/azure-sdk-for-php": 20,
+        "phpunit/phpunit": 0,
         "phpunit/phpunit-selenium": 0,
         "phpunit/phpunit-story": 0,
         "phpunit/dbunit": 0,
