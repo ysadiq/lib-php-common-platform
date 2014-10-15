@@ -200,7 +200,7 @@ $_config['models'] = array(
         'description' => 'An array of platform states from various perspectives.',
         'required'    => true,
         'properties'  => array(
-            'state'          => array(
+            'provision_state' => array(
                 'type'        => 'integer',
                 'format'      => 'int32',
                 'required'    => true,
@@ -224,7 +224,7 @@ $_config['models'] = array(
 HTML
                 ,
             ),
-            'platform_state' => array(
+            'operation_state' => array(
                 'type'        => 'integer',
                 'format'      => 'int32',
                 'required'    => true,
