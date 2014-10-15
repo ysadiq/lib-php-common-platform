@@ -468,12 +468,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "6df969d019a787e5ba631f6e7d302c2a154603b7"
+                "reference": "d02a4ba54664d21dce401c0ef61aeee083b558de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/6df969d019a787e5ba631f6e7d302c2a154603b7",
-                "reference": "6df969d019a787e5ba631f6e7d302c2a154603b7",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/d02a4ba54664d21dce401c0ef61aeee083b558de",
+                "reference": "d02a4ba54664d21dce401c0ef61aeee083b558de",
                 "shasum": ""
             },
             "require": {
@@ -538,7 +538,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-10-11 00:10:01"
+            "time": "2014-10-15 01:00:37"
         },
         {
             "name": "guzzle/guzzle",
@@ -2296,5 +2296,7 @@
     "platform": {
         "php": "~5.3,<5.6"
     },
-    "platform-dev": []
+    "platform-dev": [
+
+    ]
 }
