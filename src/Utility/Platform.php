@@ -373,9 +373,7 @@ class Platform
     {
         return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
             ? $_SERVER['REMOTE_ADDR']
-            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] )
-                ? $_SERVER['HTTP_HOST']
-                :
+            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
                 gethostname() . ( $addendum ? '.' . $addendum : null );
     }
 
@@ -650,7 +648,7 @@ class Platform
         //  We do nothing on private installs
         if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
         {
-            return array('state' => 0, 'platform_state' => 0, 'ready_state' => 0);
+            return array('provision_state' => 0, 'operation_state' => 0, 'ready_state' => 0);
         }
 
         $dspName = $dspName ?: Pii::getParam( 'dsp_name' );
@@ -667,7 +665,11 @@ class Platform
 
         Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
 
-        return $_response->details;
+        return array(
+            'provision_state' => $_response->details->state,
+            'operation_state' => $_response->details->platform_state,
+            'ready_state'     => $_response->details->ready_state,
+        );
     }
 
     /**
@@ -685,8 +687,7 @@ class Platform
             //  We do nothing on private installs
             if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
             {
-                $_debug &&
-                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
+                $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
 
                 return true;
             }
@@ -695,8 +696,7 @@ class Platform
 
             if ( 'ready' != $stateName && 'platform' != $stateName )
             {
-                $_debug &&
-                Log::error(
+                $_debug && Log::error(
                     'setPlatformState( "' . $stateName . '", ' . $state . ' ): invalid state name"' . $stateName . '"'
                 );
 
@@ -706,8 +706,7 @@ class Platform
             //  Don't make unnecessary calls
             if ( \Kisma::get( 'platform.' . $stateName ) == $state )
             {
-                $_debug &&
-                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
+                $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
 
                 return true;
             }
@@ -717,8 +716,7 @@ class Platform
                 //  Called before DSP name is set
                 if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
                 {
-                    $_debug &&
-                    Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
+                    $_debug && Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
 
                     return false;
                 }
@@ -735,14 +733,8 @@ class Platform
 
                 if ( !$_result->success )
                 {
-                    $_debug &&
-                    Log::notice(
-                        'setPlatformState( "' .
-                        $stateName .
-                        '", ' .
-                        $state .
-                        ' ): error saving state: ' .
-                        print_r( $_result, true )
+                    $_debug && Log::notice(
+                        'setPlatformState( "' . $stateName . '", ' . $state . ' ): error saving state: ' . print_r( $_result, true )
                     );
 
                     throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
