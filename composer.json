@@ -35,7 +35,7 @@
 		"pear-pear.php.net/Net_URL2":        "*",
 		"pear-pear.php.net/Mail_Mime":       "*",
 		"pear-pear.php.net/Mail_mimeDecode": "*",
-		"dreamfactory/yii":                  "dev-develop as dev-master",
+		"dreamfactory/yii":                  "~1.1.13.10",
 		"dreamfactory/lib-php-common":       "~1.5",
 		"dreamfactory/lib-php-common-yii":   "~1.5",
 		"dreamfactory/oasys":                "~0.4",
@@ -44,7 +44,7 @@
 	},
 	"minimum-stability": "dev",
 	"require-dev":       {
-		"phpunit/phpunit":          "~3.7",
+		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/dbunit":           "@stable",
