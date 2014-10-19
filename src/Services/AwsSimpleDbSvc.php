@@ -187,10 +187,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     // REST service implementation
 
     /**
-     * @throws \Exception
-     * @return array
+     * {@inheritdoc}
      */
-    protected function _listTables()
+    protected function _listTables( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
     {
         $_resources = array();
         $_result = $this->_getTablesAsArray();

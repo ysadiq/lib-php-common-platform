@@ -409,15 +409,14 @@ class SqlDbSvc extends BaseDbSvc
     // REST service implementation
 
     /**
-     * @throws \Exception
-     * @return array
+     * {@inheritdoc}
      */
-    protected function _listTables()
+    protected function _listTables( $refresh = true )
     {
         // check for system tables
         $_exclude = ( $this->_isNative ) ? SystemManager::SYSTEM_TABLE_PREFIX : null;
 
-        $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
+        $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, true, $refresh, null, $_exclude );
         $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
 
         $_tables = array();
