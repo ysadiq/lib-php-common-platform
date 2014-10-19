@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "ddd2d944a39e59e6aa6e4972c5fa3824",
+    "hash": "80c9cd86195b22f287c7141d61260638",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -343,27 +343,28 @@
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.5.9",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "83a9c223b840b32235569c76dbef0411664ab03e"
+                "reference": "9c1eee82794c6c9aa02fbfcbbc0f53d6a4ee6877"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/83a9c223b840b32235569c76dbef0411664ab03e",
-                "reference": "83a9c223b840b32235569c76dbef0411664ab03e",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/9c1eee82794c6c9aa02fbfcbbc0f53d6a4ee6877",
+                "reference": "9c1eee82794c6c9aa02fbfcbbc0f53d6a4ee6877",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/lib-php-common": "~1.5.0@stable",
-                "dreamfactory/yii": "~1.1.13.3",
-                "kisma/kisma": "~0.2.53@stable",
-                "php": ">=5.3.18"
+                "dreamfactory/lib-php-common": "*",
+                "dreamfactory/php-utils": "*",
+                "dreamfactory/yii": "~1.1.13.10",
+                "kisma/kisma": "~0.2",
+                "php": "~5.3"
             },
             "require-dev": {
                 "phpunit/dbunit": "@stable",
-                "phpunit/phpunit": "~3.7@stable",
+                "phpunit/phpunit": "@stable",
                 "phpunit/phpunit-selenium": "@stable",
                 "phpunit/phpunit-story": "@stable"
             },
@@ -406,7 +407,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-08-14 16:46:14"
+            "time": "2014-10-19 17:13:56"
         },
         {
             "name": "dreamfactory/oasys",
@@ -414,12 +415,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "5988ccfab42b26d644ef8d5ef48047d4004f11d2"
+                "reference": "f1ec64abdf2b3560297f999f69a97f6ee5a0983c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/5988ccfab42b26d644ef8d5ef48047d4004f11d2",
-                "reference": "5988ccfab42b26d644ef8d5ef48047d4004f11d2",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/f1ec64abdf2b3560297f999f69a97f6ee5a0983c",
+                "reference": "f1ec64abdf2b3560297f999f69a97f6ee5a0983c",
                 "shasum": ""
             },
             "require": {
@@ -428,7 +429,7 @@
                 "php": "~5.3"
             },
             "require-dev": {
-                "phpunit/phpunit": "~3.7"
+                "phpunit/phpunit": "@stable"
             },
             "type": "library",
             "extra": {
@@ -460,7 +461,58 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-10-06 15:06:29"
+            "time": "2014-10-19 18:47:49"
+        },
+        {
+            "name": "dreamfactory/php-utils",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dreamfactorysoftware/php-utils.git",
+                "reference": "3a0850ee2ebe016eec8386f34e05a3136bfa7bb3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/3a0850ee2ebe016eec8386f34e05a3136bfa7bb3",
+                "reference": "3a0850ee2ebe016eec8386f34e05a3136bfa7bb3",
+                "shasum": ""
+            },
+            "require": {
+                "kisma/kisma": "*",
+                "php": "~5.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "*"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "DreamFactory\\Library\\Utility\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Jerry Ablan",
+                    "email": "jerryablan@dreamfactory.com"
+                }
+            ],
+            "description": "A library of helper classes for PHP",
+            "homepage": "https://www.dreamfactory.com/",
+            "keywords": [
+                "console",
+                "dreamfactory",
+                "utility"
+            ],
+            "time": "2014-10-19 04:22:35"
         },
         {
             "name": "dreamfactory/yii",
@@ -2163,12 +2215,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/diff.git",
-                "reference": "5843509fed39dee4b356a306401e9dd1a931fec7"
+                "reference": "92d423df43b160006907ea4297b916fdf00415d8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/diff/zipball/5843509fed39dee4b356a306401e9dd1a931fec7",
-                "reference": "5843509fed39dee4b356a306401e9dd1a931fec7",
+                "url": "https://api.github.com/repos/sebastianbergmann/diff/zipball/92d423df43b160006907ea4297b916fdf00415d8",
+                "reference": "92d423df43b160006907ea4297b916fdf00415d8",
                 "shasum": ""
             },
             "require": {
@@ -2207,7 +2259,7 @@
             "keywords": [
                 "diff"
             ],
-            "time": "2014-08-15 10:29:00"
+            "time": "2014-10-19 13:19:30"
         },
         {
             "name": "sebastian/environment",
