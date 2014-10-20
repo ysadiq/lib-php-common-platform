@@ -1,63 +1,63 @@
 {
-	"name":              "dreamfactory/lib-php-common-platform",
-	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
-	"homepage":          "http://dreamfactorysoftware.github.io",
-	"keywords":          ["sdk", "dsp-core", "dsp"],
-	"license":           ["Apache-2.0"],
-	"authors":           [
-		{
-			"name":  "Jerry Ablan",
-			"email": "jerryablan@dreamfactory.com",
-			"role":  "Lead Developer, server-side/client-side"
-		},
-		{
-			"name":  "Lee Hicks",
-			"email": "leehicks@dreamfactory.com",
-			"role":  "Lead Developer, server-side/client-side"
-		}
-	],
-	"repositories":      [
-		{
-			"type": "pear",
-			"url":  "http://pear.php.net"
-		}
-	],
-	"require":           {
-		"php":                               "~5.3",
-        "kisma/kisma":                       "@stable",
-		"swiftmailer/swiftmailer":           "~4.3@stable",
-		"aws/aws-sdk-php":                   "~2.4.0@stable",
-		"rackspace/php-opencloud":           "~1.5.0@stable",
-		"dready92/php-on-couch":             "*",
-		"phpforce/soap-client":              "*",
-		"jeremeamia/superclosure":           "*",
-		"pear-pear.php.net/HTTP_Request2":   "*",
-		"pear-pear.php.net/Net_URL2":        "*",
-		"pear-pear.php.net/Mail_Mime":       "*",
-		"pear-pear.php.net/Mail_mimeDecode": "*",
-		"dreamfactory/yii":                  "~1.1.13.10",
-		"dreamfactory/lib-php-common":       "~1.5",
-		"dreamfactory/lib-php-common-yii":   "~1.5",
-		"dreamfactory/oasys":                "~0.4@dev",
-		"dreamfactory/javascript-sdk":       "~1.0",
-		"dreamfactory/azure-sdk-for-php":    "dev-develop as dev-master"
-	},
-	"minimum-stability": "dev",
-	"require-dev":       {
-		"phpunit/phpunit":          "@stable",
+    "name": "dreamfactory/lib-php-common-platform",
+    "description": "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
+    "homepage": "http://dreamfactorysoftware.github.io",
+    "keywords": ["sdk", "dsp-core", "dsp"],
+    "license": ["Apache-2.0"],
+    "authors": [
+        {
+            "name": "Jerry Ablan",
+            "email": "jerryablan@dreamfactory.com",
+            "role": "Lead Developer, server-side/client-side"
+        },
+        {
+            "name": "Lee Hicks",
+            "email": "leehicks@dreamfactory.com",
+            "role": "Lead Developer, server-side/client-side"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "pear",
+            "url": "http://pear.php.net"
+        }
+    ],
+    "require": {
+        "php": "~5.3",
+        "kisma/kisma": "~0.2",
+        "swiftmailer/swiftmailer": "~4.3@stable",
+        "aws/aws-sdk-php": "~2.4.0@stable",
+        "rackspace/php-opencloud": "~1.5.0@stable",
+        "dready92/php-on-couch": "*",
+        "phpforce/soap-client": "*",
+        "jeremeamia/superclosure": "*",
+        "pear-pear.php.net/HTTP_Request2": "*",
+        "pear-pear.php.net/Net_URL2": "*",
+        "pear-pear.php.net/Mail_Mime": "*",
+        "pear-pear.php.net/Mail_mimeDecode": "*",
+        "dreamfactory/javascript-sdk": "~1.0",
+        "dreamfactory/yii": "~1.1.13.10",
+        "dreamfactory/lib-php-common": "dev-develop as dev-master",
+        "dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
+        "dreamfactory/oasys": "dev-develop as dev-master",
+        "dreamfactory/azure-sdk-for-php": "dev-develop as dev-master"
+    },
+    "minimum-stability": "dev",
+    "require-dev": {
+        "phpunit/phpunit": "@stable",
         "phpunit/dbunit": "@stable",
         "phpunit/phpunit-selenium": "@stable",
         "phpunit/phpunit-story": "@stable",
-		"phpunit/php-invoker":          "@stable"
-	},
-	"autoload":          {
-		"psr-4": {
-			"DreamFactory\\Platform\\": "src/"
-		}
-	},
-	"extra":             {
-		"branch-alias": {
-			"dev-develop": "1.8.x-dev"
-		}
-	}
+        "phpunit/php-invoker": "@stable"
+    },
+    "autoload": {
+        "psr-4": {
+            "DreamFactory\\Platform\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-develop": "1.8.x-dev"
+        }
+    }
 }

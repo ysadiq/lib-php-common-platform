@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "338e86e152e9496054786f8ce80966c6",
+    "hash": "a42f235ae0a4a9fe293ef3c0af0413fc",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -734,16 +734,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.67",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349"
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
-                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/eea48a0189839a3e7b878b802d1837b4ea9d5241",
+                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241",
                 "shasum": ""
             },
             "require": {
@@ -788,7 +788,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-10-05 22:12:34"
+            "time": "2014-10-05 22:12:45"
         },
         {
             "name": "monolog/monolog",
@@ -2464,15 +2464,34 @@
             "alias": "dev-master",
             "alias_normalized": "9999999-dev",
             "version": "dev-develop",
+            "package": "dreamfactory/lib-php-common"
+        },
+        {
+            "alias": "dev-master",
+            "alias_normalized": "9999999-dev",
+            "version": "dev-develop",
+            "package": "dreamfactory/lib-php-common-yii"
+        },
+        {
+            "alias": "dev-master",
+            "alias_normalized": "9999999-dev",
+            "version": "dev-develop",
+            "package": "dreamfactory/oasys"
+        },
+        {
+            "alias": "dev-master",
+            "alias_normalized": "9999999-dev",
+            "version": "dev-develop",
             "package": "dreamfactory/azure-sdk-for-php"
         }
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
+        "dreamfactory/lib-php-common": 20,
+        "dreamfactory/lib-php-common-yii": 20,
         "dreamfactory/oasys": 20,
         "dreamfactory/azure-sdk-for-php": 20,
         "phpunit/phpunit": 0,
