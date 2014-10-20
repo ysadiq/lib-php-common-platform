@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "80c9cd86195b22f287c7141d61260638",
+    "hash": "338e86e152e9496054786f8ce80966c6",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -415,12 +415,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "f1ec64abdf2b3560297f999f69a97f6ee5a0983c"
+                "reference": "0b17b8f4bf0e7d57798e08775fe8be97e93826e8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/f1ec64abdf2b3560297f999f69a97f6ee5a0983c",
-                "reference": "f1ec64abdf2b3560297f999f69a97f6ee5a0983c",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/0b17b8f4bf0e7d57798e08775fe8be97e93826e8",
+                "reference": "0b17b8f4bf0e7d57798e08775fe8be97e93826e8",
                 "shasum": ""
             },
             "require": {
@@ -461,7 +461,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-10-19 18:47:49"
+            "time": "2014-10-20 00:27:46"
         },
         {
             "name": "dreamfactory/php-utils",
@@ -734,16 +734,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "dev-develop",
+            "version": "0.2.67",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241"
+                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/eea48a0189839a3e7b878b802d1837b4ea9d5241",
-                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
+                "reference": "aa4f8e5d21ac8ad8885d298555691c1a5c3f7349",
                 "shasum": ""
             },
             "require": {
@@ -788,7 +788,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-10-05 22:12:45"
+            "time": "2014-10-05 22:12:34"
         },
         {
             "name": "monolog/monolog",
@@ -2469,9 +2469,11 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
+        "kisma/kisma": 0,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
+        "dreamfactory/oasys": 20,
         "dreamfactory/azure-sdk-for-php": 20,
         "phpunit/phpunit": 0,
         "phpunit/dbunit": 0,

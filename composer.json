@@ -24,6 +24,7 @@
 	],
 	"require":           {
 		"php":                               "~5.3",
+        "kisma/kisma":                       "@stable",
 		"swiftmailer/swiftmailer":           "~4.3@stable",
 		"aws/aws-sdk-php":                   "~2.4.0@stable",
 		"rackspace/php-opencloud":           "~1.5.0@stable",
@@ -37,7 +38,7 @@
 		"dreamfactory/yii":                  "~1.1.13.10",
 		"dreamfactory/lib-php-common":       "~1.5",
 		"dreamfactory/lib-php-common-yii":   "~1.5",
-		"dreamfactory/oasys":                "~0.4",
+		"dreamfactory/oasys":                "~0.4@dev",
 		"dreamfactory/javascript-sdk":       "~1.0",
 		"dreamfactory/azure-sdk-for-php":    "dev-develop as dev-master"
 	},
