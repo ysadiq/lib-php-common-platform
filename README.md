@@ -7,7 +7,7 @@ It is, for all intents and purposes, the DreamFactory DSP SDK for SDK.
 
 Please visit our [wiki](https://github.com/dreamfactorysoftware/dsp-core/wiki) for platform and API documentation.
 
-## Installation
+### Installation
 
 Add a line to your "require" section in your composer configuration:
 
