@@ -148,11 +148,24 @@ $_commonProperties = array(
         'type'        => 'boolean',
         'description' => 'True if the current user has not logged in.',
     ),
+    'paths'                      => array(
+        'type'        => 'array',
+        'description' => 'An array of the various absolute paths of this server.',
+        'items'       => array(
+            'type' => 'string',
+        ),
+    ),
     'states'                     => array(
         'type'        => 'StateInfo',
         'description' => 'An array of the current platform state from various perspectives.',
     ),
+    'timestamp_format'           => array(
+        'type'        => 'string',
+        'description' => 'The date/time format used for timestamps.',
+    ),
 );
+
+@ksort( $_commonProperties );
 
 $_config['models'] = array(
     'ConfigRequest'  => array(
@@ -246,7 +259,7 @@ HTML
 HTML
                 ,
             ),
-            'ready_state'    => array(
+            'ready_state'     => array(
                 'type'        => 'integer',
                 'format'      => 'int32',
                 'required'    => true,
@@ -274,4 +287,8 @@ HTML
     ),
 );
 
+@ksort( $_config['models'] );
+@ksort( $_config['models']['ConfigResponse']['properties'] );
+
 return $_config;
+
