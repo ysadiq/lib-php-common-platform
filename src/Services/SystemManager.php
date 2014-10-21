@@ -166,6 +166,9 @@ class SystemManager extends BaseSystemRestService
         {
             if ( PlatformStates::DATABASE_READY != ( $_dbState = static::_validateDatabaseStructure() ) )
             {
+                //  Flush the activated cache since we have no db...
+                Platform::storeSet( 'dsp.admin_activated', false );
+
                 //	Something is needed for the database
                 return $_dbState;
             }
