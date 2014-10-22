@@ -102,10 +102,12 @@ class Register extends BasePlatformRestResource
         /** @var $_config Config */
         if ( false === ( $_config = Config::getOpenRegistration() ) )
         {
+            //@todo should this be a 403?
             throw new BadRequestException( "Open registration for users is not currently enabled for this system." );
         }
 
         $_email = Option::get( $data, 'email', FilterInput::request( 'email' ) );
+
         if ( empty( $_email ) )
         {
             throw new BadRequestException( "The email field for registering a user can not be empty." );

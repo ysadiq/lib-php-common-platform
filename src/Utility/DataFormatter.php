@@ -23,10 +23,10 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Interfaces\Exportable;
+use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Enums\DataFormats;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
 
 /**
  * DataFormatter
@@ -242,7 +242,7 @@ class DataFormatter
 
         //Initializations
         $xml_array = array();
-        $current = & $xml_array; //Reference
+        $current = &$xml_array; //Reference
 
         //Go through the tags.
         $repeated_tag_index = array(); //Multiple tags with same name will be turned into an array
@@ -291,7 +291,7 @@ class DataFormatter
             /** @var string $level */
             if ( $type == "open" )
             { //The starting of the tag '<tag>'
-                $parent[$level - 1] = & $current;
+                $parent[$level - 1] = &$current;
                 if ( !is_array( $current ) or ( !in_array( $tag, array_keys( $current ) ) ) )
                 { //Insert New tag
                     $current[$tag] = $result;
@@ -301,7 +301,7 @@ class DataFormatter
                     }
                     $repeated_tag_index[$tag . '_' . $level] = 1;
 
-                    $current = & $current[$tag];
+                    $current = &$current[$tag];
                 }
                 else
                 { //There was another element with the same tag name
@@ -326,7 +326,7 @@ class DataFormatter
                         }
                     }
                     $last_item_index = $repeated_tag_index[$tag . '_' . $level] - 1;
-                    $current = & $current[$tag][$last_item_index];
+                    $current = &$current[$tag][$last_item_index];
                 }
             }
             elseif ( $type == "complete" )
@@ -382,7 +382,7 @@ class DataFormatter
             }
             elseif ( $type == 'close' )
             { //End of tag '</tag>'
-                $current = & $parent[$level - 1];
+                $current = &$parent[$level - 1];
             }
         }
 
@@ -533,7 +533,7 @@ class DataFormatter
 
         // assume first row is field header
         $_result = array();
-        ini_set('auto_detect_line_endings',TRUE);
+        ini_set( 'auto_detect_line_endings', true );
         if ( ( $_handle = fopen( $_filename, "r" ) ) !== false )
         {
             $_headers = fgetcsv( $_handle, null, "," );
@@ -1088,5 +1088,23 @@ class DataFormatter
         unset( $fieldarr[$pos] );
 
         return implode( $delimiter, array_values( $fieldarr ) );
+    }
+
+    /**
+     * Flattens an array of one record to a single array
+     *
+     * @param array  $array
+     * @param string $key The record key to flatten
+     *
+     * @return mixed
+     */
+    public static function flattenArray( $array, $key = 'record' )
+    {
+        if ( is_array( $array ) && null !== ( $_data = IfSet::get( $array, $key ) ) && count( $_data ) )
+        {
+            return current( $_data );
+        }
+
+        return $array;
     }
 }

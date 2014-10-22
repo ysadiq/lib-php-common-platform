@@ -371,10 +371,16 @@ class Platform
      */
     public static function getCacheKey( $addendum = null )
     {
-        return PHP_SAPI . '.' . isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
+        return PHP_SAPI . '.' . ( isset( $_SERVER, $_SERVER['REMOTE_ADDR'] )
             ? $_SERVER['REMOTE_ADDR']
-            : gethostname() . '.' . isset( $_SERVER, $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] :
-                gethostname() . ( $addendum ? '.' . $addendum : null );
+            : gethostname() . '.' . ( isset( $_SERVER, $_SERVER['HTTP_HOST'] )
+                ? $_SERVER['HTTP_HOST']
+                : gethostname() . ( $addendum
+                    ? '.' . $addendum
+                    : null
+                )
+            )
+        );
     }
 
     /**
