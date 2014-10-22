@@ -21,8 +21,11 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -51,6 +54,30 @@ class RemoteWebSvc extends BasePlatformRestService
      * @var array
      */
     protected $_parameters;
+    /**
+     * @var array
+     */
+    protected $_excludedHeaders;
+    /**
+     * @var array
+     */
+    protected $_excludedParameters;
+    /**
+     * @var bool
+     */
+    protected $_cacheEnabled;
+    /**
+     * @var int
+     */
+    protected $_cacheTTL;
+    /**
+     * @var bool
+     */
+    protected $_cacheMatchBody;
+    /**
+     * @var string
+     */
+    protected $_cacheQuery;
     /**
      * @var string
      */
@@ -86,78 +113,117 @@ class RemoteWebSvc extends BasePlatformRestService
         {
             throw new \InvalidArgumentException( 'Remote Web Service base url can not be empty.' );
         }
+
+        $_clientExclusions = Option::get( $this->_credentials, 'client_exclusions' );
+        $this->_excludedHeaders = Option::get( $_clientExclusions, 'headers', array() );
+        $this->_excludedParameters = Option::get( $_clientExclusions, 'parameters', array() );
+
+        $_cacheConfig = Option::get( $this->_credentials, 'cache_config' );
+        $this->_cacheEnabled = Option::getBool( $_cacheConfig, 'enabled' );
+        $this->_cacheTTL = intval( Option::get( $_cacheConfig, 'ttl', Platform::DEFAULT_CACHE_TTL ) );
+        $this->_cacheMatchBody = Option::getBool( $_cacheConfig, 'match_body' );
+
+        $this->_query = '';
+        $this->_cacheQuery = '';
     }
 
-    protected static function parseArrayParameter( &$output, $name, $value )
+    protected static function parseArrayParameter( &$query, &$key, $name, $value, $add_to_query = true, $add_to_key = true )
     {
         if ( is_array( $value ) )
         {
             foreach ( $value as $sub => $subValue )
             {
-                static::parseArrayParameter( $output, $name . '[' . $sub . ']', $subValue );
+                static::parseArrayParameter( $query, $cache_key, $name . '[' . $sub . ']', $subValue, $add_to_query, $add_to_key );
             }
         }
         else
         {
-            if ( !empty( $output ) )
-            {
-                $output .= '&';
-            }
-            $output .= urlencode( $name );
+            $value = Session::replaceLookup( $value, true );
+            $_part = urlencode( $name );
             if ( !empty( $value ) )
             {
-                $output .= '=' . urlencode( $value );
+                $_part .= '=' . urlencode( $value );
+            }
+            if ( $add_to_query )
+            {
+                if ( !empty( $query ) )
+                {
+                    $query .= '&';
+                }
+                $query .= $_part;
+            }
+            if ( $add_to_key )
+            {
+                if ( !empty( $key ) )
+                {
+                    $key .= '&';
+                }
+                $key .= $_part;
             }
         }
     }
 
+    protected static function doesActionApply( $config, $action )
+    {
+        if ( null !== $_excludeActions = Option::get( $config, 'action' ) )
+        {
+            if ( !( is_string( $_excludeActions ) && 0 === strcasecmp( 'all', $_excludeActions ) ) )
+            {
+                $_excludeActions = DbUtilities::validateAsArray( $_excludeActions, ',', true, 'Exclusion action config is invalid.' );
+                if ( false === array_search( $action, $_excludeActions ) )
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 
     /**
      * @param $action
      *
      * @return string
      */
-    protected function buildParameterString( $action )
+    protected static function buildParameterString( $parameters, $exclusions, $action, &$query, &$cache_key )
     {
-        $param_str = '';
-
-        foreach ( $_REQUEST as $key => $value )
+        // inbound parameters from request to be passed on
+        foreach ( $_REQUEST as $_name => $_value )
         {
-            switch ( strtolower( $key ) )
+            $_outbound = true;
+            $_addToCacheKey = true;
+            // unless excluded
+            foreach ( $exclusions as $_exclusion )
             {
-                case '_': // timestamp added by jquery
-                case 'app_name': // app_name required by our api
-                case 'method': // method option for our api
-                case 'format': //	Output format
-                case 'path': //	Added by Yii router
-                    break;
-                default:
-                    static::parseArrayParameter( $param_str, $key, $value );
-                    break;
-            }
-        }
-
-        if ( !empty( $this->_parameters ) )
-        {
-            foreach ( $this->_parameters as $param )
-            {
-                $paramAction = Option::get( $param, 'action' );
-                if ( !empty( $paramAction ) && ( 0 !== strcasecmp( 'all', $paramAction ) ) )
+                if ( 0 === strcasecmp( $_name, strval( Option::get( $_exclusion, 'name' ) ) ) )
                 {
-                    if ( 0 !== strcasecmp( $action, $paramAction ) )
+                    if ( static::doesActionApply( $_exclusion, $action ) )
                     {
-                        continue;
+                        $_outbound = !Option::getBool( $_exclusion, 'outbound', true );
+                        $_addToCacheKey = !Option::getBool( $_exclusion, 'cache_key', true );
                     }
                 }
-                $key = Option::get( $param, 'name' );
-                $value = Session::replaceLookup( Option::get( $param, 'value' ), true );
-                $param_str .= ( !empty( $param_str ) ) ? '&' : '';
-                $param_str .= urlencode( $key );
-                $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
             }
+
+            static::parseArrayParameter( $query, $cache_key, $_name, $_value, $_outbound, $_addToCacheKey );
         }
 
-        return $param_str;
+        // DSP additional outbound parameters
+        if ( !empty( $parameters ) )
+        {
+            foreach ( $parameters as $_param )
+            {
+                if ( static::doesActionApply( $_param, $action ) )
+                {
+                    $_name = Option::get( $_param, 'name' );
+                    $_value = Option::get( $_param, 'value' );
+                    $_outbound = Option::getBool( $_param, 'outbound', true );
+                    $_addToCacheKey = Option::getBool( $_param, 'cache_key', true );
+
+                    static::parseArrayParameter( $query, $cache_key, $_name, $_value, $_outbound, $_addToCacheKey );
+                }
+            }
+        }
     }
 
     /**
@@ -170,27 +236,20 @@ class RemoteWebSvc extends BasePlatformRestService
     {
         if ( !empty( $this->_headers ) )
         {
-            foreach ( $this->_headers as $header )
+            foreach ( $this->_headers as $_header )
             {
-                $headerAction = Option::get( $header, 'action' );
-
-                if ( !empty( $headerAction ) && ( 0 !== strcasecmp( 'all', $headerAction ) ) )
+                if ( static::doesActionApply( $_header, $action ) )
                 {
-                    if ( 0 !== strcasecmp( $action, $headerAction ) )
+                    $_name = Option::get( $_header, 'name' );
+                    $_value = Session::replaceLookup( Option::get( $_header, 'value' ), true );
+
+                    if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
                     {
-                        continue;
+                        $options[CURLOPT_HTTPHEADER] = array();
                     }
+
+                    $options[CURLOPT_HTTPHEADER][] = $_name . ': ' . $_value;
                 }
-
-                $key = Option::get( $header, 'name' );
-                $value = Session::replaceLookup( Option::get( $header, 'value' ), true );
-
-                if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
-                {
-                    $options[CURLOPT_HTTPHEADER] = array();
-                }
-
-                $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
             }
         }
 
@@ -206,19 +265,13 @@ class RemoteWebSvc extends BasePlatformRestService
     {
         parent::_preProcess();
 
-        $this->_query = $this->buildParameterString( $this->_action );
-        $this->_url = rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null );
+        $this->checkPermission( $this->_action, $this->_apiName );
 
-        if ( !empty( $this->_query ) )
-        {
-            $_splicer = ( false === strpos( $this->_baseUrl, '?' ) ) ? '?' : '&';
-            $this->_url .= $_splicer . $this->_query;
-        }
+        //  set outbound parameters
+        $this->buildParameterString( $this->_parameters, $this->_excludedParameters, $this->_action, $this->_query, $this->_cacheQuery );
 
         //	set additional headers
         $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
-
-        $this->checkPermission( $this->_action, $this->_apiName );
     }
 
     /**
@@ -227,12 +280,44 @@ class RemoteWebSvc extends BasePlatformRestService
      */
     protected function _handleResource()
     {
-//		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
+        $_data = RestData::getPostedData() ?: array();
+
+        $_resource = ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null );
+        $this->_url = rtrim( $this->_baseUrl, '/' ) . $_resource;
+
+        if ( !empty( $this->_query ) )
+        {
+            $_splicer = ( false === strpos( $this->_baseUrl, '?' ) ) ? '?' : '&';
+            $this->_url .= $_splicer . $this->_query;
+        }
+
+        // build cache_key
+        $_cacheKey = $this->_action . ':' . $this->_apiName . $_resource;
+        if ( !empty( $this->_cacheQuery ) )
+        {
+            $_splicer = ( false === strpos( $_cacheKey, '?' ) ) ? '?' : '&';
+            $_cacheKey .= $_splicer . $this->_cacheQuery;
+        }
+
+        if ( $this->_cacheEnabled )
+        {
+            switch ( $this->_action )
+            {
+                case static::GET:
+                    if ( null !== $_result = Platform::storeGet( $_cacheKey ) )
+                    {
+                        return $_result;
+                    }
+                    break;
+            }
+        }
+
+        Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
 
         $_result = Curl::request(
             $this->_action,
             $this->_url,
-            RestData::getPostedData() ? : array(),
+            $_data,
             $this->_curlOptions
         );
 
@@ -240,6 +325,16 @@ class RemoteWebSvc extends BasePlatformRestService
         {
             $_error = Curl::getError();
             throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
+        }
+
+        if ( $this->_cacheEnabled )
+        {
+            switch ( $this->_action )
+            {
+                case static::GET:
+                    Platform::storeSet( $_cacheKey, $_result, $this->_cacheTTL );
+                    break;
+            }
         }
 
         return $_result;
