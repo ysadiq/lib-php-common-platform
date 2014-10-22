@@ -307,7 +307,7 @@ class Config extends BaseSystemRestResource
 
         $flushCache && Platform::storeDelete( static::OPEN_REG_CACHE_KEY );
 
-        if ( null === ( $_config = Platform::storeGet( static::OPEN_REG_CACHE_KEY ) ) )
+        if ( null === ( $_config = Platform::storeGet( static::OPEN_REG_CACHE_KEY ) ) || !is_array( $_config ) )
         {
             /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
             if ( null === ( $_config = ResourceStore::model( 'config' )->find( array('select' => $COLUMNS) ) ) )
@@ -315,10 +315,12 @@ class Config extends BaseSystemRestResource
                 throw new InternalServerErrorException( 'Unable to load system configuration.' );
             }
 
-            Platform::storeSet( static::OPEN_REG_CACHE_KEY, $_config->getAttributes() );
+            $_config = $_config->getAttributes();
+
+            Platform::storeSet( static::OPEN_REG_CACHE_KEY, $_config );
         }
 
-        return !$_config->allow_open_registration ? false : $_config;
+        return !$_config['allow_open_registration'] ? false : $_config;
     }
 
     /**
