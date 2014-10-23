@@ -227,7 +227,7 @@ class Fabric extends SeedUtility
 
         $_response = Curl::get( $_url . '?oasys=' . urlencode( Pii::getParam( 'oauth.salt' ) ) );
 
-        if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
+        if ( !$_response || HttpResponse::Ok != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
         {
             static::_errorLog(
                 'Global provider credential pull failed: ' .
@@ -292,8 +292,8 @@ class Fabric extends SeedUtility
             }
 
             if ( is_object( $_response ) &&
-                isset( $_response->details, $_response->details->code ) &&
-                HttpResponse::NotFound == $_response->details->code
+                 isset( $_response->details, $_response->details->code ) &&
+                 HttpResponse::NotFound == $_response->details->code
             )
             {
                 static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
@@ -406,13 +406,13 @@ class Fabric extends SeedUtility
         try
         {
             if ( false ===
-                ( $_result =
-                    Curl::request(
-                        $method,
-                        static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
-                        $payload,
-                        $curlOptions
-                    ) )
+                 ( $_result =
+                     Curl::request(
+                         $method,
+                         static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
+                         $payload,
+                         $curlOptions
+                     ) )
             )
             {
                 throw new \RuntimeException( 'Failed to contact API server.' );
@@ -434,7 +434,7 @@ class Fabric extends SeedUtility
 //********************************************************************************
 
 if ( is_file( Fabric::MAINTENANCE_MARKER ) &&
-    Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
+     Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
 )
 {
     header( 'Location: ' . Fabric::MAINTENANCE_URI );

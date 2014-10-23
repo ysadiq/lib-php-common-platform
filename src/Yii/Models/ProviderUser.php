@@ -36,194 +36,192 @@ namespace DreamFactory\Platform\Yii\Models;
  */
 class ProviderUser extends BasePlatformSystemModel
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * @return string the associated database table name
-	 */
-	public function tableName()
-	{
-		return static::tableNamePrefix() . 'provider_user';
-	}
+    /**
+     * @return string the associated database table name
+     */
+    public function tableName()
+    {
+        return static::tableNamePrefix() . 'provider_user';
+    }
 
-	/**
-	 * @return array validation rules for model attributes.
-	 */
-	public function rules()
-	{
-		$_rules = array(
-			array( 'user_id, provider_id', 'required' ),
-			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
-		);
+    /**
+     * @return array validation rules for model attributes.
+     */
+    public function rules()
+    {
+        return array(
+            array('user_id, provider_id', 'required'),
+            array('provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe'),
+        );
+    }
 
-		return array_merge( parent::rules(), $_rules );
-	}
+    /**
+     * @return array
+     */
+    public function relations()
+    {
+        return array_merge(
+            parent::relations(),
+            array(
+                'user'     => array(static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id'),
+                'provider' => array(static::BELONGS_TO, __NAMESPACE__ . '\\Provider', 'provider_id'),
+            )
+        );
+    }
 
-	/**
-	 * @return array
-	 */
-	public function relations()
-	{
-		return array_merge(
-			parent::relations(),
-			array(
-				'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
-				'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Provider', 'provider_id' ),
-			)
-		);
-	}
+    /**
+     * @return array
+     */
+    public function behaviors()
+    {
+        return array_merge(
+            parent::behaviors(),
+            array(
+                //	Secure JSON
+                'base_platform_model.secure_json' => array(
+                    'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+                    'salt'             => $this->getDb()->password,
+                    'secureAttributes' => array(
+                        'auth_text',
+                    )
+                ),
+            )
+        );
+    }
 
-	/**
-	 * @return array
-	 */
-	public function behaviors()
-	{
-		return array_merge(
-			parent::behaviors(),
-			array(
-				//	Secure JSON
-				'base_platform_model.secure_json' => array(
-					'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					'salt'             => $this->getDb()->password,
-					'secureAttributes' => array(
-						'auth_text',
-					)
-				),
-			)
-		);
-	}
+    /**
+     * @param array $additionalLabels
+     *
+     * @return array customized attribute labels (name=>label)
+     */
+    public function attributeLabels( $additionalLabels = array() )
+    {
+        return parent::attributeLabels(
+            array_merge(
+                $additionalLabels,
+                array(
+                    'provider_id'      => 'Provider ID',
+                    'provider_user_id' => 'Provider User ID',
+                    'user_id'          => 'User ID',
+                    'account_type'     => 'Account Type',
+                    'auth_text'        => 'Authorization',
+                    'last_use_date'    => 'Last Used',
+                )
+            )
+        );
+    }
 
-	/**
-	 * @param array $additionalLabels
-	 *
-	 * @return array customized attribute labels (name=>label)
-	 */
-	public function attributeLabels( $additionalLabels = array() )
-	{
-		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					'provider_id'      => 'Provider ID',
-					'user_id'          => 'User ID',
-					'provider_user_id' => 'Provider User ID',
-					'account_type'     => 'Account Type',
-					'auth_text'        => 'Authorization',
-					'last_use_date'    => 'Last Used',
-				)
-			)
-		);
-	}
+    /**
+     * @param int    $userId
+     * @param string $portal
+     *
+     * @return $this
+     */
+    public function byUserPortal( $userId, $portal )
+    {
+        $this->getDbCriteria()->mergeWith(
+            array(
+                'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
+                'params'    => array(
+                    ':user_id'  => $userId,
+                    ':api_name' => trim( strtolower( $portal ) ),
+                ),
+            )
+        );
 
-	/**
-	 * @param int    $userId
-	 * @param string $portal
-	 *
-	 * @return $this
-	 */
-	public function byUserPortal( $userId, $portal )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
-				'params'    => array(
-					':user_id'  => $userId,
-					':api_name' => trim( strtolower( $portal ) ),
-				),
-			)
-		);
+        return $this;
+    }
 
-		return $this;
-	}
+    /**
+     * @param int $userId
+     * @param int $portalId
+     *
+     * @return $this
+     */
+    public function byUserPortalId( $userId, $portalId )
+    {
+        $this->getDbCriteria()->mergeWith(
+            array(
+                'condition' => 'user_id = :user_id and provider_id = :portal_id',
+                'params'    => array(
+                    ':user_id'   => $userId,
+                    ':portal_id' => $portalId,
+                ),
+            )
+        );
 
-	/**
-	 * @param int $userId
-	 * @param int $portalId
-	 *
-	 * @return $this
-	 */
-	public function byUserPortalId( $userId, $portalId )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				'condition' => 'user_id = :user_id and provider_id = :portal_id',
-				'params'    => array(
-					':user_id'   => $userId,
-					':portal_id' => $portalId,
-				),
-			)
-		);
+        return $this;
+    }
 
-		return $this;
-	}
+    /**
+     * @param int $userId
+     * @param int $providerUserId
+     *
+     * @return $this
+     */
+    public function byUserProviderUserId( $userId, $providerUserId )
+    {
+        $this->getDbCriteria()->mergeWith(
+            array(
+                'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
+                'params'    => array(
+                    ':user_id'          => $userId,
+                    ':provider_user_id' => $providerUserId,
+                ),
+            )
+        );
 
-	/**
-	 * @param int $userId
-	 * @param int $providerUserId
-	 *
-	 * @return $this
-	 */
-	public function byUserProviderUserId( $userId, $providerUserId )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
-				'params'    => array(
-					':user_id'          => $userId,
-					':provider_user_id' => $providerUserId,
-				),
-			)
-		);
+        return $this;
+    }
 
-		return $this;
-	}
+    /**
+     * @param string $email
+     *
+     * @return User
+     */
+    public static function getByEmail( $email )
+    {
+        return User::model()->find(
+            'email = :email',
+            array(
+                ':email' => $email,
+            )
+        );
+    }
 
-	/**
-	 * @param string $email
-	 *
-	 * @return User
-	 */
-	public static function getByEmail( $email )
-	{
-		return User::model()->find(
-			'email = :email',
-			array(
-				':email' => $email,
-			)
-		);
-	}
+    /**
+     * @param int $userId
+     *
+     * @return Provider[]
+     */
+    public static function getLogins( $userId )
+    {
+        return static::model()->findAll(
+            'user_id = :user_id',
+            array(
+                ':user_id' => $userId,
+            )
+        );
+    }
 
-	/**
-	 * @param int $userId
-	 *
-	 * @return Provider[]
-	 */
-	public static function getLogins( $userId )
-	{
-		return static::model()->findAll(
-			'user_id = :user_id',
-			array(
-				':user_id' => $userId,
-			)
-		);
-	}
-
-	/**
-	 * @param int $userId
-	 * @param int $providerId
-	 *
-	 * @return ProviderUser
-	 */
-	public static function getLogin( $userId, $providerId )
-	{
-		return static::model()->find(
-			'user_id = :user_id and provider_id = :provider_id',
-			array(
-				':user_id'     => $userId,
-				':provider_id' => $providerId,
-			)
-		);
-	}
+    /**
+     * @param int $userId
+     * @param int $providerId
+     *
+     * @return ProviderUser
+     */
+    public static function getLogin( $userId, $providerId )
+    {
+        return static::model()->find(
+            'user_id = :user_id and provider_id = :provider_id',
+            array(
+                ':user_id'     => $userId,
+                ':provider_id' => $providerId,
+            )
+        );
+    }
 }

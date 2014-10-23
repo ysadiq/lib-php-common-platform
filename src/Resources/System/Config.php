@@ -36,6 +36,7 @@ use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -208,7 +209,7 @@ class Config extends BaseSystemRestResource
                 //  General settings
                 'allow_admin_remote_logins' => IfSet::getBool( $_params, 'dsp.allow_admin_remote_logins' ),
                 'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) &&
-                    IfSet::getBool( $_data, 'allow_open_registration' ) ),
+                                                 IfSet::getBool( $_data, 'allow_open_registration' ) ),
                 'remote_login_providers'    => array(),
                 'restricted_verbs'          => IfSet::get( $_params, 'dsp.restricted_verbs', array() ),
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),
@@ -335,7 +336,7 @@ class Config extends BaseSystemRestResource
         $flushCache && Platform::storeDelete( static::LOOKUP_CACHE_KEY );
 
         if ( null ===
-            ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+             ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             /** @var LookupKey[] $_models */
@@ -401,12 +402,13 @@ class Config extends BaseSystemRestResource
                     $_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
 
                     $_remoteProviders[] = array(
-                        'id'            => $_row->id,
-                        'provider_name' => $_row->provider_name_text,
-                        'api_name'      => $_row->endpoint_text,
-                        'config_text'   => $_config,
-                        'is_active'     => $_row->enable_ind,
-                        'is_system'     => true,
+                        'id'                => $_row->id,
+                        'provider_name'     => $_row->provider_name_text,
+                        'api_name'          => $_row->endpoint_text,
+                        'config_text'       => $_config,
+                        'is_active'         => $_row->enable_ind,
+                        'is_system'         => true,
+                        'is_login_provider' => true,
                     );
                 }
 
@@ -421,7 +423,13 @@ class Config extends BaseSystemRestResource
         //*************************************************************************
 
         /** @var Provider[] $_models */
-        $_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
+        $_models =
+            ResourceStore::model( 'provider' )->findAll(
+                array(
+                    'select' => 'id, provider_name, api_name, config_text, is_active, is_system, is_login_provider',
+                    'order'  => 'provider_name',
+                )
+            );
 
         if ( !empty( $_models ) )
         {
@@ -451,6 +459,7 @@ class Config extends BaseSystemRestResource
         }
 
         Platform::storeSet( static::PROVIDERS_CACHE_KEY, $_remoteProviders, static::CONFIG_CACHE_TTL );
+//        Log::debug( 'Remote providers: ' . print_r( $_remoteProviders, true ) );
 
         return $_remoteProviders;
     }
