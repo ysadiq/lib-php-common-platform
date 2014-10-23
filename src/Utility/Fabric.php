@@ -107,11 +107,14 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
-        return static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) && file_exists( static::FABRIC_MARKER );
+        return
+            static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) &&
+            file_exists( static::FABRIC_MARKER );
     }
 
     /**
-     * @param bool $returnHost If true and the host is private, the host name is returned instead of TRUE. FALSE is still returned if false
+     * @param bool $returnHost If true and the host is private, the host name is returned instead of TRUE. FALSE is
+     *                         still returned if false
      *
      * @return bool
      */
@@ -148,7 +151,8 @@ class Fabric extends SeedUtility
         {
             static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
             throw new \CHttpException(
-                HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
+                HttpResponse::Forbidden,
+                'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
             );
         }
 
@@ -200,12 +204,13 @@ class Fabric extends SeedUtility
      * Retrieves a global login provider credential set
      *
      * @param string $id
+     * @param bool   $force
      *
      * @return array
      */
-    public static function getProviderCredentials( $id = null )
+    public static function getProviderCredentials( $id = null, $force = false )
     {
-        if ( !static::fabricHosted() && !static::hostedPrivatePlatform() )
+        if ( !$force && !static::fabricHosted() && !static::hostedPrivatePlatform() )
         {
             Log::info( 'Global provider credential pull skipped: not hosted entity.' );
 
@@ -224,7 +229,12 @@ class Fabric extends SeedUtility
 
         if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
         {
-            static::_errorLog( 'Global provider credential pull failed: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
+            static::_errorLog(
+                'Global provider credential pull failed: ' .
+                Curl::getLastHttpCode() .
+                PHP_EOL .
+                print_r( $_response, true )
+            );
 
             return array();
         }
@@ -251,7 +261,11 @@ class Fabric extends SeedUtility
     {
         //	What has it gots in its pocketses? Cookies first, then session
         $_privateKey =
-            FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
+            FilterInput::cookie(
+                static::PrivateFigNewton,
+                FilterInput::session( static::PrivateFigNewton ),
+                \Kisma::get( 'platform.user_key' )
+            );
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $host );
 
         $_dbConfigFileName = str_ireplace(
@@ -289,7 +303,9 @@ class Fabric extends SeedUtility
             if ( !$_response || !is_object( $_response ) || false == $_response->success )
             {
                 static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
-                throw new \CHttpException( HttpResponse::InternalServerError, 'Cannot connect to authentication service' );
+                throw new \CHttpException(
+                    HttpResponse::InternalServerError, 'Cannot connect to authentication service'
+                );
             }
 
             $_instance = $_cache = $_response->details;
@@ -389,7 +405,15 @@ class Fabric extends SeedUtility
 
         try
         {
-            if ( false === ( $_result = Curl::request( $method, static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ), $payload, $curlOptions ) ) )
+            if ( false ===
+                ( $_result =
+                    Curl::request(
+                        $method,
+                        static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
+                        $payload,
+                        $curlOptions
+                    ) )
+            )
             {
                 throw new \RuntimeException( 'Failed to contact API server.' );
             }
@@ -409,7 +433,9 @@ class Fabric extends SeedUtility
 //* Check for maintenance mode...
 //********************************************************************************
 
-if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/ )
+if ( is_file( Fabric::MAINTENANCE_MARKER ) &&
+    Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
+)
 {
     header( 'Location: ' . Fabric::MAINTENANCE_URI );
     die();

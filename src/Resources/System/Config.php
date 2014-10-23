@@ -190,6 +190,7 @@ class Config extends BaseSystemRestResource
         //  Indicator to rebuild the config cache if the inbound request was NOT a "GET"
         $_refresh = ( static::GET != $this->_action );
 
+        $_data = DataFormatter::flattenArray( $this->_response );
         $_config = static::getCurrentConfig( $_refresh );
         $_params = Pii::params();
 
@@ -207,7 +208,7 @@ class Config extends BaseSystemRestResource
                 //  General settings
                 'allow_admin_remote_logins' => IfSet::getBool( $_params, 'dsp.allow_admin_remote_logins' ),
                 'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) &&
-                                                 IfSet::getBool( $this->_response, 'allow_open_registration' ) ),
+                    IfSet::getBool( $_data, 'allow_open_registration' ) ),
                 'remote_login_providers'    => array(),
                 'restricted_verbs'          => IfSet::get( $_params, 'dsp.restricted_verbs', array() ),
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),
@@ -275,7 +276,7 @@ class Config extends BaseSystemRestResource
 
         //	Only return a single row, not in an array
         $this->_response = array_merge(
-            DataFormatter::flattenArray( $this->_response ),
+            $_data,
             $_config
         );
 
@@ -333,7 +334,9 @@ class Config extends BaseSystemRestResource
     {
         $flushCache && Platform::storeDelete( static::LOOKUP_CACHE_KEY );
 
-        if ( null === ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( null ===
+            ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        )
         {
             /** @var LookupKey[] $_models */
             $_models =
