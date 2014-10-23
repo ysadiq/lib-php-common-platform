@@ -1671,6 +1671,11 @@ class SqlDbSvc extends BaseDbSvc
         switch ( $relationType )
         {
             case 'belongs_to':
+                if ( empty( $fieldVal ) )
+                {
+                    return null;
+                }
+
                 $_fields = Option::get( $extras, 'fields' );
                 $_ssFilters = Option::get( $extras, 'ss_filters' );
                 $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
@@ -1691,6 +1696,11 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 break;
             case 'has_many':
+                if ( empty( $fieldVal ) )
+                {
+                    return array();
+                }
+
                 $_fields = Option::get( $extras, 'fields' );
                 $_ssFilters = Option::get( $extras, 'ss_filters' );
                 $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
@@ -1707,6 +1717,11 @@ class SqlDbSvc extends BaseDbSvc
                 return $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 break;
             case 'many_many':
+                if ( empty( $fieldVal ) )
+                {
+                    return array();
+                }
+
                 $join = Option::get( $relation, 'join', '' );
                 $joinTable = substr( $join, 0, strpos( $join, '(' ) );
                 $other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
@@ -1726,33 +1741,35 @@ class SqlDbSvc extends BaseDbSvc
                     $_params = Option::get( $_criteria, 'params', array() );
 
                     $joinData = $this->_recordQuery( $joinTable, $_fields, $_where, $_params, $_bindings, $extras );
-                    if ( !empty( $joinData ) )
+                    if ( empty( $joinData ) )
                     {
-                        $relatedIds = array();
-                        foreach ( $joinData as $record )
-                        {
-                            $relatedIds[] = Option::get( $record, $joinRightField );
-                        }
-                        if ( !empty( $relatedIds ) )
-                        {
-                            $_fields = Option::get( $extras, 'fields' );
-                            $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
-                            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
-                            $_bindings = Option::get( $_result, 'bindings' );
-                            $_fields = Option::get( $_result, 'fields' );
-                            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+                        return array();
+                    }
 
-                            $_where = array('in', $relatedField, $relatedIds);
+                    $relatedIds = array();
+                    foreach ( $joinData as $record )
+                    {
+                        $relatedIds[] = Option::get( $record, $joinRightField );
+                    }
+                    if ( !empty( $relatedIds ) )
+                    {
+                        $_fields = Option::get( $extras, 'fields' );
+                        $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
+                        $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                        $_bindings = Option::get( $_result, 'bindings' );
+                        $_fields = Option::get( $_result, 'fields' );
+                        $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            return $this->_recordQuery(
-                                $relatedTable,
-                                $_fields,
-                                $_where,
-                                $_params,
-                                $_bindings,
-                                $extras
-                            );
-                        }
+                        $_where = array('in', $relatedField, $relatedIds);
+
+                        return $this->_recordQuery(
+                            $relatedTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                     }
                 }
                 break;
