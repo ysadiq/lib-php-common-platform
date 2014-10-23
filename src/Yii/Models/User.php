@@ -127,16 +127,16 @@ class User extends BasePlatformSystemModel
     public function rules()
     {
         $_rules = array(
-            array( 'email, display_name', 'required' ),
-            array( 'email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-            array( 'email', 'email' ),
-            array( 'email', 'length', 'max' => 255 ),
-            array( 'default_app_id, user_source, role_id', 'numerical', 'integerOnly' => true ),
-            array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
-            array( 'phone', 'length', 'max' => 32 ),
-            array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
-            array( 'is_active, is_sys_admin', 'boolean' ),
-            array( 'user_data', 'safe' ),
+            array('email, display_name', 'required'),
+            array('email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false),
+            array('email', 'email'),
+            array('email', 'length', 'max' => 255),
+            array('default_app_id, user_source, role_id', 'numerical', 'integerOnly' => true),
+            array('password, first_name, last_name, security_answer', 'length', 'max' => 64),
+            array('phone', 'length', 'max' => 32),
+            array('confirm_code, display_name, security_question', 'length', 'max' => 128),
+            array('is_active, is_sys_admin', 'boolean'),
+            array('user_data', 'safe'),
         );
 
         return array_merge( parent::rules(), $_rules );
@@ -148,20 +148,20 @@ class User extends BasePlatformSystemModel
     public function relations()
     {
         $_relations = array(
-            'apps_created'        => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'created_by_id' ),
-            'apps_modified'       => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'last_modified_by_id' ),
-            'app_groups_created'  => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'created_by_id' ),
-            'app_groups_modified' => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'last_modified_by_id' ),
-            'roles_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'created_by_id' ),
-            'roles_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'last_modified_by_id' ),
-            'services_created'    => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'created_by_id' ),
-            'services_modified'   => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'last_modified_by_id' ),
-            'users_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'created_by_id' ),
-            'users_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id' ),
-            'default_app'         => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
-            'role'                => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
-            'authorizations'      => array( self::HAS_MANY, __NAMESPACE__ . '\\ProviderUser', 'user_id' ),
-            'lookup_keys'         => array( self::HAS_MANY, __NAMESPACE__ . '\\LookupKey', 'user_id' ),
+            'apps_created'        => array(self::HAS_MANY, __NAMESPACE__ . '\\App', 'created_by_id'),
+            'apps_modified'       => array(self::HAS_MANY, __NAMESPACE__ . '\\App', 'last_modified_by_id'),
+            'app_groups_created'  => array(self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'created_by_id'),
+            'app_groups_modified' => array(self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'last_modified_by_id'),
+            'roles_created'       => array(self::HAS_MANY, __NAMESPACE__ . '\\Role', 'created_by_id'),
+            'roles_modified'      => array(self::HAS_MANY, __NAMESPACE__ . '\\Role', 'last_modified_by_id'),
+            'services_created'    => array(self::HAS_MANY, __NAMESPACE__ . '\\Service', 'created_by_id'),
+            'services_modified'   => array(self::HAS_MANY, __NAMESPACE__ . '\\Service', 'last_modified_by_id'),
+            'users_created'       => array(self::HAS_MANY, __NAMESPACE__ . '\\User', 'created_by_id'),
+            'users_modified'      => array(self::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id'),
+            'default_app'         => array(self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id'),
+            'role'                => array(self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id'),
+            'authorizations'      => array(self::HAS_MANY, __NAMESPACE__ . '\\ProviderUser', 'user_id'),
+            'lookup_keys'         => array(self::HAS_MANY, __NAMESPACE__ . '\\LookupKey', 'user_id'),
         );
 
         return array_merge( parent::relations(), $_relations );
@@ -287,7 +287,7 @@ class User extends BasePlatformSystemModel
         }
 
         //	Check and make sure this is not the last admin user
-        if ( $this->is_sys_admin && !static::model()->count( 'is_sys_admin = :is AND id != :id', array( ':is' => 1, ':id' => $_id ) ) )
+        if ( $this->is_sys_admin && !static::model()->count( 'is_sys_admin = :is AND id != :id', array(':is' => 1, ':id' => $_id) ) )
         {
             throw new StorageException( 'There must be at least one administrative account. This one may not be deleted.' );
         }
@@ -332,7 +332,7 @@ class User extends BasePlatformSystemModel
     public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
     {
         //	Don't show these
-        $hidden = array( 'password', 'security_question', 'security_answer' ) + $hidden;
+        $hidden = array('password', 'security_question', 'security_answer') + $hidden;
 
         $_myColumns = array_merge(
             array(
@@ -411,7 +411,7 @@ class User extends BasePlatformSystemModel
             'role.apps',
             'role.services'
         )->findByAttributes(
-            array( 'email' => $userName )
+            array('email' => $userName)
         );
 
         if ( empty( $_user ) )
@@ -461,7 +461,7 @@ class User extends BasePlatformSystemModel
                 foreach ( $this->role->role_service_accesses as $_perm )
                 {
                     $_permServiceId = $_perm->service_id;
-                    $_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'verbs', 'filters', 'filter_op' ) );
+                    $_temp = $_perm->getAttributes( $columns ?: array('service_id', 'component', 'verbs', 'filters', 'filter_op') );
 
                     if ( $this->role->services )
                     {
@@ -486,7 +486,7 @@ class User extends BasePlatformSystemModel
                 /** @var RoleServiceAccess $_perm */
                 foreach ( $this->role->role_system_accesses as $_perm )
                 {
-                    $_temp = $_perm->getAttributes( $columns ? : array( 'component', 'verbs', 'filters', 'filter_op' ) );
+                    $_temp = $_perm->getAttributes( $columns ?: array('component', 'verbs', 'filters', 'filter_op') );
                     $_temp['service'] = 'system';
                     $_perms[] = $_temp;
                 }
@@ -503,7 +503,7 @@ class User extends BasePlatformSystemModel
      */
     public static function getByEmail( $email )
     {
-        return static::model()->find( 'email = :email', array( ':email' => $email ) );
+        return static::model()->find( 'email = :email', array(':email' => $email) );
     }
 
     /**
@@ -589,7 +589,7 @@ class User extends BasePlatformSystemModel
             /** @var User $_user */
             $_user = new static();
 
-            $_userName = $profile->getPreferredUsername() ? : $profile->getDisplayName();
+            $_userName = $profile->getPreferredUsername() ?: $profile->getDisplayName();
 
             $_user->is_active = true;
             $_user->is_sys_admin = false;
@@ -616,7 +616,7 @@ class User extends BasePlatformSystemModel
             $_data = array();
         }
 
-        $_data[ $providerId . '.profile' ] = $profile->toArray();
+        $_data[$providerId . '.profile'] = $profile->toArray();
 
         //	Save the remote profile info... and then the row
         $_user->user_data = $_data;
@@ -626,7 +626,12 @@ class User extends BasePlatformSystemModel
 
         try
         {
-            $_user->save();
+            if ( !$_user->save() )
+            {
+                throw new \CDbException( $_user->getErrorsForLogging() );
+            }
+
+//            Log::debug( 'Remote login user created: ' . $_user->id );
         }
         catch ( \Exception $_ex )
         {
@@ -653,22 +658,30 @@ class User extends BasePlatformSystemModel
     protected static function _createRemoteLoginAuthorization( $user, $profile, $provider, $providerModel )
     {
         //	Create an authorization row for this dude...
-        if ( null === ( $_providerUser = ProviderUser::model()->byUserProviderUserId( $user->id, $profile->getUserId() )->find() ) )
+        $_providerUser = ProviderUser::model()->byUserProviderUserId( $user->id, $profile->getUserId() )->find();
+
+        if ( empty( $_providerUser ) )
         {
             //	Create new authorization
             $_providerUser = new ProviderUser();
-            $_providerUser->user_id = $user->id;
             $_providerUser->provider_user_id = $profile->getUserId();
             $_providerUser->provider_id = $providerModel->id;
+            $_providerUser->user_id = $user->id;
             $_providerUser->account_type = ProviderUserTypes::REMOTE_LOGIN;
         }
 
-        $_providerUser->last_use_date = date( 'c' );
+        $_providerUser->provider_user_id = $profile->getUserId();
+        $_providerUser->provider_id = $providerModel->id;
+        $_providerUser->user_id = $user->id;
+        $_providerUser->last_use_date = Platform::getSystemTimestamp();
         $_providerUser->auth_text = $provider->getConfig()->toArray();
 
         try
         {
-            $_providerUser->save();
+            if ( !$_providerUser->save() )
+            {
+                throw new \CDbException( $_providerUser->getErrorsForLogging() );
+            }
         }
         catch ( \CDbException $_ex )
         {
