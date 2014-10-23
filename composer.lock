@@ -269,9 +269,9 @@
             ],
             "authors": [
                 {
-                    "name": "Sykes, Jason",
+                    "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -293,12 +293,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "cf8c1972a1b097f6ad5e5a43936229ecfb4f6e2e"
+                "reference": "9761316a889e0d3301ad4955af4f43bdbb227a10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/cf8c1972a1b097f6ad5e5a43936229ecfb4f6e2e",
-                "reference": "cf8c1972a1b097f6ad5e5a43936229ecfb4f6e2e",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/9761316a889e0d3301ad4955af4f43bdbb227a10",
+                "reference": "9761316a889e0d3301ad4955af4f43bdbb227a10",
                 "shasum": ""
             },
             "require": {
@@ -339,7 +339,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-10-18 18:14:27"
+            "time": "2014-10-21 21:57:07"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -347,12 +347,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "bcfec023596dd49f0ad98f01e448c4ebcee0f6a8"
+                "reference": "112670991a750245e2adff81a5b28dcad960d7d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/bcfec023596dd49f0ad98f01e448c4ebcee0f6a8",
-                "reference": "bcfec023596dd49f0ad98f01e448c4ebcee0f6a8",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/112670991a750245e2adff81a5b28dcad960d7d5",
+                "reference": "112670991a750245e2adff81a5b28dcad960d7d5",
                 "shasum": ""
             },
             "require": {
@@ -407,7 +407,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-10-21 15:31:07"
+            "time": "2014-10-21 21:57:32"
         },
         {
             "name": "dreamfactory/oasys",
@@ -415,12 +415,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "0b17b8f4bf0e7d57798e08775fe8be97e93826e8"
+                "reference": "4ed89160e70b2f8d68467eb5f92001c0abb94169"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/0b17b8f4bf0e7d57798e08775fe8be97e93826e8",
-                "reference": "0b17b8f4bf0e7d57798e08775fe8be97e93826e8",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/4ed89160e70b2f8d68467eb5f92001c0abb94169",
+                "reference": "4ed89160e70b2f8d68467eb5f92001c0abb94169",
                 "shasum": ""
             },
             "require": {
@@ -461,7 +461,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-10-20 00:27:46"
+            "time": "2014-10-21 21:57:21"
         },
         {
             "name": "dreamfactory/php-utils",
@@ -469,12 +469,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
-                "reference": "3a0850ee2ebe016eec8386f34e05a3136bfa7bb3"
+                "reference": "25c75d6277465fad419ee7180cc5780956ca626a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/3a0850ee2ebe016eec8386f34e05a3136bfa7bb3",
-                "reference": "3a0850ee2ebe016eec8386f34e05a3136bfa7bb3",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/25c75d6277465fad419ee7180cc5780956ca626a",
+                "reference": "25c75d6277465fad419ee7180cc5780956ca626a",
                 "shasum": ""
             },
             "require": {
@@ -512,7 +512,7 @@
                 "dreamfactory",
                 "utility"
             ],
-            "time": "2014-10-19 04:22:35"
+            "time": "2014-10-22 18:09:40"
         },
         {
             "name": "dreamfactory/yii",
@@ -738,12 +738,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241"
+                "reference": "7e8ab8b6d9c6b686a8a71d31eae3e222b73f7c20"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/eea48a0189839a3e7b878b802d1837b4ea9d5241",
-                "reference": "eea48a0189839a3e7b878b802d1837b4ea9d5241",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/7e8ab8b6d9c6b686a8a71d31eae3e222b73f7c20",
+                "reference": "7e8ab8b6d9c6b686a8a71d31eae3e222b73f7c20",
                 "shasum": ""
             },
             "require": {
@@ -754,7 +754,7 @@
                 "symfony/http-foundation": "~2.4"
             },
             "require-dev": {
-                "phpunit/phpunit": "~3.7"
+                "phpunit/phpunit": "@stable"
             },
             "type": "library",
             "extra": {
@@ -788,7 +788,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-10-05 22:12:45"
+            "time": "2014-10-21 22:02:12"
         },
         {
             "name": "monolog/monolog",
@@ -796,12 +796,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "f835cd21e472683a9d251131f8c89ba18ed506c7"
+                "reference": "d0a9acbad0643726453e901d9d49c14e13de9f86"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/f835cd21e472683a9d251131f8c89ba18ed506c7",
-                "reference": "f835cd21e472683a9d251131f8c89ba18ed506c7",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/d0a9acbad0643726453e901d9d49c14e13de9f86",
+                "reference": "d0a9acbad0643726453e901d9d49c14e13de9f86",
                 "shasum": ""
             },
             "require": {
@@ -860,7 +860,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-10-21 09:22:09"
+            "time": "2014-10-21 20:10:18"
         },
         {
             "name": "nikic/php-parser",
@@ -1042,10 +1042,10 @@
         },
         {
             "name": "pear-pear.php.net/Net_URL2",
-            "version": "2.0.11",
+            "version": "2.1.0",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/Net_URL2-2.0.11.tgz",
+                "url": "http://pear.php.net/get/Net_URL2-2.1.0.tgz",
                 "reference": null,
                 "shasum": null
             },
@@ -1053,7 +1053,7 @@
                 "php": ">=5.1.4.0"
             },
             "replace": {
-                "pear-pear/net_url2": "== 2.0.11.0"
+                "pear-pear/net_url2": "== 2.1.0.0"
             },
             "type": "pear-library",
             "autoload": {
@@ -1914,16 +1914,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "4.3.3",
+            "version": "4.3.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "5a0bc4dcbb7340c0a9a9bc3507854a67c564edc4"
+                "reference": "23e4e0310f037aae873cc81b8658dbbb82878f71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/5a0bc4dcbb7340c0a9a9bc3507854a67c564edc4",
-                "reference": "5a0bc4dcbb7340c0a9a9bc3507854a67c564edc4",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/23e4e0310f037aae873cc81b8658dbbb82878f71",
+                "reference": "23e4e0310f037aae873cc81b8658dbbb82878f71",
                 "shasum": ""
             },
             "require": {
@@ -1934,7 +1934,7 @@
                 "ext-spl": "*",
                 "php": ">=5.3.3",
                 "phpunit/php-code-coverage": "~2.0",
-                "phpunit/php-file-iterator": "~1.3.1",
+                "phpunit/php-file-iterator": "~1.3.2",
                 "phpunit/php-text-template": "~1.2",
                 "phpunit/php-timer": "~1.0.2",
                 "phpunit/phpunit-mock-objects": "~2.3",
@@ -1984,7 +1984,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-10-16 16:53:00"
+            "time": "2014-10-22 11:43:12"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
@@ -2266,12 +2266,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/environment.git",
-                "reference": "205fcef5998953ec69cb79bc1ea9fee1277c8714"
+                "reference": "0d9bf79554d2a999da194a60416c15cf461eb67d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/environment/zipball/205fcef5998953ec69cb79bc1ea9fee1277c8714",
-                "reference": "205fcef5998953ec69cb79bc1ea9fee1277c8714",
+                "url": "https://api.github.com/repos/sebastianbergmann/environment/zipball/0d9bf79554d2a999da194a60416c15cf461eb67d",
+                "reference": "0d9bf79554d2a999da194a60416c15cf461eb67d",
                 "shasum": ""
             },
             "require": {
@@ -2283,7 +2283,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.1.x-dev"
+                    "dev-master": "1.2.x-dev"
                 }
             },
             "autoload": {
@@ -2308,7 +2308,7 @@
                 "environment",
                 "hhvm"
             ],
-            "time": "2014-10-08 05:30:43"
+            "time": "2014-10-22 06:38:05"
         },
         {
             "name": "sebastian/exporter",

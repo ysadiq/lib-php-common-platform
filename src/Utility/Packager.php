@@ -300,7 +300,7 @@ class Packager
         try
         {
             ResourceStore::setResourceName( 'app' );
-            $_appResults = ResourceStore::insertOne( $record, array('fields' => 'id,api_name') );
+            $_appResults = ResourceStore::insertOne( $record, array('fields' => '*') );
         }
         catch ( \Exception $ex )
         {
