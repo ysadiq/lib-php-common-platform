@@ -115,10 +115,9 @@ class App extends BaseSystemRestResource
 
             if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
             {
-                throw new InternalServerErrorException( "Failed to receive upload of '" .
-                                                        $_files['name'] .
-                                                        "': " .
-                                                        $_error );
+                throw new InternalServerErrorException(
+                    "Failed to receive upload of '" . $_files['name'] . "': " . $_error
+                );
             }
 
             $_extension = strtolower( pathinfo( $_files['name'], PATHINFO_EXTENSION ) );
@@ -140,14 +139,7 @@ class App extends BaseSystemRestResource
             //  Fire specialized event
             $this->_triggerActionEvent( $_results, 'app.import' );
         }
-        elseif ( null !=
-                   $_importUrl =
-                       Option::get(
-                           $this->_requestPayload,
-                           'import_url',
-                           Option::get( $this->_requestPayload, 'url' )
-                       )
-        )
+        elseif ( null != $_importUrl = Option::get( $this->_requestPayload, 'import_url' ) )
         {
             $_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
             if ( 'dfpkg' != $_extension )
@@ -225,9 +217,30 @@ class App extends BaseSystemRestResource
      */
     protected function _handleDelete()
     {
+        $_fields = Option::get( $this->_requestPayload, 'fields' );
+        $_deleteStorage = Option::getBool( $this->_requestPayload, 'delete_storage' );
+        if ( $_deleteStorage )
+        {
+            // make sure fields has at least api_name and storage service id
+            if ( empty( $_fields ) )
+            {
+                $_fields = 'id,api_name,storage_service_id,storage_container';
+            }
+            elseif ( is_string( $_fields ) )
+            {
+                !empty( $_fields ) && $_fields .= ',';
+                $_fields .= 'id,api_name,storage_service_id,storage_container';
+            }
+            elseif ( is_array( $_fields ) )
+            {
+                $_fields = array_merge( $_fields, array('api_name', 'storage_service_id', 'storage_container') );
+            }
+
+            $this->_requestPayload['fields'] = $_fields;
+        }
         $_results = parent::_handleDelete();
 
-        if ( Option::getBool( $_REQUEST, 'delete_storage' ) )
+        if ( $_deleteStorage )
         {
             $_records = Option::get( $_results, 'record' );
             if ( empty( $_records ) )
@@ -312,7 +325,7 @@ class App extends BaseSystemRestResource
                     $_templatePath = $_templateBaseDir . '/' . $_file;
                     if ( is_dir( $_templatePath ) )
                     {
-                        $_storePath = ( empty( $_rootFolder ) ? : $_rootFolder . '/' ) . $_file;
+                        $_storePath = ( empty( $_rootFolder ) ?: $_rootFolder . '/' ) . $_file;
                         $_service->createFolder( $_container, $_storePath );
                         $_subFiles = array_diff( scandir( $_templatePath ), array('.', '..') );
                         if ( !empty( $_subFiles ) )
@@ -330,8 +343,7 @@ class App extends BaseSystemRestResource
                                     if ( 'sdk-init.js' == $_subFile )
                                     {
                                         $_dspHost = Curl::currentUrl( false, false );
-                                        $_content =
-                                            str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
+                                        $_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
                                         $_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
                                     }
                                     $_service->writeFile(
@@ -347,7 +359,7 @@ class App extends BaseSystemRestResource
                     else if ( file_exists( $_templatePath ) )
                     {
                         $_content = file_get_contents( $_templatePath );
-                        $_storePath = ( empty( $_rootFolder ) ? : $_rootFolder . '/' ) . $_file;
+                        $_storePath = ( empty( $_rootFolder ) ?: $_rootFolder . '/' ) . $_file;
                         $_service->writeFile( $_container, $_storePath, $_content, false );
                     }
                 }
@@ -461,8 +473,7 @@ class App extends BaseSystemRestResource
                                     {
                                         $_content = file_get_contents( $_templateSubPath );
                                         $_dspHost = Curl::currentUrl( false, false );
-                                        $_content =
-                                            str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
+                                        $_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
                                         $_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
                                         $_zip->addFromString( $_file . '/' . $_subFile, $_content );
                                     }
