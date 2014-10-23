@@ -28,7 +28,6 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Exceptions\FileSystemException;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -112,22 +111,23 @@ class Platform
 
         $_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
 
-        if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
+        if ( !LocalStorageTypes::contains( $type ) )
         {
             throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
         }
 
         //	Make a cache tag that includes the requested path...
-        $_cacheTag = $_tag . '/' . Inflector::neutralize( $_appendage );
+        $_cacheKey = $type . $_appendage;
 
-        if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
+        if ( null === ( $_path = Option::get( $_cache, $_cacheKey ) ) )
         {
-            $_path = trim( Pii::getParam( $_tag ) );
+            $_path = Pii::getParam( $type );
 
             if ( empty( $_path ) )
             {
                 $_path = \Kisma::get( 'app.project_root' ) . '/storage';
-                Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+//  May not be a logger set up when this is first called. So, axing this notice
+//              Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
             }
 
             $_checkPath = $_path . $_appendage;
@@ -148,7 +148,7 @@ class Platform
             $_path .= $_appendage;
 
             //	Store path for next time...
-            Option::set( $_cache, $_cacheTag, $_path );
+            Option::set( $_cache, $_cacheKey, $_path );
         }
 
         return $_path;
@@ -693,7 +693,8 @@ class Platform
             //  We do nothing on private installs
             if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
             {
-                $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
+                $_debug &&
+                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): ignoring. not fabric-hosted' );
 
                 return true;
             }
@@ -712,7 +713,8 @@ class Platform
             //  Don't make unnecessary calls
             if ( \Kisma::get( 'platform.' . $stateName ) == $state )
             {
-                $_debug && Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
+                $_debug &&
+                Log::info( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): no change from current state' );
 
                 return true;
             }
@@ -722,7 +724,8 @@ class Platform
                 //  Called before DSP name is set
                 if ( null === ( $_instanceId = \Kisma::get( 'platform.dsp_name' ) ) )
                 {
-                    $_debug && Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
+                    $_debug &&
+                    Log::notice( 'setPlatformState( "' . $stateName . '", ' . $state . ' ): empty DSP name' );
 
                     return false;
                 }
@@ -740,7 +743,12 @@ class Platform
                 if ( !$_result->success )
                 {
                     $_debug && Log::notice(
-                        'setPlatformState( "' . $stateName . '", ' . $state . ' ): error saving state: ' . print_r( $_result, true )
+                        'setPlatformState( "' .
+                        $stateName .
+                        '", ' .
+                        $state .
+                        ' ): error saving state: ' .
+                        print_r( $_result, true )
                     );
 
                     throw new \Exception( 'Could not change state to "' . $state . '":' . $_result->error->message );
