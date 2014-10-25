@@ -292,8 +292,8 @@ class Fabric extends SeedUtility
             }
 
             if ( is_object( $_response ) &&
-                 isset( $_response->details, $_response->details->code ) &&
-                 HttpResponse::NotFound == $_response->details->code
+                isset( $_response->details, $_response->details->code ) &&
+                HttpResponse::NotFound == $_response->details->code
             )
             {
                 static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
@@ -334,13 +334,40 @@ class Fabric extends SeedUtility
             //	File should be there from provisioning... If not, tenemos una problema!
             if ( !file_exists( $_dbConfigFile ) )
             {
-                static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
-                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
-                exit( 1 );
+                $_timestamp = date( 'c' );
+
+                $_dbConfig = <<<PHP
+<?php
+/**
+ * **** DO NOT MODIFY THIS FILE ****
+ * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
+ * @(#)\$Id: database.config.php,v 1.0.0-{$_dspName} {$_timestamp} \$
+ */
+return array(
+        'connectionString'    => 'mysql:host={$_instance->db_host_text};port={$_instance->db_port_nbr};dbname={$_instance->db_name_text}',
+        'username'            => '{$_instance->db_user_text}',
+        'password'            => '{$_instance->db_pass_text}',
+        'emulatePrepare'      => true,
+        'charset'             => 'utf8',
+        'schemaCacheDuration' => 3600,
+);
+PHP;
+
+                Log::debug( 'Writing config: ' . $_dbConfig );
+
+                //  Try and create it...
+                if ( !@mkdir( dirname( $_dbConfigFile ), 0777, true ) || false === file_put_contents( $_dbConfig, $_dbConfigFile ) )
+                {
+                    static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
+                    header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
+                    exit( 1 );
+                }
             }
 
             /** @noinspection PhpIncludeInspection */
             $_settings = require( $_dbConfigFile );
+
+            Log::debug( 'Reading config: ' . $_settings );
 
             if ( !empty( $_settings ) )
             {
@@ -406,13 +433,13 @@ class Fabric extends SeedUtility
         try
         {
             if ( false ===
-                 ( $_result =
-                     Curl::request(
-                         $method,
-                         static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
-                         $payload,
-                         $curlOptions
-                     ) )
+                ( $_result =
+                    Curl::request(
+                        $method,
+                        static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
+                        $payload,
+                        $curlOptions
+                    ) )
             )
             {
                 throw new \RuntimeException( 'Failed to contact API server.' );
@@ -434,7 +461,7 @@ class Fabric extends SeedUtility
 //********************************************************************************
 
 if ( is_file( Fabric::MAINTENANCE_MARKER ) &&
-     Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
+    Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
 )
 {
     header( 'Location: ' . Fabric::MAINTENANCE_URI );
