@@ -344,9 +344,9 @@ class Fabric extends SeedUtility
  * @(#)\$Id: database.config.php,v 1.0.0-{$_dspName} {$_timestamp} \$
  */
 return array(
-        'connectionString'    => 'mysql:host={$_instance->db_host_text};port={$_instance->db_port_nbr};dbname={$_instance->db_name_text}',
-        'username'            => '{$_instance->db_user_text}',
-        'password'            => '{$_instance->db_pass_text}',
+        'connectionString'    => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
+        'username'            => '{$_instance->db_user}',
+        'password'            => '{$_instance->db_pass}',
         'emulatePrepare'      => true,
         'charset'             => 'utf8',
         'schemaCacheDuration' => 3600,
