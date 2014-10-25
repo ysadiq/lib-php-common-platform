@@ -346,17 +346,27 @@ class Fabric extends SeedUtility
 return array(
         'connectionString'    => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
         'username'            => '{$_instance->db_user}',
-        'password'            => '{$_instance->db_pass}',
+        'password'            => '{$_instance->db_password}',
         'emulatePrepare'      => true,
         'charset'             => 'utf8',
-        'schemaCacheDuration' => 3600,
+        'schemaCachingDuration' => 3600,
 );
 PHP;
 
-                Log::debug( 'Writing config: ' . $_dbConfig );
+                if ( !is_dir( dirname( $_dbConfigFile ) ) )
+                {
+                    @mkdir( dirname( $_dbConfigFile ), 0777, true );
+                }
+
+                Log::debug( 'Writing config "' . $_dbConfigFile . '": ' . json_encode( $_instance, JSON_PRETTY_PRINT ) . PHP_EOL . $_dbConfig );
+
+                if ( false === file_put_contents( $_dbConfigFile, $_dbConfig ) )
+                {
+                    static::_errorLog( 'Cannot create database config file.' );
+                }
 
                 //  Try and create it...
-                if ( !@mkdir( dirname( $_dbConfigFile ), 0777, true ) || false === file_put_contents( $_dbConfig, $_dbConfigFile ) )
+                if ( !file_exists( $_dbConfigFile ) )
                 {
                     static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
                     header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
