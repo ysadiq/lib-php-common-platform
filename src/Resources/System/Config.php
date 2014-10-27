@@ -238,7 +238,7 @@ class Config extends BaseSystemRestResource
             //  Get the login provider array
             if ( $_config['allow_remote_logins'] )
             {
-                $_config['remove_login_providers'] = $this->_getRemoteProviders();
+                $_config['remote_login_providers'] = $this->_getRemoteProviders();
             }
             else
             {
