@@ -36,7 +36,6 @@ use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -239,14 +238,7 @@ class Config extends BaseSystemRestResource
             //  Get the login provider array
             if ( $_config['allow_remote_logins'] )
             {
-                $_remoteProviders = $this->_getRemoteProviders();
-
-                $_config['allow_remote_logins'] =
-                    empty( $_remoteProviders )
-                        ? false
-                        : array_values( $_remoteProviders );
-
-                unset( $_remoteProviders );
+                $_config['remove_login_providers'] = $this->_getRemoteProviders();
             }
             else
             {
@@ -459,6 +451,7 @@ class Config extends BaseSystemRestResource
         }
 
         Platform::storeSet( static::PROVIDERS_CACHE_KEY, $_remoteProviders, static::CONFIG_CACHE_TTL );
+
 //        Log::debug( 'Remote providers: ' . print_r( $_remoteProviders, true ) );
 
         return $_remoteProviders;
