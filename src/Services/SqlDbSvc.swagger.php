@@ -49,6 +49,25 @@ $_addApis = array(
                 'notes'            => 'List the names of the available stored procedures on this database. ',
                 'type'             => 'Resources',
                 'event_name'       => array('{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.list'),
+                'parameters'       => array(
+                    array(
+                        'name'          => 'names_only',
+                        'description'   => 'Return only the names of the procedures in an array.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                        'default'       => false,
+                    ),
+                    array(
+                        'name'          => 'refresh',
+                        'description'   => 'Refresh any cached copy of the resource list.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                ),
                 'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
             ),
         ),
@@ -81,6 +100,14 @@ $_addApis = array(
                     array(
                         'name'          => 'wrapper',
                         'description'   => 'Add this wrapper around the expected data set before returning.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'returns',
+                        'description'   => 'If returning a single value, use this to set the type of that value.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -126,11 +153,147 @@ $_addApis = array(
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'returns',
+                        'description'   => 'If returning a single value, use this to set the type of that value.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 'responseMessages' => SwaggerManager::getCommonResponses(),
             ),
         ),
         'description' => 'Operations for SQL database stored procedures.',
+    ),
+    array(
+        'path'        => '/{api_name}/' . SqlDbSvc::STORED_FUNC_RESOURCE,
+        'operations'  => array(
+            array(
+                'method'           => 'GET',
+                'summary'          => 'getStoredFuncs() - List callable stored functions.',
+                'nickname'         => 'getStoredFuncs',
+                'notes'            => 'List the names of the available stored functions on this database. ',
+                'type'             => 'Resources',
+                'event_name'       => array('{api_name}.' . SqlDbSvc::STORED_FUNC_RESOURCE . '.list'),
+                'parameters'       => array(
+                    array(
+                        'name'          => 'names_only',
+                        'description'   => 'Return only the names of the functions in an array.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                        'default'       => false,
+                    ),
+                    array(
+                        'name'          => 'refresh',
+                        'description'   => 'Refresh any cached copy of the resource list.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
+            ),
+        ),
+        'description' => 'Operations for retrieving callable stored functions.',
+    ),
+    array(
+        'path'        => '/{api_name}/' . SqlDbSvc::STORED_FUNC_RESOURCE . '/{function_name}',
+        'operations'  => array(
+            array(
+                'method'           => 'GET',
+                'summary'          => 'callStoredFunc() - Call a stored function.',
+                'nickname'         => 'callStoredFunc',
+                'notes'            =>
+                    'Call a stored function with no parameters. ' .
+                    'Set an optional wrapper for the returned data set. ',
+                'type'             => 'StoredProcResponse',
+                'event_name'       => array(
+                    '{api_name}.' . SqlDbSvc::STORED_FUNC_RESOURCE . '.{function_name}.call',
+                    '{api_name}.' . SqlDbSvc::STORED_FUNC_RESOURCE . '.function_called',
+                ),
+                'parameters'       => array(
+                    array(
+                        'name'          => 'function_name',
+                        'description'   => 'Name of the stored function to call.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                    array(
+                        'name'          => 'wrapper',
+                        'description'   => 'Add this wrapper around the expected data set before returning.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'returns',
+                        'description'   => 'If returning a single value, use this to set the type of that value.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                ),
+                'responseMessages' => SwaggerManager::getCommonResponses(),
+            ),
+            array(
+                'method'           => 'POST',
+                'summary'          => 'callStoredFuncWithParams() - Call a stored function.',
+                'nickname'         => 'callStoredFuncWithParams',
+                'notes'            =>
+                    'Call a stored function with parameters. ' .
+                    'Set an optional wrapper and schema for the returned data set. ',
+                'type'             => 'StoredProcResponse',
+                'event_name'       => array(
+                    '{api_name}.' . SqlDbSvc::STORED_FUNC_RESOURCE . '.{function_name}.call',
+                    '{api_name}.' . SqlDbSvc::STORED_FUNC_RESOURCE . '.function_called',
+                ),
+                'parameters'       => array(
+                    array(
+                        'name'          => 'function_name',
+                        'description'   => 'Name of the stored function to call.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                    array(
+                        'name'          => 'body',
+                        'description'   => 'Data containing input parameters to pass to function.',
+                        'allowMultiple' => false,
+                        'type'          => 'StoredProcRequest',
+                        'paramType'     => 'body',
+                        'required'      => true,
+                    ),
+                    array(
+                        'name'          => 'wrapper',
+                        'description'   => 'Add this wrapper around the expected data set before returning.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'returns',
+                        'description'   => 'If returning a single value, use this to set the type of that value.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                ),
+                'responseMessages' => SwaggerManager::getCommonResponses(),
+            ),
+        ),
+        'description' => 'Operations for SQL database stored functions.',
     ),
 );
 
@@ -339,6 +502,10 @@ $_addModels = array(
                 'type'        => 'string',
                 'description' => 'Add this wrapper around the expected data set before returning, same as URL parameter.',
             ),
+            'returns' => array(
+                'type'        => 'string',
+                'description' => 'If returning a single value, use this to set the type of that value, same as URL parameter.',
+            ),
         ),
     ),
     'StoredProcParam'        => array(
@@ -383,7 +550,7 @@ $_addModels = array(
                     'for the returned value, i.e. integer, boolean, string, etc.',
             ),
         ),
-    )
+    ),
 );
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
