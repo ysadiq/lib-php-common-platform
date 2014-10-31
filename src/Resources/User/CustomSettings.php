@@ -23,8 +23,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Option;
 
@@ -32,7 +31,7 @@ use Kisma\Core\Utility\Option;
  * CustomSettings
  * DSP user custom settings
  */
-class CustomSettings extends BasePlatformRestResource
+class CustomSettings extends BaseUserRestResource
 {
 	//*************************************************************************
 	//* Members
@@ -64,9 +63,9 @@ class CustomSettings extends BasePlatformRestResource
 				'description'  => 'Resource for a user to manage their custom settings.',
 				'is_active'    => true,
 				'verb_aliases' => array(
-					static::Put   => static::Post,
-					static::Patch => static::Post,
-					static::Merge => static::Post,
+					static::PUT   => static::POST,
+					static::PATCH => static::POST,
+					static::MERGE => static::POST,
 				)
 			)
 		);
@@ -96,9 +95,8 @@ class CustomSettings extends BasePlatformRestResource
 		// check valid session,
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
-		$_data = RestData::getPostedData( true, true );
 
-		return $this->setCustomSettings( $_userId, $_data, $this->_setting );
+		return $this->setCustomSettings( $_userId, $this->_requestPayload, $this->_setting );
 	}
 
 	/**

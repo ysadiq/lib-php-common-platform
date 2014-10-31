@@ -22,15 +22,14 @@ namespace DreamFactory\Platform\Resources\User;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Yii\Models\User;
 
 /**
  * Profile
  * DSP user profile
  */
-class Profile extends BasePlatformRestResource
+class Profile extends BaseUserRestResource
 {
 	//*************************************************************************
 	//* Methods
@@ -84,9 +83,8 @@ class Profile extends BasePlatformRestResource
 		// check valid session,
 		// using userId from session, get profile attributes
 		$_userId = Session::validateSession();
-		$_data = RestData::getPostedData( false, true );
 
-		return $this->changeProfile( $_userId, $_data );
+		return $this->changeProfile( $_userId, $this->_requestPayload );
 	}
 
 	//-------- User Operations ------------------------------------------------

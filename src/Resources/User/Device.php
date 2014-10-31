@@ -21,8 +21,7 @@ namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Yii\Models\Device as DeviceModel;
 use Kisma\Core\Utility\Option;
 
@@ -30,7 +29,7 @@ use Kisma\Core\Utility\Option;
  * Device
  * DSP user devices
  */
-class Device extends BasePlatformRestResource
+class Device extends BaseUserRestResource
 {
 	//*************************************************************************
 	//* Methods
@@ -80,9 +79,7 @@ class Device extends BasePlatformRestResource
 		// using userId from session, get device attributes
 		$_userId = Session::validateSession();
 
-		$_data = RestData::getPostedData( false, true );
-
-		return static::addDevice( $_userId, $_data );
+		return static::addDevice( $_userId, $this->_requestPayload );
 	}
 
 	//-------- User Operations ------------------------------------------------

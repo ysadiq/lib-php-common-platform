@@ -24,10 +24,9 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
@@ -39,7 +38,7 @@ use Kisma\Core\Utility\Option;
  * Password
  * DSP user password
  */
-class Password extends BasePlatformRestResource
+class Password extends BaseUserRestResource
 {
 	//*************************************************************************
 	//* Methods
@@ -78,9 +77,8 @@ class Password extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostedData( false, true );
-		$_old = Option::get( $_data, 'old_password' );
-		$_new = Option::get( $_data, 'new_password' );
+		$_old = Option::get( $this->_requestPayload, 'old_password' );
+		$_new = Option::get( $this->_requestPayload, 'new_password' );
 
 		if ( !empty( $_old ) )
 		{
@@ -90,12 +88,12 @@ class Password extends BasePlatformRestResource
 			return $this->changePassword( $_userId, $_old, $_new );
 		}
 
-        $_login = Option::get( $data, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
-		$_email = Option::get( $_data, 'email', FilterInput::request( 'email' ) );
-		$_code = Option::get( $_data, 'code', FilterInput::request( 'code' ) );
-		$_answer = Option::get( $_data, 'security_answer' );
+        $_login = Option::get( $this->_requestPayload, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
+		$_email = Option::get( $this->_requestPayload, 'email', FilterInput::request( 'email' ) );
+		$_code = Option::get( $this->_requestPayload, 'code', FilterInput::request( 'code' ) );
+		$_answer = Option::get( $this->_requestPayload, 'security_answer' );
 
-		if ( Option::getBool( $_data, 'reset', FilterInput::request( 'reset' ) ) )
+		if ( Option::getBool( $this->_requestPayload, 'reset', FilterInput::request( 'reset' ) ) )
 		{
 			return $this->passwordReset( $_email );
 		}

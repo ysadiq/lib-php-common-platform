@@ -24,11 +24,10 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\FilterInput;
@@ -39,7 +38,7 @@ use Kisma\Core\Utility\Option;
  * Register
  * DSP user registration
  */
-class Register extends BasePlatformRestResource
+class Register extends BaseUserRestResource
 {
     //*************************************************************************
     //* Methods
@@ -78,9 +77,8 @@ class Register extends BasePlatformRestResource
      */
     protected function _handlePost()
     {
-        $_data = RestData::getPostedData( false, true );
-        $_login = Option::get( $data, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
-        $_result = $this->userRegister( $_data, $_login, $_login );
+        $_login = Option::get( $this->_requestPayload, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
+        $_result = $this->userRegister( $this->_requestPayload, $_login, $_login );
 
         return $_result;
     }
