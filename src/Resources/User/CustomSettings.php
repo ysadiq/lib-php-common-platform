@@ -92,6 +92,8 @@ class CustomSettings extends BaseUserRestResource
 	 */
 	protected function _handlePost()
 	{
+        $this->_triggerActionEvent( $this->_response );
+
 		// check valid session,
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
@@ -104,6 +106,8 @@ class CustomSettings extends BaseUserRestResource
 	 */
 	protected function _handleDelete()
 	{
+        $this->_triggerActionEvent( $this->_response );
+
 		// check valid session,
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();

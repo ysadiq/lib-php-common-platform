@@ -31,104 +31,106 @@ use Kisma\Core\Utility\Option;
  */
 class Device extends BaseUserRestResource
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		parent::__construct(
-			$consumer,
-			array(
-				'name'           => 'User Device',
-				'service_name'   => 'user',
-				'type'           => 'System',
-				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				'api_name'       => 'device',
-				'description'    => 'Resource for a user to manage their devices.',
-				'is_active'      => true,
-				'resource_array' => $resources,
-			)
-		);
-	}
+    /**
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        parent::__construct(
+            $consumer,
+            array(
+                'name'           => 'User Device',
+                'service_name'   => 'user',
+                'type'           => 'System',
+                'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+                'api_name'       => 'device',
+                'description'    => 'Resource for a user to manage their devices.',
+                'is_active'      => true,
+                'resource_array' => $resources,
+            )
+        );
+    }
 
-	// REST interface implementation
+    // REST interface implementation
 
-	/**
-	 * @return bool
-	 */
-	protected function _handleGet()
-	{
-		// check valid session,
-		// using userId from session, get device attributes
-		$_userId = Session::validateSession();
+    /**
+     * @return bool
+     */
+    protected function _handleGet()
+    {
+        // check valid session,
+        // using userId from session, get device attributes
+        $_userId = Session::validateSession();
 
-		return static::getDevices( $_userId );
-	}
+        return static::getDevices( $_userId );
+    }
 
-	/**
-	 * @return bool
-	 */
-	protected function _handlePost()
-	{
-		// check valid session,
-		// using userId from session, get device attributes
-		$_userId = Session::validateSession();
+    /**
+     * @return bool
+     */
+    protected function _handlePost()
+    {
+        $this->_triggerActionEvent( $this->_response );
 
-		return static::addDevice( $_userId, $this->_requestPayload );
-	}
+        // check valid session,
+        // using userId from session, get device attributes
+        $_userId = Session::validateSession();
 
-	//-------- User Operations ------------------------------------------------
+        return static::addDevice( $_userId, $this->_requestPayload );
+    }
 
-	/**
-	 * @param int $user_id
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return array
-	 */
-	public static function getDevices( $user_id )
-	{
-		$_models = DeviceModel::getDevicesByUser( $user_id );
-		$_response = array();
-		if ( !empty( $_models ) )
-		{
-			foreach ( $_models as $_model )
-			{
-				$_response[] = $_model->getAttributes();
-			}
-		}
+    //-------- User Operations ------------------------------------------------
 
-		$_response = array( 'record' => $_response );
+    /**
+     * @param int $user_id
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array
+     */
+    public static function getDevices( $user_id )
+    {
+        $_models = DeviceModel::getDevicesByUser( $user_id );
+        $_response = array();
+        if ( !empty( $_models ) )
+        {
+            foreach ( $_models as $_model )
+            {
+                $_response[] = $_model->getAttributes();
+            }
+        }
 
-		return $_response;
-	}
+        $_response = array('record' => $_response);
 
-	public static function addDevice( $user_id, $data )
-	{
-		$_uuid = Option::get( $data, 'uuid' );
-		// Registration, check for already existing device
-		$_result = DeviceModel::getDeviceByUser( $user_id, $_uuid );
-		if ( null === $_result )
-		{
-			$data['user_id'] = $user_id;
-			try
-			{
-				$_model = new DeviceModel();
-				$_model->setAttributes( $data );
-				$_model->save();
+        return $_response;
+    }
 
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to register user device.\n{$ex->getMessage()}", $ex->getCode() );
-			}
-		}
+    public static function addDevice( $user_id, $data )
+    {
+        $_uuid = Option::get( $data, 'uuid' );
+        // Registration, check for already existing device
+        $_result = DeviceModel::getDeviceByUser( $user_id, $_uuid );
+        if ( null === $_result )
+        {
+            $data['user_id'] = $user_id;
+            try
+            {
+                $_model = new DeviceModel();
+                $_model->setAttributes( $data );
+                $_model->save();
 
-		return array( 'success' => true );
-	}
+            }
+            catch ( \Exception $ex )
+            {
+                throw new InternalServerErrorException( "Failed to register user device.\n{$ex->getMessage()}", $ex->getCode() );
+            }
+        }
+
+        return array('success' => true);
+    }
 }

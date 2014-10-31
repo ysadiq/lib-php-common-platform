@@ -113,6 +113,8 @@ class Session extends BaseUserRestResource
      */
     protected function _handlePost()
     {
+        $this->_triggerActionEvent( $this->_response );
+
         return $this->userLogin(
             Option::get( $this->_requestPayload, 'email' ),
             Option::get( $this->_requestPayload, 'password' ),
@@ -126,6 +128,8 @@ class Session extends BaseUserRestResource
      */
     protected function _handleDelete()
     {
+        $this->_triggerActionEvent( $this->_response );
+
         $this->userLogout();
 
         return array('success' => true);

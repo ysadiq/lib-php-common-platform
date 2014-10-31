@@ -77,6 +77,8 @@ class Register extends BaseUserRestResource
      */
     protected function _handlePost()
     {
+        $this->_triggerActionEvent( $this->_response );
+
         $_login = Option::get( $this->_requestPayload, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
         $_result = $this->userRegister( $this->_requestPayload, $_login, $_login );
 
@@ -137,7 +139,7 @@ class Register extends BaseUserRestResource
         }
 
         // Registration, check for email validation required
-        $_theUser = User::model()->find( 'email=:email', array( ':email' => $_email ) );
+        $_theUser = User::model()->find( 'email=:email', array(':email' => $_email) );
         if ( null !== $_theUser )
         {
             throw new BadRequestException( "A registered user already exists with the email '$_email'." );
@@ -212,7 +214,7 @@ class Register extends BaseUserRestResource
                 }
 
                 $_data['to'] = $_email;
-                $_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
+                $_userFields = array('first_name', 'last_name', 'display_name', 'confirm_code');
                 $_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
                 $_emailService->sendEmail( $_data );
             }
@@ -236,7 +238,7 @@ class Register extends BaseUserRestResource
             }
         }
 
-        return array( 'success' => true );
+        return array('success' => true);
     }
 
     /**
@@ -271,7 +273,7 @@ class Register extends BaseUserRestResource
 
         $_theUser = User::model()->find(
             'email=:email AND confirm_code=:cc',
-            array( ':email' => $email, ':cc' => $code )
+            array(':email' => $email, ':cc' => $code)
         );
         if ( null === $_theUser )
         {
@@ -302,7 +304,7 @@ class Register extends BaseUserRestResource
             }
         }
 
-        return array( 'success' => true );
+        return array('success' => true);
     }
 
 }
