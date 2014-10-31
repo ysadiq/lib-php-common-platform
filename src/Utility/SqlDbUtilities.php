@@ -84,9 +84,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * @param \CDbConnection|array $db         A database connection or the array of tables if you already have it pulled
-     * @param string               $name       The name of the table to check
-     * @param bool                 $returnName If true, the table name is returned instead of TRUE
+     * @param \CDbConnection $db         A database connection
+     * @param string         $name       The name of the table to check
+     * @param bool           $returnName If true, the table name is returned instead of TRUE
      *
      * @throws \InvalidArgumentException
      * @return bool
@@ -99,20 +99,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         //  Build the lower-cased table array
-        if ( is_array( $db ) )
-        {
-            $_tables = array();
-
-            foreach ( $db as $_key => $_value )
-            {
-                $_key = is_numeric( $_key ) ? strtolower( $_value ) : strtolower( $_key );
-                $_tables[$_key] = $_value;
-            }
-        }
-        else
-        {
-            $_tables = static::_getCachedTables( $db );
-        }
+        $_tables = static::_getCachedTables( $db );
 
         //	Search normal, return real name
         if ( array_key_exists( $name, $_tables ) )
@@ -140,11 +127,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @return array
      * @throws \Exception
      */
-    public static function listStoredProcedures( $db, $include = null, $exclude = null )
+    public static function listStoredProcedures( $db, $refresh = false, $include = null, $exclude = null )
     {
         try
         {
-            $_names = $db->schema->getProcedureNames();
+            $_names = $db->schema->getProcedureNames('', $refresh);
             $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
             $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
             $temp = array();
@@ -339,11 +326,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @return array
      * @throws \Exception
      */
-    public static function listStoredFunctions( $db, $include = null, $exclude = null )
+    public static function listStoredFunctions( $db, $refresh = false, $include = null, $exclude = null )
     {
         try
         {
-            $_names = $db->schema->getFunctionNames();
+            $_names = $db->schema->getFunctionNames('', $refresh );
             $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
             $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
             $temp = array();

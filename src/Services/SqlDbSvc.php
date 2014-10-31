@@ -609,7 +609,9 @@ class SqlDbSvc extends BaseDbSvc
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_result = $this->listProcedures();
+                    $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+                    $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
+                    $_result = $this->listProcedures($_namesOnly, $_refresh);
 
                     return array('resource' => $_result);
                 }
@@ -648,7 +650,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listProcedures()
+    public function listProcedures($names_only = false, $refresh = false)
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -657,18 +659,17 @@ class SqlDbSvc extends BaseDbSvc
             $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
         }
 
-        $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
         $_resources = array();
 
         try
         {
-            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
+            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, $refresh, '', $_exclude );
             foreach ( $_result as $_name )
             {
                 $_access = $this->getPermissions( static::STORED_PROC_RESOURCE . '/' . $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $names_only )
                     {
                         $_resources[] = $_name;
                     }
@@ -718,7 +719,9 @@ class SqlDbSvc extends BaseDbSvc
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_result = $this->listFunctions();
+                    $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+                    $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
+                    $_result = $this->listFunctions($_namesOnly, $_refresh);
 
                     return array('resource' => $_result);
                 }
@@ -757,7 +760,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listFunctions()
+    public function listFunctions($names_only = false, $refresh = false)
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -766,18 +769,17 @@ class SqlDbSvc extends BaseDbSvc
             $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
         }
 
-        $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
         $_resources = array();
 
         try
         {
-            $_result = SqlDbUtilities::listStoredFunctions( $this->_dbConn, '', $_exclude );
+            $_result = SqlDbUtilities::listStoredFunctions( $this->_dbConn, $refresh, '', $_exclude );
             foreach ( $_result as $_name )
             {
                 $_access = $this->getPermissions( static::STORED_FUNC_RESOURCE . '/' . $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $names_only )
                     {
                         $_resources[] = $_name;
                     }
