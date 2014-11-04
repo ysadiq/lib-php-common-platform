@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
@@ -26,6 +27,16 @@ use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+
+//********************************************************************************
+//* Check for maintenance mode...
+//********************************************************************************
+
+if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) )
+{
+    header( 'Location: ' . Fabric::MAINTENANCE_URI );
+    die();
+}
 
 /**
  * Fabric.php
@@ -80,7 +91,11 @@ class Fabric extends SeedUtility
     /**
      * @var string
      */
-    const MAINTENANCE_URI = '/web/maintenance';
+    const MAINTENANCE_URI = '/static/dreamfactory/maintenance.php';
+    /**
+     * @var string
+     */
+    const UNAVAILABLE_URI = '/static/dreamfactory/unavailable.php';
     /**
      * @var int
      */
@@ -178,12 +193,15 @@ class Fabric extends SeedUtility
      */
     protected static function _cacheSettings( $host, $settings, $instance )
     {
-        $_data = array(
-            'settings' => $settings,
-            'instance' => $instance,
+        Platform::storeSet(
+            $host,
+            json_encode(
+                array(
+                    'settings' => $settings,
+                    'instance' => $instance,
+                )
+            )
         );
-
-        file_put_contents( static::_cacheFileName( $host ), json_encode( $_data ) );
 
         return $settings;
     }
@@ -259,13 +277,6 @@ class Fabric extends SeedUtility
      */
     protected static function _getDatabaseConfig( $host )
     {
-        //	What has it gots in its pocketses? Cookies first, then session
-        $_privateKey =
-            FilterInput::cookie(
-                static::PrivateFigNewton,
-                FilterInput::session( static::PrivateFigNewton ),
-                \Kisma::get( 'platform.user_key' )
-            );
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $host );
 
         $_dbConfigFileName = str_ireplace(
@@ -277,11 +288,7 @@ class Fabric extends SeedUtility
         //	Try and get them from server...
         if ( false === ( list( $_settings, $_instance ) = static::_checkCache( $host ) ) )
         {
-            //	Otherwise we need to build it.
-            $_parts = explode( '.', $host );
-            $_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
-
-            //	Otherwise, get the credentials from the auth server...
+            //	Get the credentials from the auth server...
             $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
 
             if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
@@ -385,7 +392,7 @@ PHP;
                 setcookie( static::FigNewton, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
                 setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
 
-                $_settings = static::_cacheSettings( $host, $_settings, $_instance );
+                static::_cacheSettings( $host, $_settings, $_instance );
             }
             else
             {
@@ -394,6 +401,9 @@ PHP;
                 setcookie( static::PrivateFigNewton, '', 0, '/' );
             }
         }
+
+        //  Check for enterprise status
+        static::_checkPlatformState( $_dspName );
 
         return $_settings;
     }
@@ -405,18 +415,9 @@ PHP;
      */
     protected static function _checkCache( $host )
     {
-        //	See if file is available and return it, or expire it...
-        if ( file_exists( $_cacheFile = static::_cacheFileName( $host ) ) )
+        if ( null !== ( $_config = Platform::storeGet( $host ) ) )
         {
-            //	No session or expired?
-            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
-            {
-                @unlink( $_cacheFile );
-
-                return false;
-            }
-
-            if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
+            if ( false !== ( $_data = json_decode( $_config, true ) ) && JSON_ERROR_NONE == json_last_error() )
             {
                 return array($_data['settings'], $_data['instance']);
             }
@@ -464,16 +465,19 @@ PHP;
             return false;
         }
     }
-}
 
-//********************************************************************************
-//* Check for maintenance mode...
-//********************************************************************************
-
-if ( is_file( Fabric::MAINTENANCE_MARKER ) &&
-    Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) /*&& is_file( Fabric::FABRIC_MARKER )*/
-)
-{
-    header( 'Location: ' . Fabric::MAINTENANCE_URI );
-    die();
+    /**
+     * Check platform state for locks, etc.
+     */
+    protected static function _checkPlatformState( $dspName )
+    {
+        if ( false !== ( $_states = Platform::getPlatformStates( $dspName ) ) )
+        {
+            if ( $_states['operation_state'] > FabricPlatformStates::ACTIVATED )
+            {
+                Pii::redirect( static::UNAVAILABLE_URI );
+                exit( FabricPlatformStates::LOCKED );
+            }
+        }
+    }
 }
