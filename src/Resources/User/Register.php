@@ -24,11 +24,10 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\FilterInput;
@@ -39,7 +38,7 @@ use Kisma\Core\Utility\Option;
  * Register
  * DSP user registration
  */
-class Register extends BasePlatformRestResource
+class Register extends BaseUserRestResource
 {
     //*************************************************************************
     //* Methods
@@ -78,9 +77,10 @@ class Register extends BasePlatformRestResource
      */
     protected function _handlePost()
     {
-        $_data = RestData::getPostedData( false, true );
-        $_login = Option::get( $data, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
-        $_result = $this->userRegister( $_data, $_login, $_login );
+        $this->_triggerActionEvent( $this->_response );
+
+        $_login = Option::get( $this->_requestPayload, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
+        $_result = $this->userRegister( $this->_requestPayload, $_login, $_login );
 
         return $_result;
     }
@@ -139,7 +139,7 @@ class Register extends BasePlatformRestResource
         }
 
         // Registration, check for email validation required
-        $_theUser = User::model()->find( 'email=:email', array( ':email' => $_email ) );
+        $_theUser = User::model()->find( 'email=:email', array(':email' => $_email) );
         if ( null !== $_theUser )
         {
             throw new BadRequestException( "A registered user already exists with the email '$_email'." );
@@ -214,7 +214,7 @@ class Register extends BasePlatformRestResource
                 }
 
                 $_data['to'] = $_email;
-                $_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
+                $_userFields = array('first_name', 'last_name', 'display_name', 'confirm_code');
                 $_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
                 $_emailService->sendEmail( $_data );
             }
@@ -238,7 +238,7 @@ class Register extends BasePlatformRestResource
             }
         }
 
-        return array( 'success' => true );
+        return array('success' => true);
     }
 
     /**
@@ -273,7 +273,7 @@ class Register extends BasePlatformRestResource
 
         $_theUser = User::model()->find(
             'email=:email AND confirm_code=:cc',
-            array( ':email' => $email, ':cc' => $code )
+            array(':email' => $email, ':cc' => $code)
         );
         if ( null === $_theUser )
         {
@@ -304,7 +304,7 @@ class Register extends BasePlatformRestResource
             }
         }
 
-        return array( 'success' => true );
+        return array('success' => true);
     }
 
 }

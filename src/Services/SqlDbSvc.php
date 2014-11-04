@@ -54,6 +54,10 @@ class SqlDbSvc extends BaseDbSvc
      * Resource tag for dealing with stored procedures
      */
     const STORED_PROC_RESOURCE = '_proc';
+    /**
+     * Resource tag for dealing with stored functions
+     */
+    const STORED_FUNC_RESOURCE = '_func';
 
     //*************************************************************************
     //	Members
@@ -269,9 +273,11 @@ class SqlDbSvc extends BaseDbSvc
 
     protected function resourceIsTable( $resource )
     {
-        if ( static::STORED_PROC_RESOURCE == $resource )
+        switch ( $resource )
         {
-            return false;
+            case static::STORED_PROC_RESOURCE:
+            case static::STORED_FUNC_RESOURCE:
+                return false;
         }
 
         return parent::resourceIsTable( $resource );
@@ -323,10 +329,11 @@ class SqlDbSvc extends BaseDbSvc
             switch ( $main )
             {
                 case static::STORED_PROC_RESOURCE:
+                case static::STORED_FUNC_RESOURCE:
                     $_resource = rtrim( $main, '/' ) . '/';
                     if ( !empty( $sub ) )
                     {
-                        $_resource .= $sub;
+                        $_resource .= rtrim( strstr( $sub, '(' ) );
                     }
 
                     $this->checkPermission( $action, $_resource );
@@ -346,9 +353,22 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function validateStoredProcedureAccess( &$procedure, $action = null )
     {
-        // finally check that the current user has privileges to access this table
+        // finally check that the current user has privileges to access this procedure
         $_resource = static::STORED_PROC_RESOURCE;
         $this->validateResourceAccess( $_resource, $procedure, $action );
+    }
+
+    /**
+     * @param string $function
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateStoredFunctionAccess( &$function, $action = null )
+    {
+        // finally check that the current user has privileges to access this function
+        $_resource = static::STORED_FUNC_RESOURCE;
+        $this->validateResourceAccess( $_resource, $function, $action );
     }
 
     /**
@@ -360,6 +380,9 @@ class SqlDbSvc extends BaseDbSvc
         {
             case static::STORED_PROC_RESOURCE:
                 return $this->_handleStoredProcedures();
+                break;
+            case static::STORED_FUNC_RESOURCE:
+                return $this->_handleStoredFunctions();
                 break;
         }
 
@@ -378,6 +401,7 @@ class SqlDbSvc extends BaseDbSvc
             switch ( $this->_resource )
             {
                 case static::STORED_PROC_RESOURCE:
+                case static::STORED_FUNC_RESOURCE:
                 case static::SCHEMA_RESOURCE:
                     break;
                 default:
@@ -517,6 +541,57 @@ class SqlDbSvc extends BaseDbSvc
 //                throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
 //                )}" );
             }
+
+            try
+            {
+                $_result = SqlDbUtilities::listStoredFunctions( $this->_dbConn );
+                if ( !empty( $_result ) )
+                {
+                    $_name = static::STORED_FUNC_RESOURCE . '/';
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        if ( $_namesOnly || $_asComponents )
+                        {
+                            $_resources[] = $_name;
+                            if ( $_asComponents )
+                            {
+                                $_resources[] = $_name . '*';
+                            }
+                        }
+                        else
+                        {
+                            $_resources[] = array('name' => $_name, 'access' => $_access);
+                        }
+                    }
+
+                    foreach ( $_result as $_name )
+                    {
+                        $_name = static::STORED_FUNC_RESOURCE . '/' . $_name;
+                        $_access = $this->getPermissions( $_name );
+                        if ( !empty( $_access ) )
+                        {
+                            if ( $_namesOnly || $_asComponents )
+                            {
+                                $_resources[] = $_name;
+                            }
+                            else
+                            {
+                                $_resources[] = array('name' => $_name, 'access' => $_access);
+                            }
+                        }
+                    }
+                }
+            }
+            catch ( RestException $_ex )
+            {
+//                throw $_ex;
+            }
+            catch ( \Exception $_ex )
+            {
+//                throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+//                )}" );
+            }
         }
 
         return $_resources;
@@ -534,23 +609,31 @@ class SqlDbSvc extends BaseDbSvc
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_result = $this->listProcedures();
+                    $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+                    $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
+                    $_result = $this->listProcedures($_namesOnly, $_refresh);
 
                     return array('resource' => $_result);
                 }
 
             case static::POST:
-                $_params = Option::get( $this->_requestPayload, 'params' );
+                if ( false !== strpos($this->_resourceId, '('))
+                {
+                    $_inlineParams = strstr( $this->_resourceId, '(' );
+                    $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
+                    $_params = Option::get( $this->_requestPayload, 'params', trim( $_inlineParams, '()') );
+                }
+                else
+                {
+                    $_name = $this->_resourceId;
+                    $_params = Option::get( $this->_requestPayload, 'params', array() );
+                }
+
+                $_returns = Option::get( $this->_requestPayload, 'returns' );
                 $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
                 $_schema = Option::get( $this->_requestPayload, 'schema' );
 
-                return SqlDbUtilities::callProcedure(
-                    $this->_dbConn,
-                    $this->_resourceId,
-                    $_params,
-                    $_schema,
-                    $_wrapper
-                );
+                return SqlDbUtilities::callProcedure( $this->_dbConn, $_name, $_returns, $_params, $_schema, $_wrapper );
                 break;
 
 //            case static::PUT:
@@ -567,7 +650,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listProcedures()
+    public function listProcedures($names_only = false, $refresh = false)
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -576,18 +659,17 @@ class SqlDbSvc extends BaseDbSvc
             $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
         }
 
-        $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
         $_resources = array();
 
         try
         {
-            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
+            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, $refresh, '', $_exclude );
             foreach ( $_result as $_name )
             {
                 $_access = $this->getPermissions( static::STORED_PROC_RESOURCE . '/' . $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $names_only )
                     {
                         $_resources[] = $_name;
                     }
@@ -613,15 +695,126 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * @param string $name
      * @param array  $params
+     * @param string $returns
      * @param array  $schema
      * @param string $wrapper
      *
      * @throws \Exception
      * @return array
      */
-    public function callProcedure( $name, $params = null, $schema = null, $wrapper = null )
+    public function callProcedure( $name, $params = null, $returns = null, $schema = null, $wrapper = null )
     {
-        return SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
+        return SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $returns, $schema, $wrapper );
+    }
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleStoredFunctions()
+    {
+        switch ( $this->_action )
+        {
+            /** @noinspection PhpMissingBreakStatementInspection */
+            case static::GET:
+                if ( empty( $this->_resourceId ) )
+                {
+                    $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+                    $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
+                    $_result = $this->listFunctions($_namesOnly, $_refresh);
+
+                    return array('resource' => $_result);
+                }
+
+            case static::POST:
+                if ( false !== strpos($this->_resourceId, '('))
+                {
+                    $_inlineParams = trim( strstr( $this->_resourceId, '(' ), '()');
+                    $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
+                    $_params = Option::get( $this->_requestPayload, 'params', $_inlineParams );
+                }
+                else
+                {
+                    $_name = $this->_resourceId;
+                    $_params = Option::get( $this->_requestPayload, 'params', array() );
+                }
+
+                $_returns = Option::get( $this->_requestPayload, 'returns' );
+                $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
+                $_schema = Option::get( $this->_requestPayload, 'schema' );
+
+                return SqlDbUtilities::callFunction( $this->_dbConn, $_name, $_params, $_returns, $_schema, $_wrapper );
+                break;
+
+//            case static::PUT:
+//            case static::PATCH:
+//            case static::MERGE:
+//            case static::DELETE:
+            default:
+                throw new BadRequestException( 'Verb not currently supported on stored procedures.' );
+                break;
+        }
+    }
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    public function listFunctions($names_only = false, $refresh = false)
+    {
+        $_exclude = '';
+        if ( $this->_isNative )
+        {
+            // check for system tables
+            $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
+        }
+
+        $_resources = array();
+
+        try
+        {
+            $_result = SqlDbUtilities::listStoredFunctions( $this->_dbConn, $refresh, '', $_exclude );
+            foreach ( $_result as $_name )
+            {
+                $_access = $this->getPermissions( static::STORED_FUNC_RESOURCE . '/' . $_name );
+                if ( !empty( $_access ) )
+                {
+                    if ( $names_only )
+                    {
+                        $_resources[] = $_name;
+                    }
+                    else
+                    {
+                        $_resources[] = array('name' => $_name, 'access' => $_access);
+                    }
+                }
+            }
+
+            return $_resources;
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param array  $params
+     * @param string $returns
+     * @param array  $schema
+     * @param string $wrapper
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public function callFunction( $name, $params = null, $returns = null, $schema = null, $wrapper = null )
+    {
+        return SqlDbUtilities::callFunction( $this->_dbConn, $name, $params, $returns, $schema, $wrapper );
     }
 
     //-------- Table Records Operations ---------------------
@@ -888,7 +1081,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_value = Option::get( $_dummy, $_name, Option::get( $_read, $_name ) );
                 if ( !is_null( $_type ) && !is_null( $_value ) )
                 {
-                    if (('int' === $_type) && ('' === $_value))
+                    if ( ( 'int' === $_type ) && ( '' === $_value ) )
                     {
                         // Postgresql strangely returns "" for null integers
                         $_value = null;
@@ -1008,9 +1201,9 @@ class SqlDbSvc extends BaseDbSvc
      * ':name', in which case an associative array is expected,
      * for value substitution.
      *
-     * @param string | array $filter     SQL WHERE clause filter string
-     * @param array          $params     Array of substitution values
-     * @param array          $ss_filters Server-side filters to apply
+     * @param string | array $filter       SQL WHERE clause filter string
+     * @param array          $params       Array of substitution values
+     * @param array          $ss_filters   Server-side filters to apply
      * @param array          $avail_fields All available fields for the table
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
@@ -1133,7 +1326,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_field = trim( $_ops[0] );
                 if ( false !== array_search( $_field, $field_list ) )
                 {
-                    $_ops[0] = $this->_dbConn->quoteColumnName($_field) . ' ';
+                    $_ops[0] = $this->_dbConn->quoteColumnName( $_field ) . ' ';
                 }
 
                 $filter = implode( $_sqlOp, $_ops );
@@ -1926,7 +2119,7 @@ class SqlDbSvc extends BaseDbSvc
                     // update existing and adopt new children
                     $_where = array();
                     $_params = array();
-                    $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) ." = :f_$_pkField";
+                    $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) . " = :f_$_pkField";
 
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
@@ -2160,7 +2353,7 @@ class SqlDbSvc extends BaseDbSvc
 
                 $_where = array();
                 $_params = array();
-                $_where[] = $this->_dbConn->quoteColumnName($pkManyField) . " = :f_$pkManyField";
+                $_where[] = $this->_dbConn->quoteColumnName( $pkManyField ) . " = :f_$pkManyField";
 
                 $_serverFilter = $this->buildQueryStringFromData( $_ssManyFilters, true );
                 if ( !empty( $_serverFilter ) )

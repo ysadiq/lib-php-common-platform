@@ -22,139 +22,139 @@ namespace DreamFactory\Platform\Resources\User;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Yii\Models\User;
 
 /**
  * Profile
  * DSP user profile
  */
-class Profile extends BasePlatformRestResource
+class Profile extends BaseUserRestResource
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		parent::__construct(
-			$consumer,
-			array(
-				'name'           => 'User Profile',
-				'service_name'   => 'user',
-				'type'           => 'System',
-				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				'api_name'       => 'profile',
-				'description'    => 'Resource for a user to manage their profile.',
-				'is_active'      => true,
-				'resource_array' => $resources,
-				'verb_aliases'   => array(
-					static::PUT   => static::POST,
-					static::PATCH => static::POST,
-					static::MERGE => static::POST,
-				)
-			)
-		);
-	}
+    /**
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        parent::__construct(
+            $consumer,
+            array(
+                'name'           => 'User Profile',
+                'service_name'   => 'user',
+                'type'           => 'System',
+                'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+                'api_name'       => 'profile',
+                'description'    => 'Resource for a user to manage their profile.',
+                'is_active'      => true,
+                'resource_array' => $resources,
+                'verb_aliases'   => array(
+                    static::PUT   => static::POST,
+                    static::PATCH => static::POST,
+                    static::MERGE => static::POST,
+                )
+            )
+        );
+    }
 
-	// REST interface implementation
+    // REST interface implementation
 
-	/**
-	 * @return bool
-	 */
-	protected function _handleGet()
-	{
-		// check valid session,
-		// using userId from session, get profile attributes
-		$_userId = Session::validateSession();
+    /**
+     * @return bool
+     */
+    protected function _handleGet()
+    {
+        // check valid session,
+        // using userId from session, get profile attributes
+        $_userId = Session::validateSession();
 
-		return $this->getProfile( $_userId );
-	}
+        return $this->getProfile( $_userId );
+    }
 
-	/**
-	 * @return array|bool|void
-	 */
-	protected function _handlePost()
-	{
-		// check valid session,
-		// using userId from session, get profile attributes
-		$_userId = Session::validateSession();
-		$_data = RestData::getPostedData( false, true );
+    /**
+     * @return array|bool|void
+     */
+    protected function _handlePost()
+    {
+        $this->_triggerActionEvent( $this->_response );
 
-		return $this->changeProfile( $_userId, $_data );
-	}
+        // check valid session,
+        // using userId from session, get profile attributes
+        $_userId = Session::validateSession();
 
-	//-------- User Operations ------------------------------------------------
+        return $this->changeProfile( $_userId, $this->_requestPayload );
+    }
 
-	/**
-	 * @param int $user_id
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return array
-	 */
-	public static function getProfile( $user_id )
-	{
-		$_theUser = User::model()->findByPk( $user_id );
-		if ( null === $_theUser )
-		{
-			// bad session
-			throw new NotFoundException( "The user for the current session was not found in the system." );
-		}
+    //-------- User Operations ------------------------------------------------
 
-		try
-		{
-			$_fields = $_theUser->getAttributes( User::getProfileAttributes() );
+    /**
+     * @param int $user_id
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array
+     */
+    public static function getProfile( $user_id )
+    {
+        $_theUser = User::model()->findByPk( $user_id );
+        if ( null === $_theUser )
+        {
+            // bad session
+            throw new NotFoundException( "The user for the current session was not found in the system." );
+        }
 
-			return $_fields;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Error retrieving profile.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
+        try
+        {
+            $_fields = $_theUser->getAttributes( User::getProfileAttributes() );
 
-	/**
-	 * @param int   $user_id
-	 * @param array $record
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return bool
-	 */
-	public static function changeProfile( $user_id, $record )
-	{
-		$_theUser = User::model()->findByPk( $user_id );
-		if ( null === $_theUser )
-		{
-			// bad session
-			throw new NotFoundException( "The user for the current session was not found in the system." );
-		}
+            return $_fields;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Error retrieving profile.\n{$ex->getMessage()}", $ex->getCode() );
+        }
+    }
 
-		$_allow = User::getProfileAttributes( true );
-		foreach ( $record as $_key => $_value )
-		{
-			if ( false === array_search( $_key, $_allow ) )
-			{
-				throw new InternalServerErrorException( "Attribute '$_key' can not be updated through profile change." );
-			}
-		}
+    /**
+     * @param int   $user_id
+     * @param array $record
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return bool
+     */
+    public static function changeProfile( $user_id, $record )
+    {
+        $_theUser = User::model()->findByPk( $user_id );
+        if ( null === $_theUser )
+        {
+            // bad session
+            throw new NotFoundException( "The user for the current session was not found in the system." );
+        }
 
-		try
-		{
-			$_theUser->setAttributes( $record );
-			$_theUser->save();
+        $_allow = User::getProfileAttributes( true );
+        foreach ( $record as $_key => $_value )
+        {
+            if ( false === array_search( $_key, $_allow ) )
+            {
+                throw new InternalServerErrorException( "Attribute '$_key' can not be updated through profile change." );
+            }
+        }
 
-			return array( 'success' => true );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Error processing profile change.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
+        try
+        {
+            $_theUser->setAttributes( $record );
+            $_theUser->save();
+
+            return array('success' => true);
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Error processing profile change.\n{$ex->getMessage()}", $ex->getCode() );
+        }
+    }
 }

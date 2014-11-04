@@ -25,11 +25,10 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseUserRestResource;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
@@ -50,7 +49,7 @@ use Kisma\Core\Utility\Scalar;
  * Session
  * DSP user session
  */
-class Session extends BasePlatformRestResource
+class Session extends BaseUserRestResource
 {
     //*************************************************************************
     //* Members
@@ -106,9 +105,7 @@ class Session extends BasePlatformRestResource
      */
     protected function _handleGet()
     {
-        $_ticket = FilterInput::request( 'ticket' );
-
-        return $this->_getSession( $_ticket );
+        return $this->_getSession( Option::get( $this->_requestPayload, 'ticket' ) );
     }
 
     /**
@@ -116,16 +113,14 @@ class Session extends BasePlatformRestResource
      */
     protected function _handlePost()
     {
-        $_data = RestData::getPostedData( false, true );
+        $this->_triggerActionEvent( $this->_response );
 
-        $_result = $this->userLogin(
-            Option::get( $_data, 'email' ),
-            Option::get( $_data, 'password' ),
-            Option::get( $_data, 'duration', 0 ),
+        return $this->userLogin(
+            Option::get( $this->_requestPayload, 'email' ),
+            Option::get( $this->_requestPayload, 'password' ),
+            Option::get( $this->_requestPayload, 'duration', 0 ),
             true
         );
-
-        return $_result;
     }
 
     /**
@@ -133,6 +128,8 @@ class Session extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
+        $this->_triggerActionEvent( $this->_response );
+
         $this->userLogout();
 
         return array('success' => true);
