@@ -293,12 +293,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "bafb8b228d0a47fe2fd708da83fdda596da65e47"
+                "reference": "8df3b3d2e7bd498d4612ffefcc37858dcbc342f1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/bafb8b228d0a47fe2fd708da83fdda596da65e47",
-                "reference": "bafb8b228d0a47fe2fd708da83fdda596da65e47",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/8df3b3d2e7bd498d4612ffefcc37858dcbc342f1",
+                "reference": "8df3b3d2e7bd498d4612ffefcc37858dcbc342f1",
                 "shasum": ""
             },
             "require": {
@@ -339,7 +339,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-11-04 15:19:01"
+            "time": "2014-11-04 16:55:29"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -347,12 +347,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "b0e38c168a6f41dd01a92c57d4c0a5bbbfd51e59"
+                "reference": "cd3b004da61522b14358ad14b9825321b04b9901"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/b0e38c168a6f41dd01a92c57d4c0a5bbbfd51e59",
-                "reference": "b0e38c168a6f41dd01a92c57d4c0a5bbbfd51e59",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/cd3b004da61522b14358ad14b9825321b04b9901",
+                "reference": "cd3b004da61522b14358ad14b9825321b04b9901",
                 "shasum": ""
             },
             "require": {
@@ -407,7 +407,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-11-04 05:45:29"
+            "time": "2014-11-04 17:20:41"
         },
         {
             "name": "dreamfactory/oasys",
@@ -516,16 +516,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.10",
+            "version": "1.1.13.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "780cab13660faebd773ef71670151937f6bb0e1b"
+                "reference": "328d0b540b1169c2b0a328b9cba3564e3c2dae40"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/780cab13660faebd773ef71670151937f6bb0e1b",
-                "reference": "780cab13660faebd773ef71670151937f6bb0e1b",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/328d0b540b1169c2b0a328b9cba3564e3c2dae40",
+                "reference": "328d0b540b1169c2b0a328b9cba3564e3c2dae40",
                 "shasum": ""
             },
             "require": {
@@ -590,7 +590,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-10-15 19:10:27"
+            "time": "2014-11-04 16:37:51"
         },
         {
             "name": "guzzle/guzzle",
@@ -1042,10 +1042,10 @@
         },
         {
             "name": "pear-pear.php.net/Net_URL2",
-            "version": "2.0.11",
+            "version": "2.1.0",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/Net_URL2-2.0.11.tgz",
+                "url": "http://pear.php.net/get/Net_URL2-2.1.0.tgz",
                 "reference": null,
                 "shasum": null
             },
@@ -1053,7 +1053,7 @@
                 "php": ">=5.1.4.0"
             },
             "replace": {
-                "pear-pear/net_url2": "== 2.0.11.0"
+                "pear-pear/net_url2": "== 2.1.0.0"
             },
             "type": "pear-library",
             "autoload": {
