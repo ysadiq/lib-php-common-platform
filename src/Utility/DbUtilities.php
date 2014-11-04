@@ -550,7 +550,7 @@ class DbUtilities
 
     public static function formatValue( $value, $type )
     {
-        switch ( $type )
+        switch ( strtolower(strval($type)) )
         {
             case 'int':
             case 'integer':

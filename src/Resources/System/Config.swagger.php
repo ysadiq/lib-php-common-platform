@@ -148,11 +148,24 @@ $_commonProperties = array(
         'type'        => 'boolean',
         'description' => 'True if the current user has not logged in.',
     ),
+    'paths'                      => array(
+        'type'        => 'array',
+        'description' => 'An array of the various absolute paths of this server.',
+        'items'       => array(
+            'type' => 'string',
+        ),
+    ),
     'states'                     => array(
         'type'        => 'StateInfo',
         'description' => 'An array of the current platform state from various perspectives.',
     ),
+    'timestamp_format'           => array(
+        'type'        => 'string',
+        'description' => 'The date/time format used for timestamps.',
+    ),
 );
+
+@ksort( $_commonProperties );
 
 $_config['models'] = array(
     'ConfigRequest'  => array(
@@ -200,30 +213,6 @@ $_config['models'] = array(
         'description' => 'An array of platform states from various perspectives.',
         'required'    => true,
         'properties'  => array(
-            'provision_state' => array(
-                'type'        => 'integer',
-                'format'      => 'int32',
-                'required'    => true,
-                'description' => <<<HTML
-<div>
-    <h3>The current state of platform provisioning. Valid  states are:</h3>
-    <table>
-        <thead><tr><th>Value</th><th>Description</th></tr></thead>
-        <tbody>
-            <tr><td>0</td><td>Request queued</td></tr>
-            <tr><td>1</td><td>Provisioning in progress</td></tr>
-            <tr><td>2</td><td>Provisioning complete</td></tr>
-            <tr><td>3</td><td>Deprovisioning in progress</td></tr>
-            <tr><td>4</td><td>Deprovisioning complete</td></tr>
-            <tr><td>10</td><td>Error queuing request</td></tr>
-            <tr><td>12</td><td>Provisioning Error</td></tr>
-            <tr><td>14</td><td>Deprovisioning Error</td></tr>
-        </tbody>
-    </table>
-</div>
-HTML
-                ,
-            ),
             'operation_state' => array(
                 'type'        => 'integer',
                 'format'      => 'int32',
@@ -244,9 +233,31 @@ HTML
     </table>
 </div>
 HTML
-                ,
             ),
-            'ready_state'    => array(
+            'provision_state' => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'required'    => true,
+                'description' => <<<HTML
+<div>
+    <h3>The current state of platform provisioning. Valid states are:</h3>
+    <table>
+        <thead><tr><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td>0</td><td>Request queued</td></tr>
+            <tr><td>1</td><td>Provisioning in progress</td></tr>
+            <tr><td>2</td><td>Provisioning complete</td></tr>
+            <tr><td>3</td><td>Deprovisioning in progress</td></tr>
+            <tr><td>4</td><td>Deprovisioning complete</td></tr>
+            <tr><td>10</td><td>Error queuing request</td></tr>
+            <tr><td>12</td><td>Provisioning Error</td></tr>
+            <tr><td>14</td><td>Deprovisioning Error</td></tr>
+        </tbody>
+    </table>
+</div>
+HTML
+            ),
+            'ready_state'     => array(
                 'type'        => 'integer',
                 'format'      => 'int32',
                 'required'    => true,
@@ -268,10 +279,12 @@ HTML
     </table>
 </div>
 HTML
-                ,
             ),
         ),
     ),
 );
+
+@ksort( $_config['models'] );
+@ksort( $_config['models']['ConfigResponse']['properties'] );
 
 return $_config;

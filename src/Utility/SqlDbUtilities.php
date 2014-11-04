@@ -84,9 +84,9 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * @param \CDbConnection|array $db         A database connection or the array of tables if you already have it pulled
-     * @param string               $name       The name of the table to check
-     * @param bool                 $returnName If true, the table name is returned instead of TRUE
+     * @param \CDbConnection $db         A database connection
+     * @param string         $name       The name of the table to check
+     * @param bool           $returnName If true, the table name is returned instead of TRUE
      *
      * @throws \InvalidArgumentException
      * @return bool
@@ -99,20 +99,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         //  Build the lower-cased table array
-        if ( is_array( $db ) )
-        {
-            $_tables = array();
-
-            foreach ( $db as $_key => $_value )
-            {
-                $_key = is_numeric( $_key ) ? strtolower( $_value ) : strtolower( $_key );
-                $_tables[$_key] = $_value;
-            }
-        }
-        else
-        {
-            $_tables = static::_getCachedTables( $db );
-        }
+        $_tables = static::_getCachedTables( $db );
 
         //	Search normal, return real name
         if ( array_key_exists( $name, $_tables ) )
@@ -140,11 +127,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @return array
      * @throws \Exception
      */
-    public static function listStoredProcedures( $db, $include = null, $exclude = null )
+    public static function listStoredProcedures( $db, $refresh = false, $include = null, $exclude = null )
     {
         try
         {
-            $_names = $db->schema->getProcedureNames();
+            $_names = $db->schema->getProcedureNames('', $refresh);
             $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
             $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
             $temp = array();
@@ -182,71 +169,87 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param \CDbConnection $db
      * @param string         $name
      * @param array          $params
+     * @param string         $returns
      * @param array          $schema
      * @param string         $wrapper
      *
      * @throws \Exception
      * @return array
      */
-    public static function callProcedure( $db, $name, $params = null, $schema = null, $wrapper = null )
+    public static function callProcedure( $db, $name, $returns = null, $params = null, $schema = null, $wrapper = null )
     {
         if ( empty( $name ) )
         {
             throw new BadRequestException( 'Stored procedure name can not be empty.' );
         }
 
-        if ( is_array( $params ) )
+        if ( false === $params = static::validateAsArray( $params, ',', true ) )
         {
-            foreach ( $params as $_key => $_param )
+            $params = array();
+        }
+
+        foreach ( $params as $_key => $_param )
+        {
+            // overcome shortcomings of passed in data
+            if ( is_array( $_param ) )
             {
-                // overcome shortcomings of passed in data
-                if ( null === $_pType = Option::get( $_param, 'param_type', null, false, true ) )
-                {
-                    $_pType = 'IN';
-                    $params[$_key]['param_type'] = $_pType;
-                }
                 if ( null === $_pName = Option::get( $_param, 'name', null, false, true ) )
                 {
-                    if ( 0 !== strcasecmp( $_pName, 'IN' ) )
-                    {
-                        throw new BadRequestException( 'Stored procedure output parameter name can not be empty.' );
-                    }
-
-                    $_pName = 'param_' . $_key;
-                    $params[$_key]['name'] = $_pName;
+                    $params[$_key]['name'] = "p$_key";
+                }
+                if ( null === $_pType = Option::get( $_param, 'param_type', null, false, true ) )
+                {
+                    $params[$_key]['param_type'] = 'IN';
                 }
                 if ( null === $_pValue = Option::get( $_param, 'value', null ) )
                 {
-                    $_pValue = null;
-                    $params[$_key]['value'] = $_pValue;
+                    // ensure some value is set as this will be referenced for return of INOUT and OUT params
+                    $params[$_key]['value'] = null;
                 }
-                if ( null === $_rType = Option::get( $_param, 'type', null, false, true ) )
+                if ( false !== stripos( strval( $_pType ), 'OUT' ) )
                 {
-                    $_rType = ( isset( $_pValue ) ) ? gettype( $_pValue ) : 'string';
-                    $params[$_key]['type'] = $_rType;
-                }
-                if ( null === $_rLength = Option::get( $_param, 'length', null, false, true ) )
-                {
-                    $_rLength = 256;
-                    switch ( $_rType )
+                    if ( null === $_rType = Option::get( $_param, 'type', null, false, true ) )
                     {
-                        case 'int':
-                        case 'integer':
-                            $_rLength = 12;
-                            break;
+                        $_rType = ( isset( $_pValue ) ) ? gettype( $_pValue ) : 'string';
+                        $params[$_key]['type'] = $_rType;
                     }
-                    $params[$_key]['length'] = $_rLength;
+                    if ( null === $_rLength = Option::get( $_param, 'length', null, false, true ) )
+                    {
+                        $_rLength = 256;
+                        switch ( $_rType )
+                        {
+                            case 'int':
+                            case 'integer':
+                                $_rLength = 12;
+                                break;
+                        }
+                        $params[$_key]['length'] = $_rLength;
+                    }
                 }
             }
-        }
-        else
-        {
-            $params = array();
+            else
+            {
+                $params[$_key] = array('name' => "p$_key", 'param_type' => 'IN', 'value' => $_param);
+            }
         }
 
         try
         {
             $_result = $db->schema->callProcedure( $name, $params );
+
+            if ( !empty( $returns ) && ( 0 !== strcasecmp( 'TABLE', $returns ) ) )
+            {
+                // result could be an array of array of one value - i.e. multi-dataset format with just a single value
+                if ( is_array( $_result ) )
+                {
+                    $_result = current( $_result );
+                    if ( is_array( $_result ) )
+                    {
+                        $_result = current( $_result );
+                    }
+                }
+                $_result = static::formatValue( $_result, $returns );
+            }
 
             // convert result field values to types according to schema received
             if ( is_array( $schema ) && is_array( $_result ) )
@@ -293,25 +296,173 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
 
             // add back output parameters to results
-            if ( !empty( $params ) )
+            foreach ( $params as $_key => $_param )
             {
-                foreach ( $params as $_param )
+                if ( false !== stripos( strval( Option::get( $_param, 'param_type' ) ), 'OUT' ) )
                 {
-                    $_pType = strtoupper( Option::get( $_param, 'param_type', 'IN' ) );
-                    switch ( $_pType )
+                    $_name = Option::get( $_param, 'name', "p$_key" );
+                    if ( null !== $_value = Option::get( $_param, 'value', null ) )
                     {
-                        case 'INOUT':
-                        case 'OUT':
-                            $_name = $_param['name'];
-                            $_type = $_param['type'];
-                            if ( null !== $_value = Option::get( $_param, 'value', null ) )
-                            {
-                                $_value = static::formatValue( $_value, $_type );
-                            }
-                            $_result[$_name] = $_value;
-                            break;
+                        $_type = Option::get( $_param, 'type' );
+                        $_value = static::formatValue( $_value, $_type );
+                    }
+                    $_result[$_name] = $_value;
+                }
+            }
+
+            return $_result;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Failed to call database stored procedure.\n{$ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $include
+     * @param string         $exclude
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function listStoredFunctions( $db, $refresh = false, $include = null, $exclude = null )
+    {
+        try
+        {
+            $_names = $db->schema->getFunctionNames('', $refresh );
+            $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
+            $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
+            $temp = array();
+
+            foreach ( $_names as $name )
+            {
+                if ( !empty( $include ) )
+                {
+                    if ( false === array_search( strtolower( $name ), $includeArray ) )
+                    {
+                        continue;
                     }
                 }
+                elseif ( !empty( $exclude ) )
+                {
+                    if ( false !== array_search( strtolower( $name ), $excludeArray ) )
+                    {
+                        continue;
+                    }
+                }
+                $temp[] = $name;
+            }
+            $_names = $temp;
+            natcasesort( $_names );
+
+            return array_values( $_names );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Failed to list database stored functions.\n{$ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $name
+     * @param array          $params
+     * @param string         $returns
+     * @param array          $schema
+     * @param string         $wrapper
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function callFunction( $db, $name, $params = null, $returns = null, $schema = null, $wrapper = null )
+    {
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Stored function name can not be empty.' );
+        }
+
+        if ( false === $params = static::validateAsArray( $params, ',', true ) )
+        {
+            $params = array();
+        }
+
+        foreach ( $params as $_key => $_param )
+        {
+            // overcome shortcomings of passed in data
+            if ( is_array( $_param ) )
+            {
+                if ( null === $_pName = Option::get( $_param, 'name', null, false, true ) )
+                {
+                    $params[$_key]['name'] = "p$_key";
+                }
+            }
+            else
+            {
+                $params[$_key] = array('name' => "p$_key", 'value' => $_param);
+            }
+        }
+
+        try
+        {
+            $_result = $db->schema->callFunction( $name, $params );
+
+            if ( !empty( $returns ) && ( 0 !== strcasecmp( 'TABLE', $returns ) ) )
+            {
+                // result could be an array of array of one value - i.e. multi-dataset format with just a single value
+                if ( is_array( $_result ) )
+                {
+                    $_result = current( $_result );
+                    if ( is_array( $_result ) )
+                    {
+                        $_result = current( $_result );
+                    }
+                }
+                $_result = static::formatValue( $_result, $returns );
+            }
+
+            // convert result field values to types according to schema received
+            if ( is_array( $schema ) && is_array( $_result ) )
+            {
+                foreach ( $_result as &$_row )
+                {
+                    if ( is_array( $_row ) )
+                    {
+                        if ( isset( $_row[0] ) )
+                        {
+                            //  Multi-row set, dig a little deeper
+                            foreach ( $_row as &$_sub )
+                            {
+                                if ( is_array( $_sub ) )
+                                {
+                                    foreach ( $_sub as $_key => $_value )
+                                    {
+                                        if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                                        {
+                                            $_sub[$_key] = static::formatValue( $_value, $_type );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach ( $_row as $_key => $_value )
+                            {
+                                if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                                {
+                                    $_row[$_key] = static::formatValue( $_value, $_type );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // wrap the result set if desired
+            if ( !empty( $wrapper ) )
+            {
+                $_result = array($wrapper => $_result);
             }
 
             return $_result;
@@ -1094,6 +1245,14 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                             break;
                     }
                 }
+                else
+                {
+                    if ( '0000-00-00 00:00:00' == $default )
+                    {
+                        // read back from MySQL has formatted zeros, can't send that back
+                        $default = 0;
+                    }
+                }
 
                 if ( !isset( $field['allow_null'] ) )
                 {
@@ -1271,10 +1430,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         switch ( $driver_type )
         {
             case static::DRV_OCSQL:
-                $definition .= ( $_props['default'] ? : null ) . ( $_props['pk'] ? : null ) . ( $_props['null'] ? : null );
+                $definition .= ( $_props['default'] ?: null ) . ( $_props['pk'] ?: null ) . ( $_props['null'] ?: null );
                 break;
             default:
-                $definition .= ( $_props['null'] ? : null ) . ( $_props['default'] ? : null ) . ( $_props['pk'] ? : null );
+                $definition .= ( $_props['null'] ?: null ) . ( $_props['default'] ?: null ) . ( $_props['pk'] ?: null );
                 break;
         }
 
@@ -1283,7 +1442,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
     protected static function makeConstraintName( $prefix, $table_name, $field_name, $driver_type )
     {
-        $_temp = $prefix . '_' . $table_name . '_' . $field_name;
+        $_temp = $prefix . '_' . str_replace( '.', '_', $table_name ) . '_' . $field_name;
         switch ( $driver_type )
         {
             case static::DRV_OCSQL:
@@ -1842,7 +2001,7 @@ SQL;
     protected static function determineGenericType( $column )
     {
         $_simpleType = strstr( $column->dbType, '(', true );
-        $_simpleType = strtolower( $_simpleType ? : $column->dbType );
+        $_simpleType = strtolower( $_simpleType ?: $column->dbType );
 
         switch ( $_simpleType )
         {

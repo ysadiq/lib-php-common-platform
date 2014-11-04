@@ -865,8 +865,13 @@ class ResourceStore implements UtilityLike
 
         if ( !$_loader )
         {
-            $_loader = Option::get( $GLOBALS, '_autoloader', \Kisma::get( CoreSettings::AUTO_LOADER ) );
-        };
+            $_loader = Option::get( $GLOBALS, '_autoloader' );
+
+            if ( empty( $_loader ) && class_exists( '\\Kisma', false ) )
+            {
+                $_loader = \Kisma::get( CoreSettings::AUTO_LOADER );
+            }
+        }
 
         if ( true === $resourceName && false === $returnResource )
         {
