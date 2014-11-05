@@ -333,7 +333,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_resource = rtrim( $main, '/' ) . '/';
                     if ( !empty( $sub ) )
                     {
-                        $_resource .= rtrim( strstr( $sub, '(' ) );
+                        $_resource .= rtrim( (false !== strpos($sub, '(')) ?  strstr( $sub, '(', true )  : $sub );
                     }
 
                     $this->checkPermission( $action, $_resource );
