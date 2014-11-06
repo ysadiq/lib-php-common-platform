@@ -797,7 +797,30 @@ SQL;
     public static function clearCache()
     {
         Platform::storeDelete( static::SWAGGER_CACHE_FILE );
-        // todo clear the rest of the swagger cache for each service api name?
+        Platform::storeDelete( static::SWAGGER_EVENT_CACHE_FILE );
+
+        //  Clear the rest of the swagger cache for each service api name
+        $_sql = <<<SQL
+SELECT api_name FROM df_sys_service
+SQL;
+
+        //	Pull the services and add in the built-in services
+        $_result = array_merge(
+            static::$_builtInServices,
+            $_rows = Sql::findAll( $_sql, null, Pii::pdo() )
+        );
+
+        //	Spin through services and clear the cache file
+        foreach ( $_result as $_service )
+        {
+            $_apiName = Option::get( $_service, 'api_name' );
+            // cache it for later access
+            if ( false === Platform::storeDelete( $_apiName . '.json' ) )
+            {
+                Log::error( '  * System error deleting swagger cache file: ' . $_apiName . '.json' );
+                continue;
+            }
+        }
 
         //  Redirect back to upgrade page if this was from an upgrade request
         if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
