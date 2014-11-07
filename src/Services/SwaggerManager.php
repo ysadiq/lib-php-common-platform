@@ -838,7 +838,10 @@ SQL;
         }
 
         //  Trigger a swagger.cache_cleared event
-        return Platform::trigger( SwaggerEvents::CACHE_CLEARED );
+        Platform::trigger( SwaggerEvents::CACHE_CLEARED );
+
+        // rebuild swagger cache
+        static::_buildSwagger();
     }
 
     /**
