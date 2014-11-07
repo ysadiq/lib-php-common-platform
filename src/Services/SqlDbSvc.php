@@ -1374,6 +1374,7 @@ class SqlDbSvc extends BaseDbSvc
                                 $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                                 break;
                             case SqlDbUtilities::DRV_OCSQL:
+                            case SqlDbUtilities::DRV_IBMDB2:
                                 $_parsed[$_name] = new \CDbExpression( '(CURRENT_TIMESTAMP)' );
                                 break;
                             default:
@@ -1391,6 +1392,9 @@ class SqlDbSvc extends BaseDbSvc
                             break;
                         case SqlDbUtilities::DRV_OCSQL:
                             $_parsed[$_name] = new \CDbExpression( '(CURRENT_TIMESTAMP)' );
+                            break;
+                        case SqlDbUtilities::DRV_IBMDB2:
+                            $_parsed[$_name] = new \CDbExpression( '(GENERATED ALWAYS FOR EACH ROW ON UPDATE AS ROW CHANGE TIMESTAMP)' );
                             break;
                         default:
                             $_parsed[$_name] = new \CDbExpression( '(NOW())' );
@@ -1479,6 +1483,17 @@ class SqlDbSvc extends BaseDbSvc
                                     {
                                         case 'tinyint(1)':
                                             $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            break;
+                                    }
+                                    break;
+                                case SqlDbUtilities::DRV_IBMDB2:
+                                    switch ( $_dbType )
+                                    {
+                                        case 'SMALLINT':
+                                            if (is_bool($_fieldVal))
+                                            {
+                                                $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            }
                                             break;
                                     }
                                     break;

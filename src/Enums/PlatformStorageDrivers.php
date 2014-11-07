@@ -68,6 +68,10 @@ class PlatformStorageDrivers extends SeedEnum implements SqlDbDriverTypes
 	 * @var string
 	 */
 	const POSTGRESQL = 'pgsql';
+    /**
+     * @var string
+     */
+    const IBMDB2 = 'ibm';
 
 	/**
 	 * Returns the PDO driver type for the given connection's driver name
@@ -101,7 +105,10 @@ class PlatformStorageDrivers extends SeedEnum implements SqlDbDriverTypes
 			case static::POSTGRESQL:
 				return static::DRV_PGSQL;
 
-			default:
+            case static::IBMDB2:
+                return static::DRV_IBMDB2;
+
+            default:
 				return static::DRV_OTHER;
 		}
 	}
