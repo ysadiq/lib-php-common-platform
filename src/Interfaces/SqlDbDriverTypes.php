@@ -57,4 +57,8 @@ interface SqlDbDriverTypes
 	 * @var int
 	 */
 	const DRV_DBLIB = 6;
+    /**
+     * @var int
+     */
+    const DRV_IBMDB2 = 7;
 }
