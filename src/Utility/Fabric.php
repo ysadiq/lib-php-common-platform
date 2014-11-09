@@ -104,6 +104,10 @@ class Fabric extends SeedUtility
      * @var string
      */
     const DEFAULT_DOC_ROOT = '/var/www/launchpad/web';
+    /**
+     * @var string
+     */
+    const CLOUD_STORAGE_HASH = MHASH_SHA224;
 
     //*************************************************************************
     //* Methods
@@ -161,6 +165,8 @@ class Fabric extends SeedUtility
     {
         //	If this isn't a cloud request, bail
         $_host = static::getHostName();
+
+        list( $_storagePath, $_privatePath ) = HostedStorage::getStorageInfo( $_host );
 
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
