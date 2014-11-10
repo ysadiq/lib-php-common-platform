@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
+use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
@@ -654,7 +655,7 @@ class Platform
         //  We do nothing on private installs
         if ( !Pii::getParam( 'dsp.fabric_hosted', false ) )
         {
-            return array('provision_state' => 0, 'operation_state' => 0, 'ready_state' => 0);
+            return array('provision_state' => 0, 'operation_state' => FabricPlatformStates::UNKNOWN, 'ready_state' => 0);
         }
 
         $dspName = $dspName ?: Pii::getParam( 'dsp_name' );

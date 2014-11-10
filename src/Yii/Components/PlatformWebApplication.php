@@ -262,8 +262,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( null === ( $_autoloadPath = Pii::appStoreGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
-            $_path =
-                Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+            $_path = Platform::getPluginsPath();
 
             if ( !is_dir( $_path ) )
             {
@@ -689,8 +688,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 continue;
             }
 
-            $this->_logCorsInfo &&
-            Log::debug( 'CORS: whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
+            $this->_logCorsInfo && Log::debug( 'CORS: whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
 
             //	Check for un-parsed origin, 'null' sent when testing js files locally
             if ( is_array( $origin ) )
@@ -716,8 +714,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         $_match =
             ( ( $first['scheme'] == $second['scheme'] ) &&
-                ( $first['host'] == $second['host'] ) &&
-                ( $first['port'] == $second['port'] ) );
+              ( $first['host'] == $second['host'] ) &&
+              ( $first['port'] == $second['port'] ) );
 
         if ( $this->_logCorsInfo )
         {
@@ -781,7 +779,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         //  If standard port 80 or 443 and there is no port in uri, clear from parse...
         if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) &&
-            false === strpos( $uri, ':' . $_parts['port'] )
+             false === strpos( $uri, ':' . $_parts['port'] )
         )
         {
             $_parts['port'] = null;
