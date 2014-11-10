@@ -71,6 +71,14 @@ class Platform
      * @var string
      */
     const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+    /**
+     * @type string The current version of the platform core
+     */
+    const PLATFORM_CORE_VERSION = DSP_VERSION;
+    /**
+     * @type string The current version of the platform API
+     */
+    const PLATFORM_API_VERSION = API_VERSION;
 
     //*************************************************************************
     //	Members
@@ -92,6 +100,22 @@ class Platform
     //*************************************************************************
     //	Methods
     //*************************************************************************
+
+    /**
+     * @return string The current platform core version
+     */
+    public static function getPlatformCoreVersion()
+    {
+        return static::PLATFORM_CORE_VERSION;
+    }
+
+    /**
+     * @return string The current platform API version
+     */
+    public static function getPlatformApiVersion()
+    {
+        return static::PLATFORM_API_VERSION;
+    }
 
     /**
      * Constructs a virtual platform path

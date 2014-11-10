@@ -16,6 +16,8 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Library\Utility\FileSystem;
+
 /**
  * DreamFactory Enterprise(tm) Hosted Storage Provider
  *
@@ -95,23 +97,27 @@ class HostedStorage
     /**
      * @type string The absolute storage root path
      */
-    protected $_storageRoot;
+    protected $_storageRoot = self::DEFAULT_STORAGE_ROOT;
     /**
      * @type string The relative storage base path
+     */
+    protected $_storageBase = self::STORAGE_BASE_PATH;
+    /**
+     * @type string The absolute generated storage path
      */
     protected $_storagePath;
     /**
      * @type string The deployment zone name/id
      */
-    protected $_zone;
+    protected $_zone = false;
     /**
      * @type string The storage partition name/id
      */
-    protected $_partition;
+    protected $_partition = null;
     /**
      * @type array The hosted storage path structure, relative to the storage root
      */
-    protected $_storageTemplate;
+    protected $_skeleton;
     /**
      * @type string This instance's storage ID
      */
@@ -125,15 +131,34 @@ class HostedStorage
     //* Methods
     //*************************************************************************
 
+    public function __construct( $instanceName, $storageRoot = null, $storageBase = null )
+    {
+        $this->_storageRoot = $storageRoot ?: static::DEFAULT_STORAGE_ROOT;
+        $this->initialize( $instanceName, $storageRoot, $storageBase );
+    }
+
     /** @inheritdoc */
-    public function createStorageId( $instanceName )
+    public function initialize( $instanceName, $storageRoot = self::DEFAULT_STORAGE_ROOT, $storageBase = self::STORAGE_BASE_PATH )
     {
         false !== stripos( $instanceName, Fabric::DSP_DEFAULT_SUBDOMAIN ) || $instanceName .= Fabric::DSP_DEFAULT_SUBDOMAIN;
 
+        $this->_storageRoot = $storageRoot ?: static::DEFAULT_STORAGE_ROOT;
+        $this->_storageBase = $storageBase ?: static::STORAGE_BASE_PATH;
         $this->_storageId = hash( static::DATA_STORAGE_HASH, $instanceName );
-        $this->_storagePartition = static::getStoragePartition( $this->_storageId );
+        $this->_storagePartition = $this->getStoragePartition();
 
-        return $this->_storageId;
+        //  Find our zone
+        if ( false === ( $this->_zone = $this->getStorageZone() ) )
+        {
+            //  Local installation storage root is the install path with no zone or partition
+            $this->_storageRoot = static::_findBasePath();
+
+            $this->_zone = null;
+            $this->_partition = null;
+        }
+
+        $this->_buildStoragePath();
+        $this->_createSkeleton();
     }
 
     /**
@@ -143,19 +168,21 @@ class HostedStorage
      *
      * @return string
      */
-    public function getStoragePartition( $storageId )
+    public function getStoragePartition( $storageId = null )
     {
-        return $this->_storagePartition = substr( $storageId, 0, 2 );
+        return substr( $storageId ?: $this->_storageId, 0, 2 );
     }
 
     /** @inheritdoc */
-    public function getZoneInfo( $zone = null )
+    public function getStorageZone( $zone = null )
     {
+        //  If one was passed, use it
         if ( !empty( $zone ) )
         {
-            return array($zone, DIRECTORY_SEPARATOR . $zone);
+            return trim( $zone, DIRECTORY_SEPARATOR . ' ' );
         }
 
+        //  Only hosted instances use a zone
         if ( !Fabric::fabricHosted() )
         {
             return false;
@@ -171,35 +198,18 @@ class HostedStorage
         }
 
         //  Get the EC2 zone of this instance from the url
-        $_zone = str_ireplace( array('https://', '.amazonaws.com'), null, $_url );
-
-        return array($_zone, DIRECTORY_SEPARATOR . $_zone);
+        return trim( str_ireplace( array('https://', '.amazonaws.com'), null, $_url ), DIRECTORY_SEPARATOR . ' ' );
     }
 
-    /** @inheritdoc */
-    public function getStorageInfo( $hostname, $autoCreate = true )
+    /**
+     * Builds the storage and private paths from the parts
+     */
+    protected function _buildStoragePath()
     {
-        $this->_storageId = static::getStorageId( $hostname );
+        $this->_storagePath = FileSystem::makePath( true, $this->_storageRoot, $this->_storageBase, $this->_zone, $this->_partition );
+        $this->_privatePath = $this->_storagePath . static::STORAGE_PRIVATE_PATH;
 
-        //  Look for EC2 instance signature
-        if ( false === ( list( $this->_zone, $this->_zonePath ) = static::getZoneInfo( static::DEBUG_ZONE_ID ) ) )
-        {
-            //  Local installation so storage is /storage under installation
-            $this->_zone = false;
-            $this->_storageRoot = static::_findBasePath();
-            $this->_storagePath = $this->_storageRoot . static::STORAGE_BASE_PATH;
-        }
-        else
-        {
-            $this->_storageRoot = $this->_storageRoot ?: static::DEFAULT_STORAGE_ROOT;
-            $this->_storagePath = $this->_storageRoot . static::STORAGE_BASE_PATH . $this->_zonePath . DIRECTORY_SEPARATOR .
-                substr( $this->_storageId, 0, 2 ) . DIRECTORY_SEPARATOR . $this->_storageId;
-        }
-
-        //  Subdivide by the first two digits of the storageId and the index if not local
-        static::_ensureTemplate( $this->_storageRoot );
-
-        return array($this->_storagePath, $this->_privatePath);
+        $this->_createSkeleton();
     }
 
     /**
@@ -232,35 +242,11 @@ class HostedStorage
     }
 
     /**
-     * @param string $legacyStorageId The legacy storage ID
-     * @param string $legacyPrivateId The legacy private ID
-     * @param string $targetStorageId The mapping target storage ID
-     */
-    public function mapLegacyStorage( $legacyStorageId, $legacyPrivateId, $targetStorageId )
-    {
-        list( $_zone, $_zonePath, $_storagePath, $_privatePath ) =
-            static::getStorageInfo( $targetStorageId );
-
-    }
-
-    /**
      * Give a storage path, set up the default sub paths...
-     *
-     * @param string $storageRoot
-     * @param string $storagePath
      */
-    public function setTemplateDefaults( $storageRoot = self::DEFAULT_STORAGE_ROOT, $storagePath = null )
+    protected function _createSkeleton()
     {
-        if ( !empty( $this->_storageTemplate ) )
-        {
-            return;
-        }
-
-        $this->_storageRoot = $storageRoot;
-        $this->_storagePath = $storagePath ?: $this->_storageRoot . static::STORAGE_BASE_PATH;
-        $this->_privatePath = $this->_storagePath . static::STORAGE_PRIVATE_PATH;
-
-        $_template = array(
+        $_skeleton = array(
             $this->_storagePath => array(
                 static::APPLICATIONS_PATH,
                 static::PLUGINS_PATH,
@@ -272,44 +258,49 @@ class HostedStorage
             )
         );
 
-        $this->_storageTemplate = $_template;
+        $this->_skeleton = $_skeleton;
+        $this->_ensureSkeleton();
+    }
+
+    /**
+     * Ensures the directories in the skeleton are created and available. Only skeleton items that are arrays are processed.
+     */
+    protected function _ensureSkeleton()
+    {
+        foreach ( $this->_skeleton as $_basePath => $_paths )
+        {
+            if ( is_array( $_paths ) )
+            {
+                foreach ( $_paths as $_path )
+                {
+                    if ( !FileSystem::ensurePath( $_path ) )
+                    {
+                        throw new \RuntimeException( 'Error creating storage path "' . $_path . '"' );
+                    }
+
+                }
+            }
+        }
     }
 
     /**
      * @param string $path
-     * @param bool   $throwExceptionOnFailure
+     * @param mixed  $contents
+     * @param bool   $jsonEncode
+     * @param int    $jsonOptions
      *
-     * @return bool
+     * @return int
      */
-    protected function _ensurePath( $path, $throwExceptionOnFailure = true )
+    public function putPublicFile( $path, $contents, $jsonEncode = true, $jsonOptions = 0 )
     {
-        if ( !is_dir( $path ) && false === mkdir( $path, 0777, true ) )
-        {
-            if ( $throwExceptionOnFailure )
-            {
-                throw new \RuntimeException( 'Error creating storage area: ' . $path );
-            }
+        $_filePath = $this->getStoragePath() . DIRECTORY_SEPARATOR . ltrim( $path, DIRECTORY_SEPARATOR . ' ' );
 
-            return false;
+        if ( $jsonEncode )
+        {
+            $contents = json_encode( $contents, $jsonOptions );
         }
 
-        return true;
-    }
-
-    /**
-     * Ensures the directory in the template are created and available. Only template items that are arrays are processed.
-     *
-     * @param string $basePath
-     */
-    protected function _ensureTemplate( $basePath )
-    {
-        foreach ( $this->_storageTemplate as $_basePath => $_paths )
-        {
-            foreach ( $_paths as $_path )
-            {
-                static::_ensurePath( $_basePath . $_path );
-            }
-        }
+        return file_put_contents( $_filePath, $contents );
     }
 
     /**
@@ -331,9 +322,9 @@ class HostedStorage
     /**
      * @return string
      */
-    public function getStoragePath()
+    public function getStorageBase()
     {
-        return $this->_storagePath;
+        return $this->_storageBase;
     }
 
     /**
@@ -355,9 +346,33 @@ class HostedStorage
     /**
      * @return array
      */
-    public function getStorageTemplate()
+    public function getSkeleton()
     {
-        return $this->_storageTemplate;
+        return $this->_skeleton;
+    }
+
+    /**
+     * @return string
+     */
+    public function getStoragePath()
+    {
+        return $this->_storagePath;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPluginsPath()
+    {
+        return $this->_storagePath . DIRECTORY_SEPARATOR . static::PLUGINS_PATH;
+    }
+
+    /**
+     * @return string
+     */
+    public function getApplicationsPath()
+    {
+        return $this->_storagePath . DIRECTORY_SEPARATOR . static::APPLICATIONS_PATH;
     }
 
     /**
@@ -367,4 +382,29 @@ class HostedStorage
     {
         return $this->_privatePath;
     }
+
+    /**
+     * @return string
+     */
+    public function getLocalConfigPath()
+    {
+        return $this->_privatePath;
+    }
+
+    /**
+     * @return string
+     */
+    public function getScriptsPath()
+    {
+        return $this->_privatePath . DIRECTORY_SEPARATOR . static::SCRIPTS_PATH;
+    }
+
+    /**
+     * @return string
+     */
+    public function getUserScriptsPath()
+    {
+        return $this->_privatePath . DIRECTORY_SEPARATOR . static::USER_SCRIPTS_PATH;
+    }
+
 }
