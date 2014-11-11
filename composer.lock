@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "7008e36ad4082025c8d738ad251a1e13",
+    "hash": "f1d6c67dbd4d8e6a4c9129e61f3a5771",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -738,12 +738,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "f9d2e3f8308f6359c738f3241873108034fe4c98"
+                "reference": "1a8560a0f9cad3738fb6445946437b46f746db7c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/f9d2e3f8308f6359c738f3241873108034fe4c98",
-                "reference": "f9d2e3f8308f6359c738f3241873108034fe4c98",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/1a8560a0f9cad3738fb6445946437b46f746db7c",
+                "reference": "1a8560a0f9cad3738fb6445946437b46f746db7c",
                 "shasum": ""
             },
             "require": {
@@ -788,7 +788,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-11-11 16:50:31"
+            "time": "2014-11-11 17:02:27"
         },
         {
             "name": "monolog/monolog",

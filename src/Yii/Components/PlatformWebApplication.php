@@ -63,7 +63,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var string The HTTP Option method
      */
-    const CORS_OPTION_METHOD = 'OPTIONS';
+    const CORS_OPTION_METHOD = Request::METHOD_OPTIONS;
     /**
      * @var string The allowed HTTP methods
      */
@@ -500,13 +500,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Reset the cache before processing...
         if ( false === $whitelist )
         {
-            if ( !empty( $_cache ) )
-            {
-                $_cache = array();
-                $_cacheVerbs = array();
+            $_cache = array();
+            $_cacheVerbs = array();
 
-                $this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
-            }
+            $this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
 
             return true;
         }
@@ -714,8 +711,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         $_match =
             ( ( $first['scheme'] == $second['scheme'] ) &&
-              ( $first['host'] == $second['host'] ) &&
-              ( $first['port'] == $second['port'] ) );
+                ( $first['host'] == $second['host'] ) &&
+                ( $first['port'] == $second['port'] ) );
 
         if ( $this->_logCorsInfo )
         {
@@ -779,7 +776,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         //  If standard port 80 or 443 and there is no port in uri, clear from parse...
         if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) &&
-             false === strpos( $uri, ':' . $_parts['port'] )
+            false === strpos( $uri, ':' . $_parts['port'] )
         )
         {
             $_parts['port'] = null;
@@ -831,43 +828,46 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadCorsConfig()
     {
-        static $_whitelist = null;
+        static $_whitelist = null, $_locations = null;
 
-        if ( null === $_whitelist && null === ( $_whitelist = Pii::appStoreGet( 'cors.whitelist' ) ) )
+        if ( null === $_whitelist )
         {
             //  Empty whitelist...
+            $_config = false;
             $_whitelist = array();
+            $_locations = $_locations
+                ?: array(
+                    Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                );
 
-            //	Get CORS data from config file
-            $_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
-
-            if ( !file_exists( $_config ) )
+            //	Find cors config file location
+            foreach ( $_locations as $_path )
             {
-                //  In old location?
-                $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
-            }
-
-            if ( file_exists( $_config ) )
-            {
-                if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
+                if ( file_exists( $_path ) )
                 {
-                    $_whitelist = json_decode( $_content, true );
-
-                    if ( JSON_ERROR_NONE != json_last_error() )
-                    {
-                        throw new InternalServerErrorException(
-                            'The CORS configuration file is corrupt. Cannot continue.'
-                        );
-                    }
-
-                    $this->_logCorsInfo &&
-                    Log::debug( 'CORS: configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
+                    $_config = $_path;
+                    break;
                 }
             }
 
-            Pii::appStoreSet( 'cors.whitelist', $_whitelist ) &&
-            $this->_logCorsInfo &&
-            Log::debug( 'CORS: whitelist cached' );
+            if ( !$_config )
+            {
+                $this->_logCorsInfo && Log::debug( 'CORS: no configuration file found.' );
+
+                return null;
+            }
+
+            if ( false !== ( $_content = JsonFile::decodeFile( $_config ) ) && JSON_ERROR_NONE == json_last_error() && !empty( $_content ) )
+            {
+                $_whitelist = $_content;
+                $this->_logCorsInfo && Log::debug( 'CORS: configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
+            }
+            else
+            {
+                Log::error( 'CORS: configuration file "' . $_config . '" is corrupt or unreadable. Cannot be used and ignoring' );
+            }
         }
 
         //  Don't reset if they're the same.
