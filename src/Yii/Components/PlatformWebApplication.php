@@ -523,14 +523,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( 'file://' == $_origin )
         {
             $this->_logCorsInfo && Log::debug( 'CORS: local file/empty resource origin received: ' . $_origin );
-
-            return $returnHeaders ? array() : true;
         }
-
-        //  empty origin received. Treat like a star...
-        if ( empty( $_origin ) || 'null' == $_origin )
+        else
         {
-            return $returnHeaders ? array() : false;
+            //  empty origin received we do nothing
+            if ( empty( $_origin ) || 'null' == $_origin )
+            {
+                return $returnHeaders ? array() : false;
+            }
         }
 
         $_isStar = false;
