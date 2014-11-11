@@ -279,8 +279,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
             else
             {
-                Log::debug( 'No autoload.php file found for installed plug-ins.' );
-
+                // No autoload.php file found for installed plug-ins
                 return false;
             }
 

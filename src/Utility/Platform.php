@@ -658,7 +658,7 @@ class Platform
             return false;
         }
 
-        Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
+        //Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
 
         return array(
             'provision_state' => $_response->details->state,
