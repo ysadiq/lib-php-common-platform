@@ -492,7 +492,7 @@ SQL;
      */
     public static function findEvent( BasePlatformRestService $service, $method, $eventName = null, array $replacementValues = array() )
     {
-        $_cache = Platform::mcGet( 'swagger.event_map_cache', array() );
+        $_cache = Platform::storeGet( 'swagger.event_map_cache', array() );
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
@@ -703,7 +703,7 @@ SQL;
                     $_cache[$_hash] = $_eventName;
 
                     //  Cache for one minute...
-                    Platform::mcSet( 'swagger.event_map_cache', $_cache, 60 );
+                    Platform::storeSet( 'swagger.event_map_cache', $_cache, 60 );
 
                     return $_eventName;
                 }
