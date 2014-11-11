@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Library\Utility\Exception\FileSystemException;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
@@ -104,10 +105,6 @@ class Fabric extends SeedUtility
      * @var string
      */
     const DEFAULT_DOC_ROOT = '/var/www/launchpad/web';
-    /**
-     * @var string
-     */
-    const CLOUD_STORAGE_HASH = MHASH_SHA224;
 
     //*************************************************************************
     //* Methods
@@ -166,8 +163,6 @@ class Fabric extends SeedUtility
         //	If this isn't a cloud request, bail
         $_host = static::getHostName();
 
-        list( $_storagePath, $_privatePath ) = HostedStorage::getStorageInfo( $_host );
-
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
             static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
@@ -199,15 +194,12 @@ class Fabric extends SeedUtility
      */
     protected static function _cacheSettings( $host, $settings, $instance )
     {
-        Platform::storeSet(
-            $host,
-            json_encode(
-                array(
-                    'settings' => $settings,
-                    'instance' => $instance,
-                )
-            )
+        $_data = array(
+            'settings' => $settings,
+            'instance' => $instance,
         );
+
+        file_put_contents( static::_cacheFileName( $host ), json_encode( $_data ) );
 
         return $settings;
     }
@@ -221,7 +213,23 @@ class Fabric extends SeedUtility
      */
     protected static function _cacheFileName( $host )
     {
-        return rtrim( sys_get_temp_dir(), '/' ) . '/.dsp-' . sha1( $host . $_SERVER['REMOTE_ADDR'] );
+        try
+        {
+            $_path = Platform::getPrivatePath( DIRECTORY_SEPARATOR . '.cache' );
+        }
+        catch ( \Exception $_ex )
+        {
+            $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
+                DIRECTORY_SEPARATOR . '.dreamfactory' .
+                DIRECTORY_SEPARATOR . '.cache';
+        }
+
+        if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
+        {
+            throw  new FileSystemException( 'Unable to create cache directory' );
+        }
+
+        return $_path . DIRECTORY_SEPARATOR . sha1( $host . $_SERVER['REMOTE_ADDR'] );
     }
 
     /**
@@ -390,7 +398,7 @@ PHP;
             /** @noinspection PhpIncludeInspection */
             $_settings = require( $_dbConfigFile );
 
-            Log::debug( 'Reading config: ' . $_settings );
+            //Log::debug( 'Reading config: ' . $_settings );
 
             if ( !empty( $_settings ) )
             {
@@ -421,9 +429,20 @@ PHP;
      */
     protected static function _checkCache( $host )
     {
-        if ( null !== ( $_config = Platform::storeGet( $host ) ) )
+        $_cacheFile = static::_cacheFileName( $host );
+
+        //	See if file is available and return it, or expire it...
+        if ( file_exists( $_cacheFile ) )
         {
-            if ( false !== ( $_data = json_decode( $_config, true ) ) && JSON_ERROR_NONE == json_last_error() )
+            //	No session or expired?
+            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
+            {
+                @unlink( $_cacheFile );
+
+                return false;
+            }
+
+            if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
             {
                 return array($_data['settings'], $_data['instance']);
             }
