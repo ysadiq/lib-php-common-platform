@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f1d6c67dbd4d8e6a4c9129e61f3a5771",
+    "hash": "dbebeed6da33809cbee2150081956e9e",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -465,16 +465,16 @@
         },
         {
             "name": "dreamfactory/php-utils",
-            "version": "dev-master",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
-                "reference": "25c75d6277465fad419ee7180cc5780956ca626a"
+                "reference": "c914e54607bb4ea682ca05377b2f1e9809a71d34"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/25c75d6277465fad419ee7180cc5780956ca626a",
-                "reference": "25c75d6277465fad419ee7180cc5780956ca626a",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/c914e54607bb4ea682ca05377b2f1e9809a71d34",
+                "reference": "c914e54607bb4ea682ca05377b2f1e9809a71d34",
                 "shasum": ""
             },
             "require": {
@@ -512,7 +512,7 @@
                 "dreamfactory",
                 "utility"
             ],
-            "time": "2014-10-22 18:09:40"
+            "time": "2014-11-10 21:02:06"
         },
         {
             "name": "dreamfactory/yii",
@@ -2463,12 +2463,19 @@
             "alias": "dev-master",
             "alias_normalized": "9999999-dev",
             "version": "dev-develop",
+            "package": "dreamfactory/php-utils"
+        },
+        {
+            "alias": "dev-master",
+            "alias_normalized": "9999999-dev",
+            "version": "dev-develop",
             "package": "dreamfactory/azure-sdk-for-php"
         }
     ],
     "minimum-stability": "dev",
     "stability-flags": {
         "rackspace/php-opencloud": 0,
+        "dreamfactory/php-utils": 20,
         "dreamfactory/azure-sdk-for-php": 20,
         "phpunit/phpunit": 0,
         "phpunit/dbunit": 0,
