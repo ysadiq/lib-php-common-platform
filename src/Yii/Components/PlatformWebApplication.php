@@ -519,7 +519,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
 
-        //  Only bail if origin == 'file://'. Ya know, for Javascript!
+        //  Bail if origin is 'file://', 'null', or empty.
         if ( 'file://' == $_origin )
         {
             $this->_logCorsInfo && Log::debug( 'CORS: local file/empty resource origin received: ' . $_origin );
@@ -528,7 +528,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         //  empty origin received. Treat like a star...
-        if ( empty( $_origin ) )
+        if ( empty( $_origin ) || 'null' == $_origin )
         {
             return $returnHeaders ? array() : false;
         }
@@ -555,15 +555,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri, $_isStar ) ) )
             {
-                Log::error(
-                    'CORS: unauthorized origin rejected > Source: ' . $_requestUri . ' > Origin: ' . $_originUri
-                );
+                Log::error( 'CORS: unauthorized origin rejected > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
 
-                /**
-                 * No sir, I didn't like it.
-                 *
-                 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
-                 */
+                /** No sir, I didn't like it. @link http://www.youtube.com/watch?v=VRaoHi_xcWk */
                 header( 'HTTP/1.1 403 Forbidden' );
 
                 return Pii::end();
