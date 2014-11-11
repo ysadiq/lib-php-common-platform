@@ -48,6 +48,8 @@ class EmailUtilities
         switch ( $_transportType )
         {
             case EmailTransportTypes::SMTP: // SMTP
+            case 'smtp':
+            case 'SMTP':
                 if ( null === ( $host = Option::get( $settings, 'host', 'localhost' ) ) )
                 {
                     throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
@@ -68,6 +70,8 @@ class EmailUtilities
                 break;
 
             case EmailTransportTypes::SERVER_COMMAND: // use local process, i.e. sendmail, exim, postscript, etc
+            case 'command':
+            case 'COMMAND':
                 $transport = \Swift_SendmailTransport::newInstance( Option::get( $settings, 'command', '' ) );
                 break;
 
