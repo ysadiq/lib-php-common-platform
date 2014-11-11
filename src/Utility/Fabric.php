@@ -17,6 +17,8 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\IfSet;
+use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
@@ -199,7 +201,7 @@ class Fabric extends SeedUtility
             'instance' => $instance,
         );
 
-        file_put_contents( static::_cacheFileName( $host ), json_encode( $_data ) );
+        JsonFile::encodeFile( static::_cacheFileName( $host ), $_data );
 
         return $settings;
     }
@@ -213,16 +215,9 @@ class Fabric extends SeedUtility
      */
     protected static function _cacheFileName( $host )
     {
-        try
-        {
-            $_path = Platform::getPrivatePath( DIRECTORY_SEPARATOR . '.cache' );
-        }
-        catch ( \Exception $_ex )
-        {
-            $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
-                DIRECTORY_SEPARATOR . '.dreamfactory' .
-                DIRECTORY_SEPARATOR . '.cache';
-        }
+        $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
+            DIRECTORY_SEPARATOR . '.dreamfactory' .
+            DIRECTORY_SEPARATOR . '.fabric';
 
         if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
         {
@@ -355,6 +350,8 @@ class Fabric extends SeedUtility
             //	File should be there from provisioning... If not, tenemos una problema!
             if ( !file_exists( $_dbConfigFile ) )
             {
+                $_file = basename( $_dbConfigFile );
+                $_version = ( defined( 'DSP_VERSION' ) ? 'v' . DSP_VERSION : 'fabric' );
                 $_timestamp = date( 'c' );
 
                 $_dbConfig = <<<PHP
@@ -362,15 +359,15 @@ class Fabric extends SeedUtility
 /**
  * **** DO NOT MODIFY THIS FILE ****
  * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
- * @(#)\$Id: database.config.php,v 1.0.0-{$_dspName} {$_timestamp} \$
+ * @(#)\$Id: {$_file}, {$_version}-{$_dspName} {$_timestamp} \$
  */
 return array(
-        'connectionString'    => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
-        'username'            => '{$_instance->db_user}',
-        'password'            => '{$_instance->db_password}',
-        'emulatePrepare'      => true,
-        'charset'             => 'utf8',
-        'schemaCachingDuration' => 3600,
+    'connectionString'      => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
+    'username'              => '{$_instance->db_user}',
+    'password'              => '{$_instance->db_password}',
+    'emulatePrepare'        => true,
+    'charset'               => 'utf8',
+    'schemaCachingDuration' => 3600,
 );
 PHP;
 
@@ -442,10 +439,20 @@ PHP;
                 return false;
             }
 
-            if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
+            try
             {
-                return array($_data['settings'], $_data['instance']);
+                $_data = JsonFile::decodeFile( $_cacheFile );
             }
+            catch ( \InvalidArgumentException $_ex )
+            {
+                //  File can't be read
+                return false;
+            }
+
+            return array(
+                IfSet::get( $_data, 'settings' ),
+                IfSet::get( $_data, 'instance' )
+            );
         }
 
         return false;
