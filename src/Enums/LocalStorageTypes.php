@@ -26,56 +26,64 @@ use Kisma\Core\Enums\SeedEnum;
  */
 class LocalStorageTypes extends SeedEnum
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @type string The storage base for hosted DSPs
-	 */
-	const FABRIC_STORAGE_BASE_PATH = '/data/storage';
-	/**
-	 * @type string The storage base for non-hosted DSPs
-	 */
-	const LOCAL_STORAGE_BASE_PATH = '/storage';
-	/**
-	 * @type string
-	 */
-	const STORAGE_PATH = 'storage_path';
-	/**
-	 * @type string
-	 */
-	const STORAGE_BASE_PATH = 'storage_base_path';
-	/**
-	 * @type string
-	 */
-	const PRIVATE_PATH = 'private_path';
-	/**
-	 * @type string
-	 */
-	const LIBRARY_PATH = 'plugins_path';
-	/**
-	 * @type string
-	 */
-	const PLUGINS_PATH = 'plugins_path';
-	/**
-	 * @type string
-	 */
-	const APPLICATIONS_PATH = 'applications_path';
-	/**
-	 * @type string
-	 */
-	const SNAPSHOT_PATH = 'snapshot_path';
-	/**
-	 * @type string
-	 */
-	const SWAGGER_PATH = 'swagger_path';
-	/**
-	 * @type string
-	 */
-	const TEMPLATE_PATH = 'template_path';
-	/**
-	 * @type string The relative path to any user-specified configuration files
-	 */
-	const LOCAL_CONFIG_PATH = 'local_config_path';
+    /**
+     * @type string The storage base for hosted DSPs
+     */
+    const FABRIC_STORAGE_BASE_PATH = '/data/storage';
+    /**
+     * @type string The storage base for non-hosted DSPs
+     */
+    const LOCAL_STORAGE_BASE_PATH = '/storage';
+    /**
+     * @type string
+     */
+    const STORAGE_PATH = 'storage_path';
+    /**
+     * @type string
+     */
+    const STORAGE_BASE_PATH = 'storage_base_path';
+    /**
+     * @type string
+     */
+    const PRIVATE_PATH = 'private_path';
+    /**
+     * @type string
+     */
+    const LIBRARY_PATH = 'plugins_path';
+    /**
+     * @type string
+     */
+    const PLUGINS_PATH = 'plugins_path';
+    /**
+     * @type string
+     */
+    const APPLICATIONS_PATH = 'applications_path';
+    /**
+     * @type string
+     */
+    const SNAPSHOT_PATH = 'snapshot_path';
+    /**
+     * @type string
+     */
+    const SWAGGER_PATH = 'swagger_path';
+    /**
+     * @type string
+     */
+    const TEMPLATE_PATH = 'template_path';
+    /**
+     * @type string The relative path to any user-specified configuration files
+     */
+    const LOCAL_CONFIG_PATH = 'local_config_path';
+    /**
+     * @type string The relative path to any script files
+     */
+    const SCRIPTS_PATH = 'scripts_path';
+    /**
+     * @type string The relative path to any user-specified script files
+     */
+    const USER_SCRIPTS_PATH = 'user_scripts_path';
 }
