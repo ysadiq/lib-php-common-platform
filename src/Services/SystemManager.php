@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Library\Utility\IfSet;
+use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -612,19 +614,38 @@ SQL;
      */
     public static function getAllowedHosts()
     {
-        $_allowedHosts = array();
-        $_file = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-        if ( !file_exists( $_file ) )
+        static $_allowedHosts = false;
+
+        if ( false === $_allowedHosts )
         {
-            // old location
-            $_file = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-        }
-        if ( file_exists( $_file ) )
-        {
-            $_content = file_get_contents( $_file );
-            if ( !empty( $_content ) )
+            $_store = Fabric::getStorage();
+
+            $_locations = array(
+                0 => $_store->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                1 => $_store->getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                2 => $_store->getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+            );
+
+            foreach ( $_locations as $_index => $_location )
             {
-                $_allowedHosts = json_decode( $_content, true );
+                try
+                {
+                    $_allowedHosts = JsonFile::decodeFile( $_location );
+
+                    //  If we found this config file in a place other than the private config,
+                    //  delete it and write out one to the private config (index #0)
+                    if ( $_index != 0 )
+                    {
+                        JsonFile::encodeFile( $_locations[0], $_allowedHosts );
+                        unlink( $_location );
+                    }
+
+                    return $_allowedHosts;
+                }
+                catch ( \Exception $_ex )
+                {
+                    //  Not there or bogus...
+                }
             }
         }
 
@@ -640,18 +661,13 @@ SQL;
     {
         static::validateHosts( $allowed_hosts );
 
-        $allowed_hosts = DataFormatter::jsonEncode( $allowed_hosts, true );
-        $_path = Pii::getParam( 'storage_base_path' );
-        $_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
+        $_path = Fabric::getStorage()->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
 
-        //	Create directory if it doesn't exists
-        if ( !is_dir( $_path ) )
+        try
         {
-            @\mkdir( $_path, 0777, true );
+            JsonFile::encodeFile( $_path, $allowed_hosts );
         }
-
-        //	Write new cors config
-        if ( false === file_put_contents( $_config, $allowed_hosts ) )
+        catch ( \Exception $_ex )
         {
             throw new PlatformServiceException( 'Failed to update CORS configuration.' );
         }
@@ -667,7 +683,7 @@ SQL;
     {
         foreach ( Option::clean( $allowed_hosts ) as $_hostInfo )
         {
-            $_host = Option::get( $_hostInfo, 'host' );
+            $_host = IfSet::get( $_hostInfo, 'host' );
 
             if ( empty( $_host ) )
             {

@@ -43,6 +43,9 @@ if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option:
     die();
 }
 
+/** Initialize the class */
+Fabric::initialize();
+
 /**
  * Fabric.php
  * The configuration file for fabric-hosted DSPs
@@ -145,8 +148,7 @@ class Fabric
 
         if ( !$_config )
         {
-            static::$_request = Request::createFromGlobals();
-            static::$_hostname = static::$_request->getHttpHost();
+            static::$_hostname = static::getRequest()->getHttpHost();
             static::$_storage = new HostedStorage( static::$_hostname );
 
             //	If this isn't a hosted instance, bail
@@ -162,7 +164,7 @@ class Fabric
             {
                 //	Save it for later (don't run away and let me down <== extra points if you get the reference)
                 setcookie( static::PUBLIC_STORAGE_COOKIE, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
-                setcookie( static::PRIVATE_STORAGE_COOKIE, $_instance->private_key, time() + DateTime::TheEnd, '/' );
+                setcookie( static::PRIVATE_STORAGE_COOKIE, $_instance->private_storage_key, time() + DateTime::TheEnd, '/' );
 
                 return $_config;
             }
@@ -184,13 +186,13 @@ class Fabric
     {
         static $_fabricHosted = null;
 
-        if ( null === $_fabricHosted )
+        if ( null !== $_fabricHosted )
         {
-            $_fabricHosted =
-                ( static::DEFAULT_DOC_ROOT == static::$_request->server->get( 'document-root' ) && file_exists( static::FABRIC_MARKER ) );
+            return $_fabricHosted;
         }
 
-        return $_fabricHosted;
+        return $_fabricHosted =
+            ( static::DEFAULT_DOC_ROOT == static::getRequest()->server->get( 'document-root' ) && file_exists( static::FABRIC_MARKER ) );
     }
 
     /**
@@ -256,19 +258,15 @@ class Fabric
     /**
      * Writes the cache file out to disk
      *
-     * @param string    $host
      * @param \stdClass $instance
      * @param array     $dbConfig
-     * @param string    $configFileName
-     * @param string    $instanceFileName
-     * @param array     $values
      *
      * @throws \Exception
      */
-    protected static function _cacheSettings( $host, $instance, $dbConfig, $configFileName = null, $instanceFileName = null, array $values = array() )
+    protected static function _cacheSettings( $instance, $dbConfig )
     {
         static::_writeInstanceConfig( $instance );
-        static::_writeDbConfig( $instance );
+        static::_writeDbConfig( $instance, false );
     }
 
     /**
@@ -290,38 +288,22 @@ class Fabric
     {
         $_config = null;
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $instanceName );
-        $_instance = static::_readInstanceConfig( $instanceName );
-        $_config = static::_readDbConfig( $instanceName );
+        $_instanceDetails = static::_readInstanceConfig( $_dspName );
+        $_config = static::_readDbConfig( $_dspName );
 
-        if ( false === $_instance || false === $_config )
+        if ( false === $_instanceDetails || false === $_config )
         {
             //	Try and get them from server...
             $_response = static::_getInstanceCredentials( $instanceName, $_dspName );
-            $_instance = $_response->details;
 
-            static::_writeDbConfig( $_instance );
-            $_config = static::_readDbConfig( $_instance );
-        }
-
-        if ( !empty( $_config ) )
-        {
-            //	Save it for later (don't run away and let me down <== extra points if you get the reference)
-            setcookie( static::PUBLIC_STORAGE_COOKIE, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
-            setcookie( static::PRIVATE_STORAGE_COOKIE, $_instance->private_key, time() + DateTime::TheEnd, '/' );
-
-            static::_cacheSettings( $instanceName, $_instance, $_config );
-        }
-        else
-        {
-            //  Clear cookies
-            setcookie( static::PUBLIC_STORAGE_COOKIE, '', 0, '/' );
-            setcookie( static::PRIVATE_STORAGE_COOKIE, '', 0, '/' );
+            static::_writeInstanceConfig( $_instanceDetails = $_response->details );
+            $_config = static::_writeDbConfig( $_instanceDetails );
         }
 
         //  Check for enterprise status
         static::_checkPlatformState( $_dspName );
 
-        return array($_instance, $_config);
+        return array($_instanceDetails, $_config);
     }
 
     /**
@@ -401,6 +383,71 @@ class Fabric
     }
 
     /**
+     * @param \stdClass $instanceDetails
+     * @param bool      $includeAfter If true, config is included and returned
+     *
+     * @return array
+     */
+    protected static function _writeDbConfig( $instanceDetails, $includeAfter = true )
+    {
+        $_fileName =
+            static::$_storage->getLocalConfigPath() .
+            static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
+
+        if ( file_exists( $_fileName ) )
+        {
+            //  Save a copy
+            @copy( $_fileName, $_fileName . '.save' );
+        }
+
+        $_version = 'v' . Platform::getPlatformCoreVersion();
+        $_date = date( 'c' );
+
+        $_php = <<<PHP
+<?php
+/**
+ * **** DO NOT MODIFY THIS FILE ****
+ * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
+ * @(#)\$Id: {$instanceDetails->instance->instance_name_text}.database.config.php; {$_version}-fabric {$_date} \$
+ */
+return array(
+    'connectionString'      => 'mysql:host={$instanceDetails->db_host};port={$instanceDetails->db_port};dbname={$instanceDetails->db_name}',
+    'username'              => '{$instanceDetails->db_user}',
+    'password'              => '{$instanceDetails->db_password}',
+    'emulatePrepare'        => true,
+    'charset'               => 'utf8',
+    'schemaCachingDuration' => 3600,
+);
+PHP;
+
+        //  Write configs
+        if ( false === file_put_contents( $_fileName, $_php ) )
+        {
+            throw new FileException( 'Unable to create configuration file: ' . $_fileName );
+        }
+
+        //	Stick this in persistent storage
+        $_instanceDetails = [
+            'dsp.credentials'                     => $instanceDetails,
+            'dsp.db_name'                         => $instanceDetails->db_name,
+            'platform.dsp_name'                   => $instanceDetails->instance->instance_name_text,
+            'platform.private_path'               => static::$_storage->getPrivatePath(),
+            'platform.storage_key'                => static::$_storage->getStorageKey( $instanceDetails->storage_key ),
+            'platform.legacy_storage_key'         => $instanceDetails->storage_key,
+            'platform.private_storage_key'        => static::$_storage->getPrivateStorageKey( $instanceDetails->private_storage_key ),
+            'platform.legacy_private_storage_key' => $instanceDetails->private_storage_key,
+            'platform.db_config_file'             => $_fileName,
+            'platform.db_config_file_name'        => basename( $_fileName ),
+            PlatformStates::STATE_KEY             => null,
+        ];
+
+        \Kisma::set( $_instanceDetails );
+
+        //  Dogfood it if wanted...
+        return $includeAfter ? Includer::includeIfExists( $_fileName ) : $_instanceDetails;
+    }
+
+    /**
      * @param string $instanceName
      *
      * @return \stdClass|bool
@@ -420,16 +467,15 @@ class Fabric
     }
 
     /**
-     * @param \stdClass $instance
+     * @param \stdClass $instanceDetails
      *
-     * @throws FileException
-     * @return array
+     * @return bool
      */
-    protected static function _writeDbConfig( $instance )
+    protected static function _writeInstanceConfig( $instanceDetails )
     {
         $_fileName =
             static::$_storage->getLocalConfigPath() .
-            static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instance->instance_name_text) );
+            static::_makeFileName( static::INSTANCE_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
 
         if ( file_exists( $_fileName ) )
         {
@@ -437,67 +483,7 @@ class Fabric
             @copy( $_fileName, $_fileName . '.save' );
         }
 
-        $_version = 'v' . Platform::getPlatformCoreVersion();
-        $_date = date( 'c' );
-
-        $_php = <<<PHP
-<?php
-/**
- * **** DO NOT MODIFY THIS FILE ****
- * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
- * @(#)\$Id: {$instance->instance_name_text}.database.config.php; {$_version}-fabric {$_date} \$
- */
-return array(
-    'connectionString'      => 'mysql:host={$instance->db_host};port={$instance->db_port};dbname={$instance->db_name}',
-    'username'              => '{$instance->db_user}',
-    'password'              => '{$instance->db_password}',
-    'emulatePrepare'        => true,
-    'charset'               => 'utf8',
-    'schemaCachingDuration' => 3600,
-);
-PHP;
-
-        //  Write configs
-        if ( false === file_put_contents( $_fileName, $_php ) )
-        {
-            throw new FileException( 'Unable to create configuration file: ' . $_fileName );
-        }
-
-        //	Stick this in persistent storage
-        $_instanceDetails = array(
-            'dsp.credentials'              => $instance,
-            'dsp.db_name'                  => $instance->db_name,
-            'platform.dsp_name'            => $instance->instance_name_text,
-            'platform.private_path'        => $instance->private_path,
-            'platform.storage_key'         => $instance->storage_key,
-            'platform.private_storage_key' => $instance->private_key,
-            'platform.db_config_file'      => $_fileName,
-            'platform.db_config_file_name' => basename( $_fileName ),
-            PlatformStates::STATE_KEY      => null,
-        );
-
-        \Kisma::set( $_instanceDetails );
-
-        return $_instanceDetails;
-    }
-
-    /**
-     * @param \stdClass $instance
-     *
-     * @return bool
-     */
-    protected static function _writeInstanceConfig( $instance )
-    {
-        $_fileName =
-            static::$_storage->getLocalConfigPath() .
-            static::_makeFileName( static::INSTANCE_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instance->instance_name_text) );
-
-        if ( !file_exists( $_fileName ) )
-        {
-            return false;
-        }
-
-        JsonFile::encodeFile( $_fileName, $instance );
+        JsonFile::encodeFile( $_fileName, $instanceDetails );
 
         return true;
     }
@@ -557,7 +543,7 @@ PHP;
      */
     public static function getRequest()
     {
-        return static::$_request;
+        return static::$_request ?: static::$_request = Request::createFromGlobals();
     }
 
     /**

@@ -20,7 +20,6 @@ use DreamFactory\Library\Utility\Exception\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Utility\FileSystem;
 
@@ -142,6 +141,10 @@ class HostedStorage
      * @type Flexistore
      */
     protected $_cache;
+    /**
+     * @type array Array of calculated paths
+     */
+    protected $_paths;
 
     //*************************************************************************
     //* Methods
@@ -308,6 +311,7 @@ class HostedStorage
         );
 
         $this->_skeleton = $_template;
+        $this->_paths = array();
 
         //  Ensures the directories in the skeleton are created and available. Only template items that are arrays are processed.
         foreach ( $this->_skeleton as $_basePath => $_paths )
@@ -319,7 +323,7 @@ class HostedStorage
                     throw new FileSystemException( 'Unable to create storage path "' . $_basePath . $_path . '"' );
                 }
 
-                Pii::app()->params[$_key] = $_path;
+                $this->_paths[$_key] = $_path;
             }
         }
     }
@@ -387,7 +391,9 @@ class HostedStorage
         //	Make a cache tag that includes the requested path...
         $_cacheKey = hash( static::DATA_STORAGE_HASH, $base . $_appendage );
 
-        if ( false === ( $_path = $this->_cache->get( $_cacheKey ) ) )
+        $_path = $this->_cache->get( $_cacheKey );
+
+        if ( empty( $_path ) )
         {
             $_path = realpath( $base );
             $_checkPath = $_path . $_appendage;
@@ -566,5 +572,35 @@ class HostedStorage
     public function getApplicationsPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
         return $this->_buildPath( $this->getStoragePath( static::APPLICATIONS_PATH ), $append, $createIfMissing, $includesFile );
+    }
+
+    /**
+     * @param string $legacyKey
+     *
+     * @return bool|string The zone/partition/id that make up the new public storage key
+     */
+    public function getStorageKey( $legacyKey = null )
+    {
+        if ( false === $this->_zone )
+        {
+            return false;
+        }
+
+        if ( empty( $this->_zone ) || empty( $this->_partition ) || empty( $this->_storageId ) )
+        {
+            return $legacyKey;
+        }
+
+        return $this->_zone . DIRECTORY_SEPARATOR . $this->_partition . DIRECTORY_SEPARATOR . $this->_storageId;
+    }
+
+    /**
+     * @param string $legacyKey
+     *
+     * @return bool|string The zone/partition/id/tag that make up the new private storage key
+     */
+    public function getPrivateStorageKey( $legacyKey = null )
+    {
+        return $this->getStorageKey( $legacyKey ) . static::STORAGE_PRIVATE_PATH;
     }
 }
