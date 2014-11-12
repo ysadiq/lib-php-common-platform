@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
+use DreamFactory\Library\Utility\Exception\FileSystemException;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
@@ -28,7 +29,6 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -126,8 +126,7 @@ class Platform
      *
      * @param bool   $includesFile
      *
-     * @throws \InvalidArgumentException
-     * @throws \Kisma\Core\Exceptions\FileSystemException
+     * @throws FileSystemException
      * @return string
      */
     protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true, $includesFile = false )
@@ -224,6 +223,21 @@ class Platform
     public static function getPrivatePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
         return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH, $append, $createIfMissing, $includesFile );
+    }
+
+    /**
+     * Returns the platform's local configuration path, not the platform's config path in the root
+     *
+     * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
+     *
+     * @throws FileSystemException
+     * @return string
+     */
+    public static function getLocalConfigPath( $append = null, $createIfMissing = true, $includesFile = false )
+    {
+        return static::_getPlatformPath( LocalStorageTypes::LOCAL_CONFIG_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
@@ -468,31 +482,6 @@ class Platform
 
     /**
      * @param string $key
-     * @param mixed  $defaultValue
-     * @param bool   $remove
-     *
-     * @return array|null|string
-     */
-    public static function mcGet( $key, $defaultValue = null, $remove = false )
-    {
-        return static::_doGet( $key, $defaultValue, $remove );
-    }
-
-    /**
-     * @param string|array $key
-     * @param mixed        $value
-     * @param int          $flag
-     * @param int          $ttl
-     *
-     * @return bool|array
-     */
-    public static function mcSet( $key, $value = null, $flag = 0, $ttl = self::MEMCACHE_TTL )
-    {
-        return static::_doSet( $key, $value, $ttl, $flag );
-    }
-
-    /**
-     * @param string $key
      * @param mixed  $value
      * @param int    $ttl
      * @param int    $flag
@@ -694,7 +683,7 @@ class Platform
             return false;
         }
 
-        Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
+        //Log::debug( 'Retrieved platform states: ' . print_r( $_response, true ) );
 
         return array(
             'provision_state' => $_response->details->state,

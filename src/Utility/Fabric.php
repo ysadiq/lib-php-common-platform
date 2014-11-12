@@ -16,7 +16,12 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+<<<<<<< HEAD
 use DreamFactory\Library\Utility\Exception\FileException;
+=======
+use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\IfSet;
+>>>>>>> develop
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Interfaces\PlatformStates;
@@ -107,11 +112,15 @@ class Fabric extends SeedUtility
     /**
      * @var string Private storage cookie
      */
+<<<<<<< HEAD
     const PRIVATE_STORAGE_COOKIE = 'dsp.private';
     /**
      * @var string Public storage cookie
      */
     const PUBLIC_STORAGE_COOKIE = 'dsp.blob';
+=======
+    const DEFAULT_DOC_ROOT = '/var/www/launchpad/web';
+>>>>>>> develop
 
     //******************************************************************************
     //* Members
@@ -144,12 +153,19 @@ class Fabric extends SeedUtility
      */
     public static function initialize()
     {
+<<<<<<< HEAD
         static::$_request = Request::createFromGlobals();
         static::$_hostname = static::$_request->getHttpHost();
         static::$_storage = new HostedStorage( static::$_hostname );
 
         //	If this isn't a hosted instance, bail
         if ( !static::hostedPrivatePlatform() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
+=======
+        //	If this isn't a cloud request, bail
+        $_host = static::getHostName();
+
+        if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
+>>>>>>> develop
         {
             throw new \CHttpException(
                 Response::HTTP_FORBIDDEN,
@@ -172,6 +188,7 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
+<<<<<<< HEAD
         static $_fabricHosted = null;
 
         if ( null === $_fabricHosted )
@@ -181,6 +198,16 @@ class Fabric extends SeedUtility
         }
 
         return $_fabricHosted;
+=======
+        $_data = array(
+            'settings' => $settings,
+            'instance' => $instance,
+        );
+
+        JsonFile::encodeFile( static::_cacheFileName( $host ), $_data );
+
+        return $settings;
+>>>>>>> develop
     }
 
     /**
@@ -191,6 +218,7 @@ class Fabric extends SeedUtility
      */
     public static function hostedPrivatePlatform( $returnHost = false )
     {
+<<<<<<< HEAD
         /**
          * Add host names to this list to white-list...
          */
@@ -203,6 +231,18 @@ class Fabric extends SeedUtility
         $_host = static::$_hostname;
 
         return in_array( $_host, $_allowedHosts ) ? ( $returnHost ? $_host : true ) : false;
+=======
+        $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
+            DIRECTORY_SEPARATOR . '.dreamfactory' .
+            DIRECTORY_SEPARATOR . '.fabric';
+
+        if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
+        {
+            throw  new FileSystemException( 'Unable to create cache directory' );
+        }
+
+        return $_path . DIRECTORY_SEPARATOR . sha1( $host . $_SERVER['REMOTE_ADDR'] );
+>>>>>>> develop
     }
 
     /**
@@ -294,9 +334,85 @@ class Fabric extends SeedUtility
         if ( false === ( $_config = static::_readDbConfig( $host ) ) )
 
         {
+<<<<<<< HEAD
             $_dbConfigFileName = static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, $_values );
         }
         $_dbConfigFile = static::$_storage->getLocalConfigPath() . $_dbConfigFileName;
+=======
+            //	Get the credentials from the auth server...
+            $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
+
+            if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
+            {
+                static::_errorLog( 'DB Credential pull failure. Redirecting to df.com: ' . $host );
+                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
+                exit( 1 );
+            }
+
+            if ( is_object( $_response ) &&
+                isset( $_response->details, $_response->details->code ) &&
+                HttpResponse::NotFound == $_response->details->code
+            )
+            {
+                static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
+                throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
+            }
+
+            if ( !$_response || !is_object( $_response ) || false == $_response->success )
+            {
+                static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
+                throw new \CHttpException(
+                    HttpResponse::InternalServerError, 'Cannot connect to authentication service'
+                );
+            }
+
+            $_instance = $_cache = $_response->details;
+            $_dbName = $_instance->db_name;
+            $_dspName = $_instance->instance->instance_name_text;
+
+            $_privatePath = $_cache->private_path;
+            $_privateKey = basename( dirname( $_privatePath ) );
+            $_dbConfigFile = $_privatePath . '/' . $_dbConfigFileName;
+
+            //	Stick this in persistent storage
+            $_systemOptions = array(
+                'dsp.credentials'              => $_cache,
+                'dsp.db_name'                  => $_dbName,
+                'platform.dsp_name'            => $_dspName,
+                'platform.private_path'        => $_privatePath,
+                'platform.storage_key'         => $_instance->storage_key,
+                'platform.private_storage_key' => $_privateKey,
+                'platform.db_config_file'      => $_dbConfigFile,
+                'platform.db_config_file_name' => $_dbConfigFileName,
+                PlatformStates::STATE_KEY      => null,
+            );
+
+            \Kisma::set( $_systemOptions );
+
+            //	File should be there from provisioning... If not, tenemos una problema!
+            if ( !file_exists( $_dbConfigFile ) )
+            {
+                $_file = basename( $_dbConfigFile );
+                $_version = ( defined( 'DSP_VERSION' ) ? 'v' . DSP_VERSION : 'fabric' );
+                $_timestamp = date( 'c' );
+
+                $_dbConfig = <<<PHP
+<?php
+/**
+ * **** DO NOT MODIFY THIS FILE ****
+ * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
+ * @(#)\$Id: {$_file}, {$_version}-{$_dspName} {$_timestamp} \$
+ */
+return array(
+    'connectionString'      => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
+    'username'              => '{$_instance->db_user}',
+    'password'              => '{$_instance->db_password}',
+    'emulatePrepare'        => true,
+    'charset'               => 'utf8',
+    'schemaCachingDuration' => 3600,
+);
+PHP;
+>>>>>>> develop
 
         //	Try and get them from server...
         $_response = static::_getInstanceCredentials( $host, $_dspName );
@@ -304,7 +420,11 @@ class Fabric extends SeedUtility
 
         static::_writeDbConfig( $_instance );
 
+<<<<<<< HEAD
         $_config = JsonFile::decodeFile( $_dbConfigFile );
+=======
+            //Log::debug( 'Reading config: ' . $_settings );
+>>>>>>> develop
 
         if ( !empty( $_config ) )
         {
@@ -324,7 +444,50 @@ class Fabric extends SeedUtility
         //  Check for enterprise status
         static::_checkPlatformState( $_dspName );
 
+<<<<<<< HEAD
         return $_config;
+=======
+        return $_settings;
+    }
+
+    /**
+     * @param string $host
+     *
+     * @return bool|mixed
+     */
+    protected static function _checkCache( $host )
+    {
+        $_cacheFile = static::_cacheFileName( $host );
+
+        //	See if file is available and return it, or expire it...
+        if ( file_exists( $_cacheFile ) )
+        {
+            //	No session or expired?
+            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
+            {
+                @unlink( $_cacheFile );
+
+                return false;
+            }
+
+            try
+            {
+                $_data = JsonFile::decodeFile( $_cacheFile );
+            }
+            catch ( \InvalidArgumentException $_ex )
+            {
+                //  File can't be read
+                return false;
+            }
+
+            return array(
+                IfSet::get( $_data, 'settings' ),
+                IfSet::get( $_data, 'instance' )
+            );
+        }
+
+        return false;
+>>>>>>> develop
     }
 
     /**
