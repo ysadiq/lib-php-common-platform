@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\NamespaceTypes;
@@ -275,7 +275,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
             {
                 $_autoloadPath = $_path . '/autoload.php';
-                Log::debug( 'Found plug-in autoload.php' );
+                //Log::debug( 'Found plug-in autoload.php' );
             }
             else
             {
@@ -831,9 +831,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
 
             //	Find cors config file location
@@ -851,6 +851,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $this->_logCorsInfo && Log::debug( 'CORS: no configuration file found.' );
 
                 return null;
+            }
+
+            try
+            {
+                $_content = JsonFile::decodeFile( $_config );
+            }
+            catch ( \Exception $_ex )
+            {
+
             }
 
             if ( false !== ( $_content = JsonFile::decodeFile( $_config ) ) && JSON_ERROR_NONE == json_last_error() && !empty( $_content ) )
