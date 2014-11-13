@@ -694,7 +694,7 @@ MYSQL;
         {
             if ( empty( $_type ) )
             {
-                Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+                //Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
 
                 return PlatformServiceTypes::SYSTEM_SERVICE;
             }
