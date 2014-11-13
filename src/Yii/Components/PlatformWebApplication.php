@@ -649,7 +649,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         foreach ( $_origins as $_hostInfo )
         {
             //  Get the verbs for this entry.
-            $_verbs = IfSet::get( $_hostInfo, 'verbs', array() );
+            $_verbs = ( is_array( $_hostInfo ) ) ? IfSet::get( $_hostInfo, 'verbs', array() ) : array();
 
             //  Always add OPTIONS
             !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
