@@ -187,25 +187,6 @@ class Platform
      *
      * @return string
      */
-    public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
-    {
-        return static::_getPlatformPath(
-            LocalStorageTypes::STORAGE_BASE_PATH,
-            $append,
-            $createIfMissing,
-            $includesFile
-        );
-    }
-
-    /**
-     * Constructs the virtual storage path
-     *
-     * @param string $append
-     * @param bool   $createIfMissing
-     * @param bool   $includesFile
-     *
-     * @return string
-     */
     public static function getStoragePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
         return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH, $append, $createIfMissing, $includesFile );

@@ -410,7 +410,7 @@ SQL;
             unset( $_scripts, $_events, $_api );
         }
 
-        Log::debug( '  * Discovered ' . $_eventCount . ' event(s).' );
+        Log::debug( '  * "' . $apiName . '" has ' . $_eventCount . ' registered event(s).' );
 
         return $_eventMap;
     }

@@ -831,7 +831,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );

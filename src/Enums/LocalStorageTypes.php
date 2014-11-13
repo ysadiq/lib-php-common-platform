@@ -22,22 +22,18 @@ namespace DreamFactory\Platform\Enums;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
- * LocalStorageTypes
+ * Constants that correspond with the keys in the app config
  */
-class LocalStorageTypes extends SeedEnum
+class LocalStorageTypes extends LocalStoragePaths
 {
     //*************************************************************************
     //* Constants
     //*************************************************************************
 
     /**
-     * @type string The storage base for hosted DSPs
+     * @type string
      */
-    const FABRIC_STORAGE_BASE_PATH = '/data/storage';
-    /**
-     * @type string The storage base for non-hosted DSPs
-     */
-    const LOCAL_STORAGE_BASE_PATH = '/storage';
+    const STORAGE_ROOT = 'storage_root';
     /**
      * @type string
      */
@@ -45,7 +41,7 @@ class LocalStorageTypes extends SeedEnum
     /**
      * @type string
      */
-    const STORAGE_BASE_PATH = 'storage_base_path';
+    const PRIVATE_STORAGE_PATH = 'private_storage_path';
     /**
      * @type string
      */

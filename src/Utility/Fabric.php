@@ -16,10 +16,11 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Library\Utility\Exception\FileException;
+use DreamFactory\Library\Utility\Exceptions\FileException;
 use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
+use DreamFactory\Platform\Enums\LocalStoragePaths;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
@@ -148,8 +149,10 @@ class Fabric
 
         if ( !$_config )
         {
+            //  Initialize the storage system
+            static::$_storage = new HostedStorage();
             static::$_hostname = static::getRequest()->getHttpHost();
-            static::$_storage = new HostedStorage( static::$_hostname );
+            static::$_storage->initialize( static::$_hostname, LocalStoragePaths::STORAGE_MOUNT_POINT );
 
             //	If this isn't a hosted instance, bail
             if ( !static::hostedPrivatePlatform() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
