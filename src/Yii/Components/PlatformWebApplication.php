@@ -961,6 +961,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
+     * @param Request $requestObject
+     *
+     * @return $this
+     */
+    public function setRequestObject( $requestObject )
+    {
+        $this->_requestObject = $requestObject;
+
+        return $this;
+    }
+
+    /**
      * @param boolean $enableProfiler
      */
     public static function setEnableProfiler( $enableProfiler )
