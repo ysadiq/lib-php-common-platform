@@ -339,7 +339,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
                 $this->addCorsHeaders();
 
-                return Pii::end();
+                Pii::end();
+
+                return;
 
             case HttpMethod::TRACE:
                 Log::error(
@@ -358,6 +360,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             $this->addCorsHeaders();
         }
+
+        return;
     }
 
     /**
@@ -529,7 +533,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         else
         {
             //  empty origin received we do nothing
-            if ( empty( $_origin ) || 'null' == $_origin )
+            if ( empty( $_origin ) )
             {
                 return $returnHeaders ? array() : false;
             }
@@ -639,8 +643,28 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
-        foreach ( array_merge( $this->_corsWhitelist, Option::clean( $additional ) ) as $_hostInfo )
+        $_origins = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
+
+        //  Check out the origins
+        foreach ( $_origins as $_hostInfo )
         {
+            //  Get the verbs for this entry.
+            $_verbs = IfSet::get( $_hostInfo, 'verbs', array() );
+
+            //  Always add OPTIONS
+            !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
+
+            //  Any "*" equals unfettered access, so check here and return quickly
+            if (
+                ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
+                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+            )
+            {
+                $isStar = true;
+
+                return implode( ', ', $_verbs );
+            }
+
             $_allowedMethods = static::CORS_DEFAULT_ALLOWED_METHODS;
 
             if ( is_array( $_hostInfo ) )
@@ -657,28 +681,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     continue;
                 }
 
-                if ( isset( $_hostInfo['verbs'] ) )
-                {
-                    if ( false === array_search( static::CORS_OPTION_METHOD, $_hostInfo['verbs'] ) )
-                    {
-                        // add OPTION to allowed list
-                        $_hostInfo['verbs'][] = static::CORS_OPTION_METHOD;
-                    }
-
-                    $_allowedMethods = implode( ', ', $_hostInfo['verbs'] );
-                }
+                $_allowedMethods = implode( ', ', $_verbs );
             }
             else
             {
                 $_whiteGuy = $_hostInfo;
-            }
-
-            //	All allowed?
-            if ( static::CORS_STAR == $_whiteGuy )
-            {
-                $isStar = true;
-
-                return $_allowedMethods;
             }
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
