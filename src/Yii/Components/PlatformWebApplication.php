@@ -514,7 +514,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return $returnHeaders ? array() : false;
         }
 
-        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) )
+        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
         {
             $_cache = array();
         }
