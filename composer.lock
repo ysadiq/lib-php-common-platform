@@ -469,12 +469,21 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
+<<<<<<< HEAD
+                "reference": "0296c95c68f7a3a88e217cfc1994d3e420a0b9e6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/0296c95c68f7a3a88e217cfc1994d3e420a0b9e6",
+                "reference": "0296c95c68f7a3a88e217cfc1994d3e420a0b9e6",
+=======
                 "reference": "fad996a7b8ec5cef22e8751890a3d75219064b3e"
             },
             "dist": {
                 "type": "zip",
                 "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/fad996a7b8ec5cef22e8751890a3d75219064b3e",
                 "reference": "fad996a7b8ec5cef22e8751890a3d75219064b3e",
+>>>>>>> 3a6245fec08c977169b4b8ccbf3b0c41c68f4280
                 "shasum": ""
             },
             "require": {
@@ -512,7 +521,11 @@
                 "dreamfactory",
                 "utility"
             ],
+<<<<<<< HEAD
+            "time": "2014-11-13 03:48:45"
+=======
             "time": "2014-11-13 16:20:31"
+>>>>>>> 3a6245fec08c977169b4b8ccbf3b0c41c68f4280
         },
         {
             "name": "dreamfactory/yii",
