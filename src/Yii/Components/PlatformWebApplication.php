@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\NamespaceTypes;
@@ -275,7 +275,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
             {
                 $_autoloadPath = $_path . '/autoload.php';
-                Log::debug( 'Found plug-in autoload.php' );
+                //Log::debug( 'Found plug-in autoload.php' );
             }
             else
             {
@@ -319,8 +319,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
-
-        $this->_requestObject = Request::createFromGlobals();
 
         //  A pristine copy of the request
         $this->_requestBody = ScriptEvent::buildRequestArray();
@@ -374,7 +372,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( empty( $_config ) )
         {
             $_config = array();
-            $_configPath = Platform::getPrivatePath( '/config' );
+            $_configPath = Platform::getLocalConfigPath();
 
             $_files = FileSystem::glob(
                 $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN,
@@ -534,7 +532,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_isStar = false;
-        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
+        $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
 
@@ -955,35 +953,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Response $responseObject
-     *
-     * @return PlatformWebApplication
-     */
-    public function setResponseObject( $responseObject )
-    {
-        $this->_responseObject = $responseObject;
-
-        return $this;
-    }
-
-    /**
-     * @param \Symfony\Component\HttpFoundation\Request $requestObject
-     *
-     * @return PlatformWebApplication
-     */
-    public function setRequestObject( $requestObject )
-    {
-        $this->_requestObject = $requestObject;
-
-        return $this;
-    }
-
-    /**
      * @return \Symfony\Component\HttpFoundation\Request
      */
     public function getRequestObject()
     {
-        return $this->_requestObject;
+        return $this->_requestObject = $this->_requestObject ?: Request::createFromGlobals();
     }
 
     /**

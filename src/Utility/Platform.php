@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
-use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
@@ -79,23 +79,6 @@ class Platform
      * @type string The current version of the platform API
      */
     const PLATFORM_API_VERSION = API_VERSION;
-
-    //*************************************************************************
-    //	Members
-    //*************************************************************************
-
-    /**
-     * @var CacheProvider The persistent store to use for local storage
-     */
-    protected static $_persistentStore;
-    /**
-     * @var \Memcached A memcached persistent store
-     */
-    protected static $_memcache;
-    /**
-     * @var array
-     */
-    protected static $_paths;
 
     //*************************************************************************
     //	Methods
@@ -407,13 +390,12 @@ class Platform
      * @param string $key
      * @param mixed  $defaultValue
      * @param bool   $remove
-     * @param int    $ttl The TTL for non-removed defaults
      *
      * @return mixed
      */
-    public static function storeGet( $key, $defaultValue = null, $remove = false, $ttl = self::DEFAULT_CACHE_TTL )
+    public static function storeGet( $key, $defaultValue = null, $remove = false )
     {
-        return static::_doGet( $key, $defaultValue, $remove, $ttl );
+        return static::_doGet( $key, $defaultValue, $remove );
     }
 
     /**
@@ -478,11 +460,10 @@ class Platform
      * @param string $key
      * @param mixed  $defaultValue
      * @param bool   $remove
-     * @param int    $ttl
      *
      * @return bool|bool[]
      */
-    protected static function _doGet( $key, $defaultValue = null, $remove = false, $ttl = self::MEMCACHE_TTL )
+    protected static function _doGet( $key, $defaultValue = null, $remove = false )
     {
         return Pii::appStoreGet( $key, $defaultValue, $remove );
     }

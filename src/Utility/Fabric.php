@@ -72,7 +72,7 @@ class Fabric
     /**
      * @var string
      */
-    const INSTANCE_CONFIG_FILE_NAME_PATTERN = '/{instance_name}.instance.json';
+    const INSTANCE_CONFIG_FILE_NAME_PATTERN = '/instance.json';
     /**
      * @var string
      */
@@ -151,8 +151,10 @@ class Fabric
         {
             //  Initialize the storage system
             static::$_storage = new HostedStorage();
-            static::$_hostname = static::getRequest()->getHttpHost();
-            static::$_storage->initialize( static::$_hostname, LocalStoragePaths::STORAGE_MOUNT_POINT );
+            static::$_storage->initialize(
+                static::$_hostname = static::getRequest()->getHttpHost(),
+                LocalStoragePaths::STORAGE_MOUNT_POINT
+            );
 
             //	If this isn't a hosted instance, bail
             if ( !static::hostedPrivatePlatform() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
@@ -291,6 +293,7 @@ class Fabric
     {
         $_config = null;
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $instanceName );
+
         $_instanceDetails = static::_readInstanceConfig( $_dspName );
         $_config = static::_readDbConfig( $_dspName );
 
@@ -459,7 +462,10 @@ PHP;
     {
         $_fileName =
             static::$_storage->getLocalConfigPath() .
-            static::_makeFileName( static::INSTANCE_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceName) );
+            static::_makeFileName(
+                static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
+                array('{instance_name}' => $instanceName)
+            );
 
         if ( !file_exists( $_fileName ) )
         {
@@ -478,7 +484,10 @@ PHP;
     {
         $_fileName =
             static::$_storage->getLocalConfigPath() .
-            static::_makeFileName( static::INSTANCE_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
+            static::_makeFileName(
+                static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
+                array('{instance_name}' => $instanceDetails->instance->instance_name_text)
+            );
 
         if ( file_exists( $_fileName ) )
         {
