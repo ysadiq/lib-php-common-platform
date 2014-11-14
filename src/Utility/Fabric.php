@@ -16,7 +16,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
@@ -125,9 +125,11 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
+        static $_fabricHosted = null;
+
         return
-            static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) &&
-            file_exists( static::FABRIC_MARKER );
+            $_fabricHosted
+                ?: $_fabricHosted = static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) && file_exists( static::FABRIC_MARKER );
     }
 
     /**
@@ -500,6 +502,8 @@ PHP;
 
     /**
      * Check platform state for locks, etc.
+     *
+     * @param string $dspName
      */
     protected static function _checkPlatformState( $dspName )
     {
