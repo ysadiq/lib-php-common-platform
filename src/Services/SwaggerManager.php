@@ -612,6 +612,8 @@ SQL;
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
             case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+            case PlatformServiceTypes::REMOTE_SQL_DB:
+            case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
             case PlatformServiceTypes::NOSQL_DB:
                 $_swaps = array(
                     array(
