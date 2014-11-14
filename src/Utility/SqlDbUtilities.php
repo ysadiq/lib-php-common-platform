@@ -1238,7 +1238,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                             break;
                         case SqlDbUtilities::DRV_PGSQL:
                         case SqlDbUtilities::DRV_OCSQL:
-                            $default = 'current_timestamp';
+                        case SqlDbUtilities::DRV_IBMDB2:
+                            $default = 'CURRENT_TIMESTAMP';
                             break;
                         default:
                             $default = ( 'timestamp_on_update' === $type ) ? 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' : 0;

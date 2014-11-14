@@ -19,7 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use DreamFactory\Platform\Enums\EmailTransportTypes;
+//use DreamFactory\Platform\Enums\EmailTransportTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -581,18 +581,18 @@ MYSQL;
                 $_creds = $this->credentials;
                 if ( is_array( $_creds ) && !array_key_exists( 'transport_type', $_creds ) )
                 {
-                    $_creds['transport_type'] = EmailTransportTypes::SERVER_DEFAULT;
+                    $_creds['transport_type'] = null; //EmailTransportTypes::SERVER_DEFAULT;
                     if ( !empty( $this->storage_type ) )
                     {
                         switch ( strtoupper( $this->storage_type ) )
                         {
                             case 'SMTP': // SMTP
-                                $_creds['transport_type'] = EmailTransportTypes::SMTP;
+                                $_creds['transport_type'] = 'smtp'; //EmailTransportTypes::SMTP;
                                 break;
 
                             default:
                                 // mail()
-                                $_creds['transport_type'] = EmailTransportTypes::SERVER_COMMAND;
+                                $_creds['transport_type'] = 'command'; //EmailTransportTypes::SERVER_COMMAND;
                                 $_creds['command'] = $this->storage_type;
                                 break;
                         }
@@ -600,6 +600,12 @@ MYSQL;
                     $this->credentials = $_creds;
                 }
                 break;
+        }
+
+        // credentials needs to be returned as null if empty array, for JSON conversion to be correct
+        if (empty($this->credentials))
+        {
+            $this->credentials = null;
         }
     }
 
@@ -688,7 +694,7 @@ MYSQL;
         {
             if ( empty( $_type ) )
             {
-                Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+                //Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
 
                 return PlatformServiceTypes::SYSTEM_SERVICE;
             }

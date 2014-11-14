@@ -492,7 +492,7 @@ SQL;
      */
     public static function findEvent( BasePlatformRestService $service, $method, $eventName = null, array $replacementValues = array() )
     {
-        $_cache = Platform::mcGet( 'swagger.event_map_cache', array() );
+        $_cache = Platform::storeGet( 'swagger.event_map_cache', array() );
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
@@ -612,6 +612,8 @@ SQL;
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
             case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+            case PlatformServiceTypes::REMOTE_SQL_DB:
+            case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
             case PlatformServiceTypes::NOSQL_DB:
                 $_swaps = array(
                     array(
@@ -703,7 +705,7 @@ SQL;
                     $_cache[$_hash] = $_eventName;
 
                     //  Cache for one minute...
-                    Platform::mcSet( 'swagger.event_map_cache', $_cache, 60 );
+                    Platform::storeSet( 'swagger.event_map_cache', $_cache, 60 );
 
                     return $_eventName;
                 }
@@ -797,7 +799,30 @@ SQL;
     public static function clearCache()
     {
         Platform::storeDelete( static::SWAGGER_CACHE_FILE );
-        // todo clear the rest of the swagger cache for each service api name?
+        Platform::storeDelete( static::SWAGGER_EVENT_CACHE_FILE );
+
+        //  Clear the rest of the swagger cache for each service api name
+        $_sql = <<<SQL
+SELECT api_name FROM df_sys_service
+SQL;
+
+        //	Pull the services and add in the built-in services
+        $_result = array_merge(
+            static::$_builtInServices,
+            $_rows = Sql::findAll( $_sql, null, Pii::pdo() )
+        );
+
+        //	Spin through services and clear the cache file
+        foreach ( $_result as $_service )
+        {
+            $_apiName = Option::get( $_service, 'api_name' );
+            // cache it for later access
+            if ( false === Platform::storeDelete( $_apiName . '.json' ) )
+            {
+                Log::error( '  * System error deleting swagger cache file: ' . $_apiName . '.json' );
+                continue;
+            }
+        }
 
         //  Redirect back to upgrade page if this was from an upgrade request
         if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
@@ -815,7 +840,10 @@ SQL;
         }
 
         //  Trigger a swagger.cache_cleared event
-        return Platform::trigger( SwaggerEvents::CACHE_CLEARED );
+        Platform::trigger( SwaggerEvents::CACHE_CLEARED );
+
+        // rebuild swagger cache
+        static::_buildSwagger();
     }
 
     /**

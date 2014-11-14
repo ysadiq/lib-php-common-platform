@@ -22,11 +22,13 @@
             "url": "http://pear.php.net"
         }
     ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
         "php": "~5.3",
-        "kisma/kisma": "~0.2@stable",
-        "swiftmailer/swiftmailer": "~4.3@stable",
-        "aws/aws-sdk-php": "~2.4.0@stable",
+        "kisma/kisma": "~0.2",
+        "swiftmailer/swiftmailer": "~4.3",
+        "aws/aws-sdk-php": "~2.4.0",
         "rackspace/php-opencloud": "~1.5.0@stable",
         "dready92/php-on-couch": "*",
         "phpforce/soap-client": "*",
@@ -35,14 +37,14 @@
         "pear-pear.php.net/Net_URL2": "*",
         "pear-pear.php.net/Mail_Mime": "*",
         "pear-pear.php.net/Mail_mimeDecode": "*",
-        "dreamfactory/javascript-sdk": "~1.0@stable",
-        "dreamfactory/yii": "~1.1.13.11@stable",
-        "dreamfactory/lib-php-common": "~1.5.0@stable",
-        "dreamfactory/lib-php-common-yii": "~1.5.0@stable",
-        "dreamfactory/oasys": "~0.4@stable",
+        "dreamfactory/javascript-sdk": "~1.0",
+        "dreamfactory/php-utils": "*",
+        "dreamfactory/yii": "~1.1.13.12",
+        "dreamfactory/lib-php-common": "~1.5.0",
+        "dreamfactory/lib-php-common-yii": "~1.5.0",
+        "dreamfactory/oasys": "~0.4",
         "dreamfactory/azure-sdk-for-php": "dev-develop as dev-master"
     },
-    "minimum-stability": "dev",
     "require-dev": {
         "phpunit/phpunit": "@stable",
         "phpunit/dbunit": "@stable",
