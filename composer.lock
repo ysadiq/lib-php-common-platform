@@ -269,9 +269,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -469,12 +469,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
-                "reference": "d400d0a455a4e960a3593fed0a14033747a041fd"
+                "reference": "1ee6e9a4b2251392b39d970aa26467d18af19159"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/d400d0a455a4e960a3593fed0a14033747a041fd",
-                "reference": "d400d0a455a4e960a3593fed0a14033747a041fd",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/1ee6e9a4b2251392b39d970aa26467d18af19159",
+                "reference": "1ee6e9a4b2251392b39d970aa26467d18af19159",
                 "shasum": ""
             },
             "require": {
@@ -512,7 +512,7 @@
                 "dreamfactory",
                 "utility"
             ],
-            "time": "2014-11-11 19:32:56"
+            "time": "2014-11-13 18:24:22"
         },
         {
             "name": "dreamfactory/yii",
@@ -738,12 +738,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "1a8560a0f9cad3738fb6445946437b46f746db7c"
+                "reference": "9b16e9a4cba1ac836925988cb0f602314af1a087"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/1a8560a0f9cad3738fb6445946437b46f746db7c",
-                "reference": "1a8560a0f9cad3738fb6445946437b46f746db7c",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/9b16e9a4cba1ac836925988cb0f602314af1a087",
+                "reference": "9b16e9a4cba1ac836925988cb0f602314af1a087",
                 "shasum": ""
             },
             "require": {
@@ -788,7 +788,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-11-11 17:02:27"
+            "time": "2014-11-13 16:19:52"
         },
         {
             "name": "monolog/monolog",

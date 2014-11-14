@@ -21,6 +21,8 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
+use DreamFactory\Library\Utility\IfSet;
+use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\NamespaceTypes;
@@ -170,6 +172,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
+    /**
+     * @type \CDbCache
+     */
+    protected $_cache = null;
 
     //*************************************************************************
     //	Methods
@@ -260,7 +266,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadPlugins()
     {
-        if ( null === ( $_autoloadPath = Pii::appStoreGet( 'dsp.plugin_autoload_path' ) ) )
+        if ( false === ( $_autoloadPath = $this->_appCache()->get( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
             $_path = Platform::getPluginsPath();
@@ -283,11 +289,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-            Pii::appStoreSet( 'dsp.plugin_autoload_path', $_autoloadPath );
+            $this->_appCache()->set( 'dsp.plugin_autoload_path', $_autoloadPath, Platform::DEFAULT_CACHE_TTL );
         }
 
         /** @noinspection PhpIncludeInspection */
-        if ( false === @require( $_autoloadPath ) )
+        if ( false === Includer::includeIfExists( $_autoloadPath, true ) )
         {
             Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
 
@@ -333,7 +339,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
                 $this->addCorsHeaders();
 
-                return Pii::end();
+                Pii::end();
+
+                return;
 
             case HttpMethod::TRACE:
                 Log::error(
@@ -352,6 +360,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             $this->addCorsHeaders();
         }
+
+        return;
     }
 
     /**
@@ -367,9 +377,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
-        $_config = Pii::appStoreGet( 'platform.local_config' );
-
-        if ( empty( $_config ) )
+        if ( false === ( $_config = $this->_appCache()->get( 'platform.local_config' ) ) )
         {
             $_config = array();
             $_configPath = Platform::getLocalConfigPath();
@@ -421,7 +429,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            Pii::appStoreSet( 'platform.local_config', $_config );
+            $this->_appCache()->set( 'platform.local_config', $_config, Platform::DEFAULT_CACHE_TTL );
         }
 
         //  Merge config with our params...
@@ -492,15 +500,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addCorsHeaders( $whitelist = array(), $returnHeaders = false, $sendHeaders = true )
     {
-        static $_cache = array();
-        static $_cacheVerbs = array();
-
         //	Reset the cache before processing...
         if ( false === $whitelist )
         {
-            $_cache = array();
-            $_cacheVerbs = array();
-
+            $this->_appCache()->delete( 'dsp.cors_config' );
             $this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
 
             return true;
@@ -515,6 +518,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return $returnHeaders ? array() : false;
         }
 
+        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
+        {
+            $_cache = array();
+        }
+
         $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
 
         //  Bail if origin is 'file://', 'null', or empty.
@@ -525,13 +533,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         else
         {
             //  empty origin received we do nothing
-            if ( empty( $_origin ) || 'null' == $_origin )
+            if ( empty( $_origin ) )
             {
                 return $returnHeaders ? array() : false;
             }
         }
 
         $_isStar = false;
+        $_allowedMethods = $_headers = array();
         $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
@@ -549,7 +558,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_logCorsInfo && Log::debug( 'CORS: origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
 
         //	Not in cache, check it out...
-        if ( !in_array( $_key, $_cache ) )
+        if ( in_array( $_key, $_cache ) )
+        {
+            if ( null !== ( $_uri = IfSet::get( $_cache[$_key], 'origin_uri' ) ) )
+            {
+                $_originUri = $_uri;
+            }
+
+            $_allowedMethods = IfSet::get( $_cache[$_key], 'allowed_methods', array() );
+            $_headers = IfSet::get( $_cache[$_key], 'headers', array() );
+        }
+
+        if ( empty( $_originUri ) || empty( $_allowedMethods ) || empty( $_headers ) )
         {
             if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri, $_isStar ) ) )
             {
@@ -561,36 +581,30 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return Pii::end();
             }
 
-            $_cache[$_key] = $_originUri;
-            $_cacheVerbs[$_key] = $_allowedMethods;
-        }
-        else
-        {
-            $_originUri = trim( $_cache[$_key] );
-            $_allowedMethods = $_cacheVerbs[$_key];
-        }
+            $_headers = array(
+                'Access-Control-Allow-Credentials' => 'true',
+                'Access-Control-Allow-Headers'     => static::CORS_DEFAULT_ALLOWED_HEADERS,
+                'Access-Control-Allow-Methods'     => $_allowedMethods,
+                'Access-Control-Allow-Origin'      => $_isStar ? static::CORS_STAR : $_originUri,
+                'Access-Control-Max-Age'           => static::CORS_DEFAULT_MAX_AGE,
+            );
 
-        $_headers = array(
-            'Access-Control-Allow-Credentials' => 'true',
-            'Access-Control-Allow-Headers'     => static::CORS_DEFAULT_ALLOWED_HEADERS,
-            'Access-Control-Allow-Methods'     => $_allowedMethods,
-            'Access-Control-Allow-Origin'      => $_isStar ? static::CORS_STAR : $_originUri,
-            'Access-Control-Max-Age'           => static::CORS_DEFAULT_MAX_AGE,
-        );
-
-        if ( $this->_extendedHeaders )
-        {
-            $_headers['X-DreamFactory-Source'] = $_requestUri;
-            $_headers['X-DreamFactory-Origin-Whitelisted'] =
-                preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+            if ( $this->_extendedHeaders )
+            {
+                $_headers['X-DreamFactory-Source'] = $_requestUri;
+                $_headers['X-DreamFactory-Origin-Whitelisted'] =
+                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+            }
         }
 
         //	Store in cache...
-        $_cache[$_key] = $_originUri;
-        $_cacheVerbs[$_key] = array(
+        $_cache[$_key] = array(
+            'origin_uri'      => $_originUri,
             'allowed_methods' => $_allowedMethods,
             'headers'         => $_headers
         );
+
+        $this->_appCache()->set( 'dsp.cors_config', $_cache, Platform::DEFAULT_CACHE_TTL );
 
         if ( $returnHeaders )
         {
@@ -629,46 +643,49 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
-        foreach ( array_merge( $this->_corsWhitelist, Option::clean( $additional ) ) as $_hostInfo )
+        $_origins = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
+
+        //  Check out the origins
+        foreach ( $_origins as $_hostInfo )
         {
+            //  Get the verbs for this entry.
+            $_verbs = ( is_array( $_hostInfo ) ) ? IfSet::get( $_hostInfo, 'verbs', array() ) : array();
+
+            //  Always add OPTIONS
+            !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
+
+            //  Any "*" equals unfettered access, so check here and return quickly
+            if (
+                ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
+                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+            )
+            {
+                $isStar = true;
+
+                return implode( ', ', $_verbs );
+            }
+
             $_allowedMethods = static::CORS_DEFAULT_ALLOWED_METHODS;
 
             if ( is_array( $_hostInfo ) )
             {
                 //	If is_enabled prop not there, assuming enabled.
-                if ( !Scalar::boolval( Option::get( $_hostInfo, 'is_enabled', true ) ) )
+                if ( !IfSet::getBool( $_hostInfo, 'is_enabled', true ) )
                 {
                     continue;
                 }
 
-                if ( null === ( $_whiteGuy = Option::get( $_hostInfo, 'host' ) ) )
+                if ( null === ( $_whiteGuy = IfSet::get( $_hostInfo, 'host' ) ) )
                 {
                     Log::error( 'CORS: whitelist info does not contain a "host" parameter!' );
                     continue;
                 }
 
-                if ( isset( $_hostInfo['verbs'] ) )
-                {
-                    if ( false === array_search( static::CORS_OPTION_METHOD, $_hostInfo['verbs'] ) )
-                    {
-                        // add OPTION to allowed list
-                        $_hostInfo['verbs'][] = static::CORS_OPTION_METHOD;
-                    }
-
-                    $_allowedMethods = implode( ', ', $_hostInfo['verbs'] );
-                }
+                $_allowedMethods = implode( ', ', $_verbs );
             }
             else
             {
                 $_whiteGuy = $_hostInfo;
-            }
-
-            //	All allowed?
-            if ( static::CORS_STAR == $_whiteGuy )
-            {
-                $isStar = true;
-
-                return $_allowedMethods;
             }
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
@@ -739,13 +756,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return false;
         }
 
-        $_parts['scheme'] = Option::get(
+        $_parts['scheme'] = IfSet::get(
             $_parts,
             'scheme',
-            'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null )
+            'http' . ( IfSet::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null )
         );
 
-        $_parts['port'] = Option::get( $_parts, 'port' );
+        $_parts['port'] = IfSet::get( $_parts, 'port' );
 
         //  Set ports to defaults for scheme if empty
         if ( empty( $_parts['port'] ) )
@@ -789,9 +806,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_uri = array(
-            'scheme' => Option::get( $_parts, 'scheme' ),
-            'host'   => Option::get( $_parts, 'host' ),
-            'port'   => Option::get( $_parts, 'port' ),
+            'scheme' => IfSet::get( $_parts, 'scheme' ),
+            'host'   => IfSet::get( $_parts, 'host' ),
+            'port'   => IfSet::get( $_parts, 'port' ),
         );
 
         return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
@@ -829,9 +846,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
 
             //	Find cors config file location
@@ -851,13 +868,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return null;
             }
 
-            if ( false !== ( $_content = JsonFile::decodeFile( $_config ) ) && JSON_ERROR_NONE == json_last_error() && !empty( $_content ) )
+            try
             {
-                $_whitelist = $_content;
-                $this->_logCorsInfo && Log::debug( 'CORS: configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
+                $_whitelist = JsonFile::decodeFile( $_config );
+                $this->_logCorsInfo && Log::debug( 'CORS: configuration loaded: ' . print_r( $_whitelist, true ) );
             }
-            else
+            catch ( \Exception $_ex )
             {
+                $_whitelist = null;
                 Log::error( 'CORS: configuration file "' . $_config . '" is corrupt or unreadable. Cannot be used and ignoring' );
             }
         }
@@ -953,14 +971,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
-     * @return \Symfony\Component\HttpFoundation\Request
-     */
-    public function getRequestObject()
-    {
-        return $this->_requestObject = $this->_requestObject ?: Request::createFromGlobals();
-    }
-
-    /**
      * @param Request $requestObject
      *
      * @return $this
@@ -970,6 +980,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_requestObject = $requestObject;
 
         return $this;
+    }
+
+    /**
+     * @return \Symfony\Component\HttpFoundation\Request
+     */
+    public function getRequestObject()
+    {
+        return $this->_requestObject = $this->_requestObject ?: Request::createFromGlobals();
     }
 
     /**
@@ -1112,14 +1130,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
-     * @param EventDispatcher $dispatcher
-     */
-    public static function setDispatcher( $dispatcher )
-    {
-        static::$_dispatcher = $dispatcher;
-    }
-
-    /**
      * @return EventDispatcher
      */
     public static function getDispatcher()
@@ -1158,5 +1168,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function getRequestBody()
     {
         return $this->_requestBody;
+    }
+
+    /**
+     * @return \CDbCache
+     */
+    protected function _appCache()
+    {
+        if ( !$this->_cache )
+        {
+            //  Set up our cache...
+            $this->_cache = Pii::getAppStore();
+        }
+
+        return $this->_cache;
     }
 }
