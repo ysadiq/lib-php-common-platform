@@ -214,7 +214,7 @@ class Config extends BaseSystemRestResource
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),
                 'install_name'              => IfSet::get( $_params, 'dsp.install_name' ),
                 'is_hosted'                 => $_fabricHosted = IfSet::getBool( $_params, 'dsp.fabric_hosted' ),
-                'is_private'                => Fabric::hostedPrivatePlatform(),
+                'is_private'                => Fabric::isAllowedHost(),
                 //  DSP version info
                 'dsp_version'               => $_currentVersion = SystemManager::getCurrentVersion(),
                 'server_os'                 => strtolower( php_uname( 's' ) ),

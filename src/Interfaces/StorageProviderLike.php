@@ -46,13 +46,6 @@ interface StorageProviderLike
     public function getStorageId();
 
     /**
-     * Returns the owner's storage space structure
-     *
-     * @return array An associative array of the paths that define the layout of the storage directory
-     */
-    public function getStorageStructure();
-
-    /**
      * Returns the absolute storage path, sans trailing slash.
      *
      * @param string $append          What to append to the base
@@ -87,6 +80,7 @@ interface StorageProviderLike
      *                          there is a problem deriving the storage id.
      *
      * @return bool|string The instance's private storage key
+     * @deprecated in v1.8.2, to be removed eventually. Private storage is now always under storage path
      */
     public function getPrivateStorageKey( $legacyKey = null );
 }

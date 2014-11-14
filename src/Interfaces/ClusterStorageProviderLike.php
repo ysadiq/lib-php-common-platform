@@ -70,7 +70,7 @@ interface ClusterStorageProviderLike extends StorageProviderLike
     public function getPlatformConfigPath( $append = null, $createIfMissing = true, $includesFile = false );
 
     /**
-     * Constructs the virtual private path
+     * Constructs the private snapshot path
      *
      * @param string $append          What to append to the base
      * @param bool   $createIfMissing If true and final directory does not exist, it is created.
@@ -81,18 +81,19 @@ interface ClusterStorageProviderLike extends StorageProviderLike
     public function getSnapshotPath( $append = null, $createIfMissing = true, $includesFile = false );
 
     /**
-     * Constructs the virtual swagger path
+     * Constructs the swagger path
      *
      * @param string $append          What to append to the base
      * @param bool   $createIfMissing If true and final directory does not exist, it is created.
      * @param bool   $includesFile    If true, the $base includes a file and is not just a directory
      *
      * @return string
+     * @deprecated in v1.8.2, Swagger data is now stored in the database and not on disk
      */
     public function getSwaggerPath( $append = null, $createIfMissing = true, $includesFile = false );
 
     /**
-     * Constructs the virtual plugins path
+     * Constructs the plugins path
      *
      * @param string $append          What to append to the base
      * @param bool   $createIfMissing If true and final directory does not exist, it is created.
@@ -103,7 +104,7 @@ interface ClusterStorageProviderLike extends StorageProviderLike
     public function getPluginsPath( $append = null, $createIfMissing = true, $includesFile = false );
 
     /**
-     * Constructs the virtual private path
+     * Constructs the applications path
      *
      * @param string $append          What to append to the base
      * @param bool   $createIfMissing If true and final directory does not exist, it is created.

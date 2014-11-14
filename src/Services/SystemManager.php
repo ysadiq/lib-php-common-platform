@@ -618,7 +618,7 @@ SQL;
 
         if ( false === $_allowedHosts )
         {
-            $_store = Fabric::getStorage();
+            $_store = Fabric::getClusterStorage();
 
             $_locations = array(
                 0 => $_store->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
@@ -661,7 +661,7 @@ SQL;
     {
         static::validateHosts( $allowed_hosts );
 
-        $_path = Fabric::getStorage()->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+        $_path = Fabric::getClusterStorage()->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
 
         try
         {

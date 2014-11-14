@@ -25,9 +25,6 @@ use DreamFactory\Platform\Services\SystemManager;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Utility\FileSystem;
 
-ini_set( 'error_reporting', -1 );
-ini_set( 'display_errors', 1 );
-
 /**
  * DreamFactory Enterprise(tm) Hosted Storage Provider
  *
@@ -42,10 +39,25 @@ ini_set( 'display_errors', 1 );
  * Example paths:
  *
  * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/
+ * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/applications
+ * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/plugins
  * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/.private
+ * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/.private/config
  * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/.private/scripts
+ * /data/storage/ec2.us-east-1/33/33f58e59068f021c975a1cac49c7b6818de9df5831d89677201b9c3bd98ee1ed/.private/scripts.user
+ *
+ * This class also provides path mapping for non-hosted DSPs as well. The directory is located in the
+ * root installation path of the platform. The structure is as follows:
+ *
+ * /storage/
+ * /storage/applications
+ * /storage/plugins
+ * /storage/.private
+ * /storage/.private/config
+ * /storage/.private/scripts
+ * /storage/.private/scripts.user
  */
-class HostedStorage extends FabricStoragePaths implements ClusterStorageProviderLike
+class ClusterStorage extends FabricStoragePaths implements ClusterStorageProviderLike
 {
     //*************************************************************************
     //* Constants
@@ -77,10 +89,6 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
      */
     protected $_partition;
     /**
-     * @type array The hosted storage path structure, relative to the storage root
-     */
-    protected $_skeleton;
-    /**
      * @type Flexistore
      */
     protected $_cache;
@@ -106,32 +114,14 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
         if ( false === ( $this->_zone = $this->_findZone( static::DEBUG_ZONE_NAME ) ) )
         {
             //  Local installation
-            $_basePath = $this->_findBasePath();
-
-            return $this->_createStructure(
-                $_basePath,
-                $_basePath . DIRECTORY_SEPARATOR . static::STORAGE_PATH
-            );
+            $this->_mountPoint = $this->_findBasePath();
         }
 
         //  Hosted
-        return $this->_createStructure(
+        $this->_setStoragePaths(
             $this->_mountPoint,
-            $this->_mountPoint . static::STORAGE_PATH . DIRECTORY_SEPARATOR .
-            $this->_zone . DIRECTORY_SEPARATOR .
-            $this->_partition . DIRECTORY_SEPARATOR .
-            $this->_storageId
+            $this->_mountPoint . static::STORAGE_PATH . $this->getStorageKey( null, true )
         );
-    }
-
-    /**
-     * Returns the owner's storage space structure
-     *
-     * @return array An associative array of the paths that define the layout of the storage directory
-     */
-    public function getStorageStructure()
-    {
-        return $this->_skeleton;
     }
 
     /**
@@ -276,43 +266,39 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
 
     /**
      * @param string $legacyKey
+     * @param bool   $asPath If true, a leading directory separator is added to the return
      *
-     * @return bool|string The zone/partition/id that make up the new public storage key
+     * @return string The zone/partition/id that make up the new public storage key. Local installs return null
      */
-    public function getStorageKey( $legacyKey = null )
+    public function getStorageKey( $legacyKey = null, $asPath = false )
     {
         static $_storageKey = null;
 
-        if ( !$_storageKey )
+        if ( !$_storageKey && ( empty( $this->_zone ) || empty( $this->_partition ) || empty( $this->_storageId ) ) )
         {
-            if ( false === $this->_zone )
-            {
-                return false;
-            }
-
-            if ( empty( $this->_zone ) || empty( $this->_partition ) || empty( $this->_storageId ) )
-            {
-                return $_storageKey = $legacyKey;
-            }
+            return $legacyKey;
         }
 
         return
-            $_storageKey =
-                $_storageKey ?: $this->_zone . DIRECTORY_SEPARATOR . $this->_partition . DIRECTORY_SEPARATOR . $this->_storageId;
+            $_storageKey = $_storageKey
+                ?: ( $asPath ? DIRECTORY_SEPARATOR : null ) . $this->_zone .
+                DIRECTORY_SEPARATOR . $this->_partition .
+                DIRECTORY_SEPARATOR . $this->_storageId;
     }
 
     /**
      * @param string $legacyKey
+     * @param bool   $asPath If true, a leading directory separator is added to the return
      *
      * @return bool|string The zone/partition/id/tag that make up the new private storage key
      */
-    public function getPrivateStorageKey( $legacyKey = null )
+    public function getPrivateStorageKey( $legacyKey = null, $asPath = false )
     {
         static $_privateKey = null;
 
         return
             $_privateKey =
-                $_privateKey ?: $this->getStorageKey( $legacyKey ) . static::PRIVATE_STORAGE_PATH;
+                $_privateKey ?: $this->getStorageKey( $legacyKey, $asPath ) . static::PRIVATE_STORAGE_PATH;
     }
 
     /** @inheritdoc */
@@ -359,45 +345,35 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
      * Give a storage path, set up the default sub paths...
      *
      * @param string $mountPoint
-     * @param string $storagePath
      *
      * @return array
      */
-    protected function _createStructure( $mountPoint = null, $storagePath = null )
+    protected function _setStoragePaths( $mountPoint )
     {
-        $this->_mountPoint = $mountPoint ?: $this->_mountPoint;
-        $_storagePath = $storagePath ?: $this->_mountPoint . static::STORAGE_PATH;
-        $_privatePath = $_storagePath . static::PRIVATE_STORAGE_PATH;
+        $this->_mountPoint = $mountPoint;
+
+        $_storagePath = $this->_mountPoint . static::STORAGE_PATH . $this->getStorageKey( null, true );
+        $_privatePath = $_storagePath . $this->getPrivateStorageKey( null, true );
 
         $this->_paths = array(
             LocalStorageTypes::STORAGE_ROOT         => $this->_mountPoint,
             LocalStorageTypes::STORAGE_PATH         => $_storagePath,
             LocalStorageTypes::PRIVATE_STORAGE_PATH => $_privatePath,
+            LocalStorageTypes::APPLICATIONS_PATH    => $_storagePath . static::APPLICATIONS_PATH,
+            LocalStorageTypes::PLUGINS_PATH         => $_storagePath . static::PLUGINS_PATH,
+            LocalStorageTypes::LOCAL_CONFIG_PATH    => $_privatePath . static::CONFIG_PATH,
+            LocalStorageTypes::SCRIPTS_PATH         => $_privatePath . static::SCRIPTS_PATH,
+            LocalStorageTypes::USER_SCRIPTS_PATH    => $_privatePath . static::USER_SCRIPTS_PATH,
+            LocalStorageTypes::SWAGGER_PATH         => $_privatePath . static::CONFIG_PATH . static::SWAGGER_PATH,
         );
 
-        $this->_skeleton = array(
-            $_storagePath => array(
-                LocalStorageTypes::APPLICATIONS_PATH => static::APPLICATIONS_PATH,
-                LocalStorageTypes::PLUGINS_PATH      => static::PLUGINS_PATH,
-            ),
-            $_privatePath => array(
-                LocalStorageTypes::LOCAL_CONFIG_PATH => static::CONFIG_PATH,
-                LocalStorageTypes::SCRIPTS_PATH      => static::SCRIPTS_PATH,
-                LocalStorageTypes::USER_SCRIPTS_PATH => static::USER_SCRIPTS_PATH,
-            )
-        );
-
-        //  Ensures the directories in the skeleton are created and available. Only template items that are arrays are processed.
-        foreach ( $this->_skeleton as $_basePath => $_paths )
+        // Ensures the directories in the structure are created and available.
+        // Only template items that are arrays are processed.
+        foreach ( $this->_paths as $_id => $_path )
         {
-            foreach ( $_paths as $_key => $_path )
+            if ( !FileSystem::ensurePath( $_path ) )
             {
-                if ( !FileSystem::ensurePath( $_basePath . $_path ) )
-                {
-                    throw new FileSystemException( 'Unable to create storage path "' . $_basePath . $_path . '"' );
-                }
-
-                $this->_paths[$_key] = $_path;
+                throw new FileSystemException( 'Unable to create storage path "' . $_path . '"' );
             }
         }
 
@@ -485,7 +461,7 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
      */
     public function __wakeup()
     {
-        $this->_cache = Flexistore::createFileStore( null, null, static::CACHE_KEY );
+        $this->_cache = Flexistore::createFileStore( null, null, '.dreamfactory' . DIRECTORY_SEPARATOR . sha1( static::CACHE_KEY ) );
 
         if ( false !== ( $_cached = $this->_cache->get( $this->_storageId ) ) )
         {
@@ -494,9 +470,8 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
                 $this->_mountPoint = IfSet::get( $_cached, 'mount_point', static::STORAGE_MOUNT_POINT );
                 $this->_zone = IfSet::get( $_cached, 'zone' );
                 $this->_partition = IfSet::get( $_cached, 'partition' );
-                $this->_paths = IfSet::get( $_cached, 'paths' );
 
-                $this->_createStructure( $this->_mountPoint, $this->_paths[LocalStorageTypes::STORAGE_PATH] );
+                $this->_setStoragePaths( $this->_mountPoint, $this->_paths[LocalStorageTypes::STORAGE_PATH] );
             }
         }
     }
@@ -528,10 +503,42 @@ class HostedStorage extends FabricStoragePaths implements ClusterStorageProvider
                     'mount_point' => $this->_mountPoint,
                     'zone'        => $this->_zone,
                     'partition'   => $this->_partition,
-                    'paths'       => $this->_paths,
                 )
             );
         }
+    }
+
+    /**
+     * @param string $which The path to get. Use the LocalStorageTypes constants please.
+     *
+     * @return string Returns the path for $which or null if not yet set
+     */
+    public function getPath( $which )
+    {
+        if ( !LocalStorageTypes::contains( $which ) )
+        {
+            throw new \InvalidArgumentException( 'The path type "' . $which . '" is invalid.' );
+        }
+
+        return IfSet::get( $this->_paths, $which );
+    }
+
+    /**
+     * @param string $which The path to set. Use the LocalStorageTypes constants please.
+     * @param string $path
+     *
+     * @return $this
+     */
+    public function setPath( $which, $path )
+    {
+        if ( !LocalStorageTypes::contains( $which ) )
+        {
+            throw new \InvalidArgumentException( 'The path type "' . $which . '" is invalid.' );
+        }
+
+        $this->_paths[$which] = $path;
+
+        return $this;
     }
 
 }

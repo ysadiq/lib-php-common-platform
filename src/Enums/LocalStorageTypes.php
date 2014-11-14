@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Enums;
 
-use Kisma\Core\Enums\SeedEnum;
-
 /**
  * Constants that correspond with the keys in the app config
  */
@@ -30,6 +28,10 @@ class LocalStorageTypes extends LocalStoragePaths
     //* Constants
     //*************************************************************************
 
+    /**
+     * @type string Installation path of the system
+     */
+    const PLATFORM_ROOT = 'platform_root';
     /**
      * @type string
      */

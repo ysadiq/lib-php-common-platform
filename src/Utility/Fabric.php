@@ -21,14 +21,12 @@ use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStoragePaths;
+use DreamFactory\Platform\Interfaces\ClusterStorageProviderLike;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Curl;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
@@ -106,13 +104,13 @@ class Fabric
      */
     const EXPIRATION_THRESHOLD = 30;
     /**
-     * @var string Public storage cookie
+     * @var string Public storage cookie key
      */
-    const PUBLIC_STORAGE_COOKIE = 'dsp.blob';
+    const PUBLIC_STORAGE_COOKIE = 'dsp.storage_key';
     /**
-     * @var string Private storage cookie
+     * @var string Private storage cookie key
      */
-    const PRIVATE_STORAGE_COOKIE = 'dsp.private';
+    const PRIVATE_STORAGE_COOKIE = 'dsp.private_storage_id';
 
     //******************************************************************************
     //* Members
@@ -123,13 +121,17 @@ class Fabric
      */
     protected static $_request = null;
     /**
-     * @type HostedStorage
+     * @type ClusterStorageProviderLike
      */
-    protected static $_storage = null;
+    protected static $_clusterStorage = null;
     /**
      * @type string The instance host name
      */
     protected static $_hostname = null;
+    /**
+     * @type callable Callback to get the list of allowed hosts at runtime
+     */
+    protected static $_allowedHostsCallback = null;
 
     //*************************************************************************
     //* Methods
@@ -149,15 +151,17 @@ class Fabric
 
         if ( !$_config )
         {
+            static::$_hostname = static::getHostname();
+
             //  Initialize the storage system
-            static::$_storage = new HostedStorage();
-            static::$_storage->initialize(
-                static::$_hostname = static::getRequest()->getHttpHost(),
-                LocalStoragePaths::STORAGE_MOUNT_POINT
-            );
+            if ( empty( static::$_clusterStorage ) )
+            {
+                static::$_clusterStorage = new ClusterStorage();
+                static::$_clusterStorage->initialize( static::$_hostname, LocalStoragePaths::STORAGE_MOUNT_POINT );
+            }
 
             //	If this isn't a hosted instance, bail
-            if ( !static::hostedPrivatePlatform() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
+            if ( !static::isAllowedHost() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
             {
                 throw new \CHttpException(
                     Response::HTTP_FORBIDDEN,
@@ -206,7 +210,7 @@ class Fabric
      *
      * @return bool
      */
-    public static function hostedPrivatePlatform( $returnHost = false )
+    public static function isAllowedHost( $returnHost = false )
     {
         /**
          * Add host names to this list to white-list...
@@ -217,9 +221,19 @@ class Fabric
             'next.cloud.dreamfactory.com',
         );
 
-        $_host = static::$_hostname;
+        if ( is_callable( static::$_allowedHostsCallback ) )
+        {
+            $_result = call_user_func( static::$_allowedHostsCallback );
 
-        return in_array( $_host, $_allowedHosts ) ? ( $returnHost ? $_host : true ) : false;
+            if ( !is_array( $_result ) )
+            {
+                throw new \LogicException( 'The $allowedHostsCallback must return an array.' );
+            }
+
+            $_allowedHosts = array_merge( $_allowedHosts, array_values( $_result ) );
+        }
+
+        return in_array( static::$_hostname, $_allowedHosts ) ? ( $returnHost ? static::$_hostname : true ) : false;
     }
 
     /**
@@ -232,7 +246,7 @@ class Fabric
      */
     public static function getProviderCredentials( $id = null, $force = false )
     {
-        if ( !$force && !static::fabricHosted() && !static::hostedPrivatePlatform() )
+        if ( !$force && !static::fabricHosted() && !static::isAllowedHost() )
         {
             Log::info( 'Global provider credential pull skipped: not hosted entity.' );
 
@@ -377,7 +391,7 @@ class Fabric
     protected static function _readDbConfig( $instanceName )
     {
         $_fileName =
-            static::$_storage->getLocalConfigPath() .
+            static::$_clusterStorage->getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceName) );
 
         if ( !file_exists( $_fileName ) )
@@ -397,7 +411,7 @@ class Fabric
     protected static function _writeDbConfig( $instanceDetails, $includeAfter = true )
     {
         $_fileName =
-            static::$_storage->getLocalConfigPath() .
+            static::$_clusterStorage->getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
 
         if ( file_exists( $_fileName ) )
@@ -437,10 +451,10 @@ PHP;
             'dsp.credentials'                     => $instanceDetails,
             'dsp.db_name'                         => $instanceDetails->db_name,
             'platform.dsp_name'                   => $instanceDetails->instance->instance_name_text,
-            'platform.private_path'               => static::$_storage->getPrivatePath(),
-            'platform.storage_key'                => static::$_storage->getStorageKey( $instanceDetails->storage_key ),
+            'platform.private_path'               => static::$_clusterStorage->getPrivatePath(),
+            'platform.storage_key'                => static::$_clusterStorage->getStorageKey( $instanceDetails->storage_key ),
             'platform.legacy_storage_key'         => $instanceDetails->storage_key,
-            'platform.private_storage_key'        => static::$_storage->getPrivateStorageKey( $instanceDetails->private_storage_key ),
+            'platform.private_storage_key'        => static::$_clusterStorage->getPrivateStorageKey( $instanceDetails->private_storage_key ),
             'platform.legacy_private_storage_key' => $instanceDetails->private_storage_key,
             'platform.db_config_file'             => $_fileName,
             'platform.db_config_file_name'        => basename( $_fileName ),
@@ -461,7 +475,7 @@ PHP;
     protected static function _readInstanceConfig( $instanceName )
     {
         $_fileName =
-            static::$_storage->getLocalConfigPath() .
+            static::$_clusterStorage->getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceName)
@@ -483,7 +497,7 @@ PHP;
     protected static function _writeInstanceConfig( $instanceDetails )
     {
         $_fileName =
-            static::$_storage->getLocalConfigPath() .
+            static::$_clusterStorage->getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceDetails->instance->instance_name_text)
@@ -559,11 +573,18 @@ PHP;
     }
 
     /**
-     * @return HostedStorage
+     * @return ClusterStorageProviderLike
      */
-    public static function getStorage()
+    public static function getClusterStorage()
     {
-        return static::$_storage;
+        return static::$_clusterStorage;
     }
 
+    /**
+     * @return string The hostname of the DSP servicing  this request
+     */
+    public static function getHostname()
+    {
+        return static::getRequest()->getHttpHost();
+    }
 }
