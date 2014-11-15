@@ -20,6 +20,10 @@
         {
             "type": "pear",
             "url": "http://pear.php.net"
+        },
+        {
+            "type": "git",
+            "url": "git@github.com:dreamfactorysoftware/enterprise-storage.git"
         }
     ],
     "minimum-stability": "dev",
@@ -39,6 +43,7 @@
         "pear-pear.php.net/Mail_mimeDecode": "*",
         "dreamfactory/javascript-sdk": "~1.0",
         "dreamfactory/php-utils": "~1.0",
+        "dreamfactory/enterprise-storage": "dev-develop as dev-master",
         "dreamfactory/yii": "~1.1.13.12",
         "dreamfactory/lib-php-common": "~1.5.0",
         "dreamfactory/lib-php-common-yii": "~1.5.0",
