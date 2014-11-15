@@ -1,4 +1,4 @@
-## DreamFactory Services Platform&trade; SDK For PHP v1.8.5
+## DreamFactory Services Platform&trade; SDK For PHP v1.8.6
 [![Latest Stable Version](https://poser.pugx.org/dreamfactory/lib-php-common-platform/v/stable.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![Total Downloads](https://poser.pugx.org/dreamfactory/lib-php-common-platform/downloads.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![Latest Unstable Version](https://poser.pugx.org/dreamfactory/lib-php-common-platform/v/unstable.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform) [![License](https://poser.pugx.org/dreamfactory/lib-php-common-platform/license.svg)](https://packagist.org/packages/dreamfactory/lib-php-common-platform)
 
 This library contains common components for interacting with the DreamFactory Services Platform&trade;.
