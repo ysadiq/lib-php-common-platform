@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\Includer;
@@ -43,7 +44,6 @@ use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -66,7 +66,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var string The HTTP Option method
      */
-    const CORS_OPTION_METHOD = Request::METHOD_OPTIONS;
+    const CORS_OPTION_METHOD = Verbs::OPTIONS;
     /**
      * @var string The allowed HTTP methods
      */
