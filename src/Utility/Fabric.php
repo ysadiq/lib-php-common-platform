@@ -18,6 +18,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Library\Utility\Exceptions\FileException;
 use DreamFactory\Library\Utility\Includer;
+use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStoragePaths;
@@ -123,7 +124,19 @@ class Fabric
     /**
      * @type ClusterStorageProviderLike
      */
+<<<<<<< HEAD
     protected static $_clusterStorage = null;
+=======
+    public static function fabricHosted()
+    {
+        static $_fabricHosted = null;
+
+        return
+            $_fabricHosted
+                ?: $_fabricHosted = static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) && file_exists( static::FABRIC_MARKER );
+    }
+
+>>>>>>> develop
     /**
      * @type string The instance host name
      */
