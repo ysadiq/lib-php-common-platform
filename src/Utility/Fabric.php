@@ -18,7 +18,6 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Library\Utility\Exceptions\FileException;
 use DreamFactory\Library\Utility\Includer;
-use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStoragePaths;
@@ -124,19 +123,7 @@ class Fabric
     /**
      * @type ClusterStorageProviderLike
      */
-<<<<<<< HEAD
     protected static $_clusterStorage = null;
-=======
-    public static function fabricHosted()
-    {
-        static $_fabricHosted = null;
-
-        return
-            $_fabricHosted
-                ?: $_fabricHosted = static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) && file_exists( static::FABRIC_MARKER );
-    }
-
->>>>>>> develop
     /**
      * @type string The instance host name
      */
@@ -202,18 +189,26 @@ class Fabric
     }
 
     /**
-     * @return bool True if this DSP is fabric-hosted (i.e. marker exists and doc root matches)
+     * @return bool True if this DSP is a hosted instance. Method kept for backwards-compatibility
      */
     public static function fabricHosted()
     {
-        static $_fabricHosted = null;
+        return static::hostedInstance();
+    }
 
-        if ( null !== $_fabricHosted )
+    /**
+     * @return bool True if this DSP is fabric-hosted (i.e. marker exists and doc root matches)
+     */
+    public static function hostedInstance()
+    {
+        static $_hostedInstance = null;
+
+        if ( null !== $_hostedInstance )
         {
-            return $_fabricHosted;
+            return $_hostedInstance;
         }
 
-        return $_fabricHosted =
+        return $_hostedInstance =
             ( static::DEFAULT_DOC_ROOT == static::getRequest()->server->get( 'document-root' ) && file_exists( static::FABRIC_MARKER ) );
     }
 

@@ -44,6 +44,8 @@ use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -53,7 +55,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @property callable onEndRequest
  * @property callable onBeginRequest
  */
-class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike
+class PlatformWebApplication extends \CWebApplication implements ContainerAwareInterface, PublisherLike, SubscriberLike
 {
     //*************************************************************************
     //	Constants
@@ -172,6 +174,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
+    /**
+     * @type ContainerInterface
+     */
+    protected $_container = null;
     /**
      * @type \CDbCache
      */
@@ -1182,5 +1188,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         return $this->_cache;
+    }
+
+    /**
+     * Sets the Container.
+     *
+     * @param ContainerInterface|null $container A ContainerInterface instance or null
+     *
+     * @return $this
+     */
+    public function setContainer( ContainerInterface $container = null )
+    {
+        $this->_container = $container;
+
+        return $this;
     }
 }
