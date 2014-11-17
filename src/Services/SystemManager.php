@@ -641,14 +641,7 @@ SQL;
         static::validateHosts( $allowed_hosts );
 
         $allowed_hosts = DataFormatter::jsonEncode( $allowed_hosts, true );
-        $_path = Pii::getParam( 'storage_base_path' );
-        $_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
-
-        //	Create directory if it doesn't exists
-        if ( !is_dir( $_path ) )
-        {
-            @\mkdir( $_path, 0777, true );
-        }
+        $_config = Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
 
         //	Write new cors config
         if ( false === file_put_contents( $_config, $allowed_hosts ) )

@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
-use DreamFactory\Library\Utility\Exception\FileSystemException;
+use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
