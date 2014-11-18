@@ -86,7 +86,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     /**
      * @var string The private CORS configuration file
      */
-    const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+    const CORS_DEFAULT_CONFIG_FILE = 'cors.config.json';
     /**
      * @var string The session key for CORS configs
      */
@@ -106,7 +106,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     /**
      * @var string The pattern of for local configuration files
      */
-    const DEFAULT_LOCAL_CONFIG_PATTERN = '/*.config.php';
+    const DEFAULT_LOCAL_CONFIG_PATTERN = '*.config.php';
     /**
      * @var string The default path (sub-path) of installed plug-ins
      */
@@ -649,10 +649,10 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
-        $_origins = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
+        $_allowedHosts = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
 
         //  Check out the origins
-        foreach ( $_origins as $_hostInfo )
+        foreach ( $_allowedHosts as $_hostInfo )
         {
             //  Get the verbs for this entry.
             $_verbs = ( is_array( $_hostInfo ) ) ? IfSet::get( $_hostInfo, 'verbs', array() ) : array();
@@ -852,7 +852,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
@@ -898,7 +898,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     public function setCorsWhitelist( $corsWhitelist )
     {
-        $this->_corsWhitelist = $corsWhitelist;
+        $this->_corsWhitelist = is_array( $corsWhitelist ) ? $corsWhitelist : array($corsWhitelist);
 
         //	Reset the header cache
         $this->addCorsHeaders( false );

@@ -16,12 +16,13 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Library\Enterprise\Storage\Interfaces\PlatformStructureResolverLike;
+use DreamFactory\Library\Enterprise\Storage\Provider;
 use DreamFactory\Library\Utility\Exceptions\FileException;
 use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
-use DreamFactory\Platform\Enums\LocalStoragePaths;
-use DreamFactory\Platform\Interfaces\ClusterStorageProviderLike;
+use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
@@ -31,6 +32,9 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+
+ini_set( 'display_errors', 1 );
+ini_set( 'error_reporting', -1 );
 
 //********************************************************************************
 //* Check for maintenance mode...
@@ -90,6 +94,10 @@ class Fabric
     /**
      * @var string
      */
+    const DEFAULT_DEV_DOC_ROOT = '/opt/dreamfactory/dsp/dsp-core/web';
+    /**
+     * @var string
+     */
     const MAINTENANCE_MARKER = '/var/www/.fabric_maintenance';
     /**
      * @var string
@@ -121,9 +129,9 @@ class Fabric
      */
     protected static $_request = null;
     /**
-     * @type ClusterStorageProviderLike
+     * @type PlatformStructureResolverLike
      */
-    protected static $_clusterStorage = null;
+    protected static $_storageResolver = null;
     /**
      * @type string The instance host name
      */
@@ -154,10 +162,10 @@ class Fabric
             static::$_hostname = static::getHostname();
 
             //  Initialize the storage system
-            if ( empty( static::$_clusterStorage ) )
+            if ( empty( static::$_storageResolver ) )
             {
-                static::$_clusterStorage = new ClusterStorage();
-                static::$_clusterStorage->initialize( static::$_hostname, LocalStoragePaths::STORAGE_MOUNT_POINT );
+                static::$_storageResolver = new Provider();
+                static::$_storageResolver->initialize( static::$_hostname, LocalStorageTypes::STORAGE_MOUNT_POINT );
             }
 
             //	If this isn't a hosted instance, bail
@@ -202,14 +210,11 @@ class Fabric
     public static function hostedInstance()
     {
         static $_hostedInstance = null;
+        static $_validRoots = array(self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT);
 
-        if ( null !== $_hostedInstance )
-        {
-            return $_hostedInstance;
-        }
-
-        return $_hostedInstance =
-            ( static::DEFAULT_DOC_ROOT == static::getRequest()->server->get( 'document-root' ) && file_exists( static::FABRIC_MARKER ) );
+        return $_hostedInstance = $_hostedInstance
+            ?:
+            ( in_array( static::getRequest()->server->get( 'document-root' ), $_validRoots ) && file_exists( static::FABRIC_MARKER ) );
     }
 
     /**
@@ -313,9 +318,7 @@ class Fabric
      */
     protected static function _getInstanceConfig( $instanceName )
     {
-        $_config = null;
         $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $instanceName );
-
         $_instanceDetails = static::_readInstanceConfig( $_dspName );
         $_config = static::_readDbConfig( $_dspName );
 
@@ -399,7 +402,7 @@ class Fabric
     protected static function _readDbConfig( $instanceName )
     {
         $_fileName =
-            static::$_clusterStorage->getLocalConfigPath() .
+            static::$_storageResolver->getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceName) );
 
         if ( !file_exists( $_fileName ) )
@@ -419,7 +422,7 @@ class Fabric
     protected static function _writeDbConfig( $instanceDetails, $includeAfter = true )
     {
         $_fileName =
-            static::$_clusterStorage->getLocalConfigPath() .
+            static::$_storageResolver->getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
 
         if ( file_exists( $_fileName ) )
@@ -459,10 +462,10 @@ PHP;
             'dsp.credentials'                     => $instanceDetails,
             'dsp.db_name'                         => $instanceDetails->db_name,
             'platform.dsp_name'                   => $instanceDetails->instance->instance_name_text,
-            'platform.private_path'               => static::$_clusterStorage->getPrivatePath(),
-            'platform.storage_key'                => static::$_clusterStorage->getStorageKey( $instanceDetails->storage_key ),
+            'platform.private_path'               => static::$_storageResolver->getPrivatePath(),
+            'platform.storage_key'                => static::$_storageResolver->getStorageKey( $instanceDetails->storage_key ),
             'platform.legacy_storage_key'         => $instanceDetails->storage_key,
-            'platform.private_storage_key'        => static::$_clusterStorage->getPrivateStorageKey( $instanceDetails->private_storage_key ),
+            'platform.private_storage_key'        => static::$_storageResolver->getPrivateStorageKey( $instanceDetails->private_storage_key ),
             'platform.legacy_private_storage_key' => $instanceDetails->private_storage_key,
             'platform.db_config_file'             => $_fileName,
             'platform.db_config_file_name'        => basename( $_fileName ),
@@ -483,7 +486,7 @@ PHP;
     protected static function _readInstanceConfig( $instanceName )
     {
         $_fileName =
-            static::$_clusterStorage->getLocalConfigPath() .
+            static::$_storageResolver->getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceName)
@@ -505,7 +508,7 @@ PHP;
     protected static function _writeInstanceConfig( $instanceDetails )
     {
         $_fileName =
-            static::$_clusterStorage->getLocalConfigPath() .
+            static::$_storageResolver->getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceDetails->instance->instance_name_text)
@@ -581,11 +584,11 @@ PHP;
     }
 
     /**
-     * @return ClusterStorageProviderLike
+     * @return PlatformStructureResolverLike
      */
-    public static function getClusterStorage()
+    public static function getStorageResolver()
     {
-        return static::$_clusterStorage;
+        return static::$_storageResolver;
     }
 
     /**

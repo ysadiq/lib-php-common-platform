@@ -72,7 +72,11 @@ class LocalStorageTypes extends LocalStoragePaths
      * @type string
      */
     const TEMPLATE_PATH = 'template_path';
-    /**
+	/**
+	 * @type string The relative path to any user-specified configuration files
+	 */
+	const PRIVATE_CONFIG_PATH = 'private_config_path';
+	/**
      * @type string The relative path to any user-specified configuration files
      */
     const LOCAL_CONFIG_PATH = 'local_config_path';

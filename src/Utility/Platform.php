@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
+use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
@@ -60,9 +61,9 @@ class Platform
      */
     const MEMCACHE_PORT = 11211;
     /**
-     * @type int The default cache ttl, 5m = 3000ms
+     * @type int The default cache ttl, 5m = 300s
      */
-    const DEFAULT_CACHE_TTL = 3000;
+    const DEFAULT_CACHE_TTL = 300;
     /**
      * @type string The default date() format (YYYY-MM-DD HH:MM:SS)
      */
@@ -126,7 +127,7 @@ class Platform
         //	Make a cache tag that includes the requested path...
         $_cacheKey = $type . $_appendage;
 
-        if ( null === ( $_path = Option::get( $_cache, $_cacheKey ) ) )
+        if ( null === ( $_path = IfSet::get( $_cache, $_cacheKey ) ) )
         {
             $_path = Pii::getParam( $type );
 
@@ -155,10 +156,29 @@ class Platform
             $_path .= $_appendage;
 
             //	Store path for next time...
-            Option::set( $_cache, $_cacheKey, $_path );
+            $_cache[$_cacheKey] = $_path;
         }
 
         return $_path;
+    }
+
+    /**
+     * Constructs the virtual storage path
+     *
+     * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
+     *
+     * @return string
+     */
+    public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
+    {
+        return static::_getPlatformPath(
+            LocalStorageTypes::STORAGE_BASE_PATH,
+            $append,
+            $createIfMissing,
+            $includesFile
+        );
     }
 
     /**
@@ -201,7 +221,22 @@ class Platform
      */
     public static function getLocalConfigPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::LOCAL_CONFIG_PATH, $append, $createIfMissing, $includesFile );
+        return static::getPrivateConfigPath( $append, $createIfMissing, $includesFile );
+    }
+
+    /**
+     * Returns the platform's private configuration path, not the platform's config path in the root
+     *
+     * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
+     *
+     * @throws FileSystemException
+     * @return string
+     */
+    public static function getPrivateConfigPath( $append = null, $createIfMissing = true, $includesFile = false )
+    {
+        return static::_getPlatformPath( LocalStorageTypes::PRIVATE_CONFIG_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**

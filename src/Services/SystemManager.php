@@ -614,41 +614,33 @@ SQL;
      */
     public static function getAllowedHosts()
     {
-        static $_allowedHosts = false;
-
-        if ( false === $_allowedHosts )
+        static $_allowedHosts = null;
+        
+        if ( $_allowedHosts )
         {
-            $_store = Fabric::getClusterStorage();
-
-            $_locations = array(
-                0 => $_store->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                1 => $_store->getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                2 => $_store->getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-            );
-
-            foreach ( $_locations as $_index => $_location )
-            {
-                try
-                {
-                    $_allowedHosts = JsonFile::decodeFile( $_location );
-
-                    //  If we found this config file in a place other than the private config,
-                    //  delete it and write out one to the private config (index #0)
-                    if ( $_index != 0 )
-                    {
-                        JsonFile::encodeFile( $_locations[0], $_allowedHosts );
-                        unlink( $_location );
-                    }
-
-                    return $_allowedHosts;
-                }
-                catch ( \Exception $_ex )
-                {
-                    //  Not there or bogus...
-                }
-            }
+            return $_allowedHosts;
+        }
+        
+        if ( false === ( $_config = static::_locateCorsConfig() ) )
+        {
+            return array();
         }
 
+        try
+        {
+            $_allowedHosts = JsonFile::decodeFile( $_config );
+
+            //  Taint no good.
+            if ( !is_array( $_allowedHosts ) || empty( $_allowedHosts ) )
+            {
+                return array();
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            return array();
+        }
+        
         return $_allowedHosts;
     }
 
@@ -661,16 +653,8 @@ SQL;
     {
         static::validateHosts( $allowed_hosts );
 
-        $_path = Fabric::getClusterStorage()->getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
-
-        try
-        {
-            JsonFile::encodeFile( $_path, $allowed_hosts );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new PlatformServiceException( 'Failed to update CORS configuration.' );
-        }
+        $_config = Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+        JsonFile::encodeFile( $_config, $allowed_hosts );
     }
 
     /**
