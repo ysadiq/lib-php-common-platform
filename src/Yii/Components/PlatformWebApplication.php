@@ -649,10 +649,21 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         foreach ( $_allowedHosts as $_hostInfo )
         {
             //  Get the verbs for this entry.
-            $_verbs = ( is_array( $_hostInfo ) ) ? IfSet::get( $_hostInfo, 'verbs', array() ) : array();
+            $_verbs =
+                is_array( $_hostInfo )
+                    ? IfSet::get( $_hostInfo, 'verbs', array() )
+                    : array();
 
             //  Always add OPTIONS
             !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
+
+            //  If we don't have enabled array, or a string, skip
+            if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
+                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+            )
+            {
+                continue;
+            }
 
             //  Any "*" equals unfettered access, so check here and return quickly
             if (
@@ -665,27 +676,23 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return implode( ', ', $_verbs );
             }
 
-            $_allowedMethods = static::CORS_DEFAULT_ALLOWED_METHODS;
+            $_allowedMethods = $_whiteGuy = null;
 
             if ( is_array( $_hostInfo ) )
             {
                 //	If is_enabled prop not there, assuming enabled.
-                if ( !IfSet::getBool( $_hostInfo, 'is_enabled', true ) )
-                {
-                    continue;
-                }
-
                 if ( null === ( $_whiteGuy = IfSet::get( $_hostInfo, 'host' ) ) )
                 {
                     Log::error( 'CORS: whitelist info does not contain a "host" parameter!' );
                     continue;
                 }
 
-                $_allowedMethods = implode( ', ', $_verbs );
+                $_allowedMethods = implode( ', ', IfSet::get( $_hostInfo, 'verbs', array(static::CORS_OPTION_METHOD) ) );
             }
-            else
+            elseif ( is_string( $_hostInfo ) )
             {
                 $_whiteGuy = $_hostInfo;
+                $_allowedMethods = static::CORS_DEFAULT_ALLOWED_METHODS;
             }
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
