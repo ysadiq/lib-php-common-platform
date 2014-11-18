@@ -139,14 +139,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     protected $_requestBody;
     /**
-     * @var  Response
-     */
-    protected $_responseObject;
-    /**
-     * @var bool If true, headers will be added to the response object instance of this run
-     */
-    protected $_useResponseObject = false;
-    /**
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
@@ -469,34 +461,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
-     * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
-     * @param bool $sendHeaders
-     *
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
-    {
-        if ( null === $this->_responseObject && $createIfNull )
-        {
-            $this->_responseObject = Response::create();
-        }
-
-        return $this->_responseObject;
-    }
-
-    /**
-     * @param \Symfony\Component\HttpFoundation\Response $responseObject
-     *
-     * @return PlatformWebApplication
-     */
-    public function setResponseObject( $responseObject )
-    {
-        $this->_responseObject = $responseObject;
-
-        return $this;
-    }
-
     /**
      * @param \Symfony\Component\HttpFoundation\Request $requestObject
      *
@@ -675,33 +639,5 @@ class PlatformConsoleApplication extends \CConsoleApplication
         }
 
         return static::$_dispatcher;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getUseResponseObject()
-    {
-        return $this->_useResponseObject;
-    }
-
-    /**
-     * @param boolean $useResponseObject
-     *
-     * @return PlatformWebApplication
-     */
-    public function setUseResponseObject( $useResponseObject )
-    {
-        $this->_useResponseObject = $useResponseObject;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRequestBody()
-    {
-        return $this->_requestBody;
     }
 }

@@ -32,7 +32,6 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -45,7 +44,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
@@ -70,7 +68,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var string The allowed HTTP methods
      */
-    const CORS_DEFAULT_ALLOWED_METHODS = 'GET, POST, PUT, DELETE, PATCH, MERGE, COPY, OPTIONS';
+    const CORS_DEFAULT_ALLOWED_METHODS = 'GET,POST,PUT,DELETE,PATCH,MERGE,COPY,OPTIONS';
     /**
      * @var string The allowed HTTP headers
      * Tunnelling verb overrides: X-HTTP-Method (Microsoft), X-HTTP-Method-Override (Google/GData), X-METHOD-OVERRIDE
@@ -153,22 +151,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected $_modelNamespaces = array();
     /**
-     * @var Request
-     */
-    protected $_requestObject;
-    /**
-     * @var array Normalized array of inbound request body
-     */
-    protected $_requestBody;
-    /**
-     * @var  Response
-     */
-    protected $_responseObject;
-    /**
-     * @var bool If true, headers will be added to the response object instance of this run
-     */
-    protected $_useResponseObject = false;
-    /**
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
@@ -176,6 +158,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @type \CDbCache
      */
     protected $_cache = null;
+    /**
+     * @type Request
+     */
+    protected $_requestObject;
 
     //*************************************************************************
     //	Methods
@@ -195,6 +181,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_localInit();
 
         //	Setup the request handler and events
+        $this->_requestObject = Request::createFromGlobals();
         $this->onBeginRequest = array($this, '_onBeginRequest');
         $this->onEndRequest = array($this, '_onEndRequest');
     }
@@ -325,9 +312,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
-
-        //  A pristine copy of the request
-        $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
@@ -491,6 +475,33 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
+     * Checks to see if an origin is allowed to connect to this system
+     *
+     * @param string $origin
+     *
+     * @return bool|array If allowed, the host configuration is returned. False otherwise
+     */
+    protected function _isOriginAllowed( $origin )
+    {
+        $_whitelist = empty( $this->_corsWhitelist ) ? array() : $this->_corsWhitelist;
+
+        if ( in_array( $origin, array_keys( $_whitelist ) ) )
+        {
+            return $_whitelist[$origin];
+        }
+
+        return false;
+    }
+
+    protected function _isRequestAllowed( $origin, $method )
+    {
+        if ( false === ( $_methods = $this->_isOriginAllowed( $origin ) ) )
+        {
+            return false;
+        }
+    }
+
+    /**
      * @param array|bool $whitelist     Set to "false" to reset the internal method cache.
      * @param bool       $returnHeaders If true, the headers are return in an array and NOT sent
      * @param bool       $sendHeaders   If false, the headers will NOT be sent. Defaults to true. $returnHeaders takes
@@ -504,7 +515,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( false === $whitelist )
         {
             $this->_appCache()->delete( 'dsp.cors_config' );
-            $this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
+
+            //$this->_logCorsInfo && Log::debug( 'CORS: internal cache reset.' );
 
             return true;
         }
@@ -513,7 +525,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( !isset( $_SERVER, $_SERVER['HTTP_ORIGIN'] ) || !array_key_exists( 'HTTP_ORIGIN', $_SERVER ) )
         {
             //  No origin header, no CORS...
-            $this->_logCorsInfo && Log::debug( 'CORS: no origin received.' );
+            //$this->_logCorsInfo && Log::debug( 'CORS: no origin received.' );
 
             return $returnHeaders ? array() : false;
         }
@@ -541,7 +553,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $_isStar = false;
         $_allowedMethods = $_headers = array();
-        $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
+        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
 
@@ -643,6 +655,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
+        $_requestVerb = strtoupper( $this->_requestObject->getMethod() );
         $_allowedHosts = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
 
         //  Check out the origins
@@ -651,8 +664,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             //  Get the verbs for this entry.
             $_verbs =
                 is_array( $_hostInfo )
-                    ? IfSet::get( $_hostInfo, 'verbs', array() )
-                    : array();
+                    ? IfSet::get( $_hostInfo, 'verbs', array(static::CORS_OPTION_METHOD) )
+                    : explode( ',', static::CORS_DEFAULT_ALLOWED_METHODS );
 
             //  Always add OPTIONS
             !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
@@ -673,10 +686,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             {
                 $isStar = true;
 
+                //  If the inbound verb is not allowed, bail
+                if ( !in_array( $_requestVerb, $_verbs ) )
+                {
+                    Log::notice( 'CORS: "*" request with non-allowed verb "' . $_requestVerb . '"' );
+
+                    return false;
+                }
+
                 return implode( ', ', $_verbs );
             }
 
-            $_allowedMethods = $_whiteGuy = null;
+            $_whiteGuy = null;
 
             if ( is_array( $_hostInfo ) )
             {
@@ -686,13 +707,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     Log::error( 'CORS: whitelist info does not contain a "host" parameter!' );
                     continue;
                 }
-
-                $_allowedMethods = implode( ', ', IfSet::get( $_hostInfo, 'verbs', array(static::CORS_OPTION_METHOD) ) );
             }
             elseif ( is_string( $_hostInfo ) )
             {
                 $_whiteGuy = $_hostInfo;
-                $_allowedMethods = static::CORS_DEFAULT_ALLOWED_METHODS;
             }
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
@@ -709,7 +727,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 //	Is this origin on the whitelist?
                 if ( $this->_compareUris( $origin, $_whiteParts ) )
                 {
-                    return $_allowedMethods;
+                    //  If the inbound verb is not allowed, bail
+                    if ( !in_array( $_requestVerb, $_verbs ) )
+                    {
+                        Log::notice( 'CORS: host "' . $_whiteGuy . '" requested non-allowed verb "' . $_requestVerb . '"' );
+
+                        return false;
+                    }
+
+                    //  Return a string for the outbound header
+                    return implode( ', ', $_verbs );
                 }
             }
         }
@@ -878,7 +905,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             try
             {
                 $_whitelist = JsonFile::decodeFile( $_config );
-                $this->_logCorsInfo && Log::debug( 'CORS: configuration loaded: ' . print_r( $_whitelist, true ) );
+                //$this->_logCorsInfo && Log::debug( 'CORS: configuration loaded: ' . print_r( $_whitelist, true ) );
             }
             catch ( \Exception $_ex )
             {
@@ -953,28 +980,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function getExtendedHeaders()
     {
         return $this->_extendedHeaders;
-    }
-
-    /**
-     * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
-     * @param bool $sendHeaders
-     *
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
-    {
-        if ( null === $this->_responseObject && $createIfNull )
-        {
-            $this->_responseObject = Response::create();
-
-            if ( $this->_autoAddHeaders )
-            {
-                $this->addCorsHeaders( array(), false, $sendHeaders );
-            }
-        }
-
-        return $this->_responseObject;
     }
 
     /**
@@ -1147,34 +1152,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         return static::$_dispatcher;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getUseResponseObject()
-    {
-        return $this->_useResponseObject;
-    }
-
-    /**
-     * @param boolean $useResponseObject
-     *
-     * @return PlatformWebApplication
-     */
-    public function setUseResponseObject( $useResponseObject )
-    {
-        $this->_useResponseObject = $useResponseObject;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRequestBody()
-    {
-        return $this->_requestBody;
     }
 
     /**
