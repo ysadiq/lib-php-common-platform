@@ -643,10 +643,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
-        $_origins = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
+        $_allowedHosts = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
 
         //  Check out the origins
-        foreach ( $_origins as $_hostInfo )
+        foreach ( $_allowedHosts as $_hostInfo )
         {
             //  Get the verbs for this entry.
             $_verbs = ( is_array( $_hostInfo ) ) ? IfSet::get( $_hostInfo, 'verbs', array() ) : array();

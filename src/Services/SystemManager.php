@@ -48,7 +48,6 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use Kisma\Core\Utility\Storage;
-use Yii;
 
 /**
  * SystemManager
@@ -613,6 +612,13 @@ SQL;
      */
     public static function getAllowedHosts()
     {
+        static $_allowedHosts = null;
+
+        if ( $_allowedHosts )
+        {
+            return $_allowedHosts;
+        }
+
         if ( false === ( $_config = static::_locateCorsConfig() ) )
         {
             return array();
@@ -632,6 +638,8 @@ SQL;
         {
             return array();
         }
+
+        return $_allowedHosts;
     }
 
     /**
