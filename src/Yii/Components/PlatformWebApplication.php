@@ -84,7 +84,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var string The private CORS configuration file
      */
-    const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+    const CORS_DEFAULT_CONFIG_FILE = 'cors.config.json';
     /**
      * @var string The session key for CORS configs
      */
@@ -104,7 +104,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var string The pattern of for local configuration files
      */
-    const DEFAULT_LOCAL_CONFIG_PATTERN = '/*.config.php';
+    const DEFAULT_LOCAL_CONFIG_PATTERN = '*.config.php';
     /**
      * @var string The default path (sub-path) of installed plug-ins
      */
@@ -846,7 +846,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
@@ -892,7 +892,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setCorsWhitelist( $corsWhitelist )
     {
-        $this->_corsWhitelist = $corsWhitelist;
+        $this->_corsWhitelist = is_array( $corsWhitelist ) ? $corsWhitelist : array($corsWhitelist);
 
         //	Reset the header cache
         $this->addCorsHeaders( false );

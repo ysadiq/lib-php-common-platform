@@ -132,14 +132,11 @@ class Config extends BaseSystemRestResource
      */
     protected function _handlePut()
     {
-        //  Changing config, bust caches
-        Platform::storeDelete( static::OPEN_REG_CACHE_KEY );
-        Platform::storeDelete( static::PROVIDERS_CACHE_KEY );
-
         //	Check for CORS changes...
-        if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
+        if ( null !== ( $_hostList = Ifset::get( $this->_requestPayload, 'allowed_hosts' ) ) )
         {
             SystemManager::setAllowedHosts( $_hostList );
+            unset( $this->_requestPayload['allowed_hosts'] );
         }
 
         try
@@ -147,8 +144,6 @@ class Config extends BaseSystemRestResource
             if ( Session::isSystemAdmin() && isset( $this->_requestPayload['lookup_keys'] ) )
             {
                 LookupKey::assignLookupKeys( $this->_requestPayload['lookup_keys'] );
-
-                Platform::storeDelete( static::LOOKUP_CACHE_KEY );
             }
         }
         catch ( ForbiddenException $_ex )
@@ -159,6 +154,9 @@ class Config extends BaseSystemRestResource
         {
             // do nothing
         }
+
+        //  Changing config, bust caches
+        static::flushCachedConfig();
 
         return parent::_handlePut();
     }
@@ -191,7 +189,7 @@ class Config extends BaseSystemRestResource
         $_refresh = ( static::GET != $this->_action );
 
         $_data = DataFormatter::flattenArray( $this->_response );
-        $_config = static::getCurrentConfig( $_refresh );
+        $_config = null; //static::getCurrentConfig( $_refresh );
         $_params = Pii::params();
 
         if ( $_params instanceof \CAttributeCollection )
@@ -208,7 +206,7 @@ class Config extends BaseSystemRestResource
                 //  General settings
                 'allow_admin_remote_logins' => IfSet::getBool( $_params, 'dsp.allow_admin_remote_logins' ),
                 'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) &&
-                                                 IfSet::getBool( $_data, 'allow_open_registration' ) ),
+                    IfSet::getBool( $_data, 'allow_open_registration' ) ),
                 'remote_login_providers'    => array(),
                 'restricted_verbs'          => IfSet::get( $_params, 'dsp.restricted_verbs', array() ),
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),
@@ -328,7 +326,7 @@ class Config extends BaseSystemRestResource
         $flushCache && Platform::storeDelete( static::LOOKUP_CACHE_KEY );
 
         if ( null ===
-             ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+            ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             /** @var LookupKey[] $_models */
@@ -503,5 +501,18 @@ class Config extends BaseSystemRestResource
     public static function getCurrentConfig( $flush = true )
     {
         return Platform::storeGet( static::CACHE_KEY, null, $flush, static::CONFIG_CACHE_TTL );
+    }
+
+    /**
+     * Flushes all cached configuration values
+     */
+    public static function flushCachedConfig()
+    {
+        Platform::storeDelete( static::CACHE_KEY );
+        Platform::storeDelete( static::LAST_RESPONSE_CACHE_KEY );
+        Platform::storeDelete( static::LOOKUP_CACHE_KEY );
+        Platform::storeDelete( static::OPEN_REG_CACHE_KEY );
+        Platform::storeDelete( static::PROVIDERS_CACHE_KEY );
+        Platform::storeDelete( static::GLOBAL_PROVIDERS_CACHE_KEY );
     }
 }
