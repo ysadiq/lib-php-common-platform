@@ -530,11 +530,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return $returnHeaders ? array() : false;
         }
 
-        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
-        {
-            $_cache = array();
-        }
-
         $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
 
         //  Bail if origin is 'file://', 'null', or empty.
@@ -565,9 +560,20 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
+        if ( $_requestUri !== $_originUri )
+        {
+            //  Same origin, bail
+            return true;
+        }
+
         $_key = sha1( $_requestUri . $_originUri );
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
+
+        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
+        {
+            $_cache = array();
+        }
 
         //	Not in cache, check it out...
         if ( in_array( $_key, $_cache ) )
@@ -604,8 +610,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( $this->_extendedHeaders )
             {
                 $_headers['X-DreamFactory-Source'] = $_requestUri;
-                $_headers['X-DreamFactory-Origin-Whitelisted'] =
-                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
