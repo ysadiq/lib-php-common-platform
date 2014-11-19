@@ -237,11 +237,6 @@ class RestResponse extends HttpResponse
      */
     public static function sendResults( $result, $code = RestResponse::Ok, $format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
-        if ( Pii::app()->getUseResponseObject() )
-        {
-            return static::_sendResponseObjectResults( $result, $code, $format, $as_file, $exitAfterSend );
-        }
-
         //	Some REST services may handle the response, they just return null
         if ( is_null( $result ) && headers_sent() )
         {
