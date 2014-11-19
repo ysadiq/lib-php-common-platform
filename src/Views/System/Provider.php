@@ -47,7 +47,7 @@ class Provider extends BaseSystemRestResource
                 'service_name'   => 'system',
                 'name'           => 'provider',
                 'api_name'       => 'provider',
-                'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+                'type_id'        => PlatformServiceTypes::PORTAL_SERVICE,
                 'type'           => 'Service',
                 'description'    => 'Service provider configuration.',
                 'is_active'      => true,

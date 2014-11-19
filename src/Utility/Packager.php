@@ -150,8 +150,8 @@ class Packager
                                     $_serviceType = $_service->type_id;
                                     switch ( strtolower( $_serviceType ) )
                                     {
-                                        case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-                                        case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
+                                        case PlatformServiceTypes::NATIVE_SQL_DB_SCHEMA:
+                                        case PlatformServiceTypes::SQL_DB_SCHEMA:
                                             /** @var $_schema SchemaSvc */
                                             $_schema = ServiceHandler::getServiceObject( $_serviceName );
                                             $_describe = $_schema->describeTables( implode( ',', $_component ) );
@@ -161,8 +161,8 @@ class Packager
                                             );
                                             $_schemas[] = $_temp;
                                             break;
-                                        case PlatformServiceTypes::LOCAL_SQL_DB:
-                                        case PlatformServiceTypes::REMOTE_SQL_DB:
+                                        case PlatformServiceTypes::NATIVE_SQL_DB:
+                                        case PlatformServiceTypes::SQL_DB:
                                         case PlatformServiceTypes::NOSQL_DB:
                                             /** @var $_schema BaseDbSvc */
                                             $_schema = ServiceHandler::getServiceObject( $_serviceName );
@@ -201,7 +201,7 @@ class Packager
                 {
                     $_service = Service::model()->find(
                         'type_id = :type',
-                        array(':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE)
+                        array(':type' => PlatformServiceTypes::NATIVE_FILE_STORAGE)
                     );
                     $_storageServiceId = ( $_service ) ? $_service->getPrimaryKey() : null;
                     $_container = 'applications';
@@ -286,7 +286,7 @@ class Packager
             // must be set or defaulted to local
             $_model = Service::model()->find(
                 'type_id = :type',
-                array(':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE)
+                array(':type' => PlatformServiceTypes::NATIVE_FILE_STORAGE)
             );
             $_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
             $record['storage_service_id'] = $_storageServiceId;

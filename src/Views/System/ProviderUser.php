@@ -46,7 +46,7 @@ class ProviderUser extends BaseSystemRestResource
 				'name'           => 'provider user',
 				'type'           => 'Service',
 				'service_name'   => 'system',
-				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+				'type_id'        => PlatformServiceTypes::PORTAL_SERVICE,
 				'api_name'       => 'provider_user',
 				'description'    => 'Service provider account configuration.',
 				'is_active'      => true,

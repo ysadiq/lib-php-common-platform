@@ -436,11 +436,11 @@ MYSQL;
     {
         switch ( $this->getServiceTypeId() )
         {
-            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::NATIVE_SQL_DB:
                 throw new BadRequestException( 'System generated database services can not be deleted.' );
                 break;
 
-            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
                 throw new BadRequestException( 'System generated application storage service can not be deleted.' );
                 break;
         }
@@ -457,7 +457,7 @@ MYSQL;
     {
         $_id = $id ? : $this->type_id;
 
-        return ( PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id );
+        return ( PlatformServiceTypes::FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id );
     }
 
     /**
@@ -545,8 +545,8 @@ MYSQL;
         //	Add fake field for client
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::NATIVE_SQL_DB:
+            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
                 $this->is_system = true;
                 break;
 
@@ -561,8 +561,8 @@ MYSQL;
         // backwards compatibility helper
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
-            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
+            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
+            case PlatformServiceTypes::FILE_STORAGE:
                 $_creds = $this->credentials;
                 if ( is_array( $_creds ) && !array_key_exists( 'private_paths', $_creds ) )
                 {

@@ -67,6 +67,10 @@ class PlatformStorageTypes extends SeedEnum
      * @var int
      */
     const RACKSPACE_CLOUDFILES = 8;
+    /**
+     * @var int
+     */
+    const AWS_SNS = 9;
 
     /**
      * @param int    $value        enumerated type value
@@ -78,6 +82,7 @@ class PlatformStorageTypes extends SeedEnum
         self::AWS_S3                   => 'AwsS3Svc',
         self::AWS_DYNAMODB             => 'AwsDynamoDbSvc',
         self::AWS_SIMPLEDB             => 'AwsSimpleDbSvc',
+        self::AWS_SNS                  => 'AwsSnsSvc',
         self::AZURE_BLOB               => 'WindowsAzureBlobSvc',
         self::AZURE_TABLES             => 'WindowsAzureTablesSvc',
         self::COUCHDB                  => 'CouchDbSvc',
