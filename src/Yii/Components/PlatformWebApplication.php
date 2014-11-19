@@ -560,7 +560,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
-        if ( $_requestUri !== $_originUri )
+        if ( $_requestUri === $_originUri )
         {
             //  Same origin, bail
             return true;
