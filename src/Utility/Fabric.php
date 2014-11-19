@@ -16,13 +16,10 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Library\Enterprise\Storage\Interfaces\PlatformStructureResolverLike;
-use DreamFactory\Library\Enterprise\Storage\Provider;
 use DreamFactory\Library\Utility\Exceptions\FileException;
 use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
-use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
@@ -129,10 +126,6 @@ class Fabric
      */
     protected static $_request = null;
     /**
-     * @type PlatformStructureResolverLike
-     */
-    protected static $_storageResolver = null;
-    /**
      * @type string The instance host name
      */
     protected static $_hostname = null;
@@ -160,13 +153,6 @@ class Fabric
         if ( !$_config )
         {
             static::$_hostname = static::getHostname();
-
-            //  Initialize the storage system
-            if ( empty( static::$_storageResolver ) )
-            {
-                static::$_storageResolver = new Provider();
-                static::$_storageResolver->initialize( static::$_hostname, LocalStorageTypes::STORAGE_MOUNT_POINT );
-            }
 
             //	If this isn't a hosted instance, bail
             if ( !static::isAllowedHost() && false === stripos( static::$_hostname, static::DSP_DEFAULT_SUBDOMAIN ) )
@@ -402,7 +388,7 @@ class Fabric
     protected static function _readDbConfig( $instanceName )
     {
         $_fileName =
-            static::$_storageResolver->getLocalConfigPath() .
+            Platform::getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceName) );
 
         if ( !file_exists( $_fileName ) )
@@ -422,7 +408,7 @@ class Fabric
     protected static function _writeDbConfig( $instanceDetails, $includeAfter = true )
     {
         $_fileName =
-            static::$_storageResolver->getLocalConfigPath() .
+            Platform::getLocalConfigPath() .
             static::_makeFileName( static::DB_CONFIG_FILE_NAME_PATTERN, array('{instance_name}' => $instanceDetails->instance->instance_name_text) );
 
         if ( file_exists( $_fileName ) )
@@ -462,10 +448,10 @@ PHP;
             'dsp.credentials'                     => $instanceDetails,
             'dsp.db_name'                         => $instanceDetails->db_name,
             'platform.dsp_name'                   => $instanceDetails->instance->instance_name_text,
-            'platform.private_path'               => static::$_storageResolver->getPrivatePath(),
-            'platform.storage_key'                => static::$_storageResolver->getStorageKey( $instanceDetails->storage_key ),
+            'platform.private_path'               => Platform::getPrivatePath(),
+            'platform.storage_key'                => $instanceDetails->storage_key,
             'platform.legacy_storage_key'         => $instanceDetails->storage_key,
-            'platform.private_storage_key'        => static::$_storageResolver->getPrivateStorageKey( $instanceDetails->private_storage_key ),
+            'platform.private_storage_key'        => $instanceDetails->private_storage_key,
             'platform.legacy_private_storage_key' => $instanceDetails->private_storage_key,
             'platform.db_config_file'             => $_fileName,
             'platform.db_config_file_name'        => basename( $_fileName ),
@@ -486,7 +472,7 @@ PHP;
     protected static function _readInstanceConfig( $instanceName )
     {
         $_fileName =
-            static::$_storageResolver->getLocalConfigPath() .
+            Platform::getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceName)
@@ -508,7 +494,7 @@ PHP;
     protected static function _writeInstanceConfig( $instanceDetails )
     {
         $_fileName =
-            static::$_storageResolver->getLocalConfigPath() .
+            Platform::getLocalConfigPath() .
             static::_makeFileName(
                 static::INSTANCE_CONFIG_FILE_NAME_PATTERN,
                 array('{instance_name}' => $instanceDetails->instance->instance_name_text)
@@ -581,14 +567,6 @@ PHP;
     public static function getRequest()
     {
         return static::$_request ?: static::$_request = Request::createFromGlobals();
-    }
-
-    /**
-     * @return PlatformStructureResolverLike
-     */
-    public static function getStorageResolver()
-    {
-        return static::$_storageResolver;
     }
 
     /**

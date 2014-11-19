@@ -20,12 +20,15 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Library\Utility\Enums\Verbs;
+use DreamFactory\Library\Enterprise\Storage\Enums\EnterprisePaths;
+use DreamFactory\Library\Enterprise\Storage\Resolver;
+use DreamFactory\Library\Utility\Environment;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\Includer;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Components\Profiler;
+use DreamFactory\Platform\Enums\CorsDefaults;
 use DreamFactory\Platform\Enums\NamespaceTypes;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
@@ -56,61 +59,6 @@ use Symfony\Component\HttpFoundation\Request;
 class PlatformWebApplication extends \CWebApplication implements ContainerAwareInterface, PublisherLike, SubscriberLike
 {
     //*************************************************************************
-    //	Constants
-    //*************************************************************************
-
-    /**
-     * @var string Indicates all is allowed
-     */
-    const CORS_STAR = '*';
-    /**
-     * @var string The HTTP Option method
-     */
-    const CORS_OPTION_METHOD = Verbs::OPTIONS;
-    /**
-     * @var string The allowed HTTP methods
-     */
-    const CORS_DEFAULT_ALLOWED_METHODS = 'GET,POST,PUT,DELETE,PATCH,MERGE,COPY,OPTIONS';
-    /**
-     * @var string The allowed HTTP headers
-     * Tunnelling verb overrides: X-HTTP-Method (Microsoft), X-HTTP-Method-Override (Google/GData), X-METHOD-OVERRIDE
-     * (IBM)
-     */
-    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type,X-Requested-With,X-DreamFactory-Application-Name,X-Application-Name,X-DreamFactory-Session-Token,X-HTTP-Method,X-HTTP-Method-Override,X-METHOD-OVERRIDE';
-    /**
-     * @var int The default number of seconds to allow this to be cached. Default is 15 minutes.
-     */
-    const CORS_DEFAULT_MAX_AGE = 900;
-    /**
-     * @var string The private CORS configuration file
-     */
-    const CORS_DEFAULT_CONFIG_FILE = 'cors.config.json';
-    /**
-     * @var string The session key for CORS configs
-     */
-    const CORS_WHITELIST_KEY = 'cors.config';
-    /**
-     * @var string The default DSP resource namespace
-     */
-    const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
-    /**
-     * @var string The default DSP resource namespace
-     */
-    const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resources';
-    /**
-     * @var string The default DSP model namespace
-     */
-    const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
-    /**
-     * @var string The pattern of for local configuration files
-     */
-    const DEFAULT_LOCAL_CONFIG_PATTERN = '*.config.php';
-    /**
-     * @var string The default path (sub-path) of installed plug-ins
-     */
-    const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-
-    //*************************************************************************
     //	Members
     //*************************************************************************
 
@@ -118,6 +66,10 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      * @var EventDispatcher
      */
     protected static $_dispatcher;
+    /**
+     * @type Resolver
+     */
+    protected static $_resolver;
     /**
      * @var bool If true, profiling information is output to the log
      */
@@ -180,14 +132,9 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     {
         parent::init();
 
-        //	Debug options
-        $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
-        static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-
         $this->_localInit();
 
         //	Setup the request handler and events
-        $this->_requestObject = Request::createFromGlobals();
         $this->onBeginRequest = array($this, '_onBeginRequest');
         $this->onEndRequest = array($this, '_onEndRequest');
     }
@@ -199,7 +146,15 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     protected function _localInit()
     {
-        //  Load the CORS config file
+        //	Debug options
+        $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
+        static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
+        $this->_requestObject = Request::createFromGlobals();
+
+        $this->_resolver = new Resolver();
+        $this->_resolver->initialize( Environment::getHostname( true, true ), EnterprisePaths::MOUNT_POINT );
+
+        //  Load the CORS config file if we're not cli
         if ( 'cli' != PHP_SAPI )
         {
             $this->_loadCorsConfig();
@@ -223,10 +178,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     public function startProfiler( $id = __CLASS__ )
     {
-        if ( static::$_enableProfiler )
-        {
-            Profiler::start( $id );
-        }
+        static::$_enableProfiler && Profiler::start( $id );
 
         return $this;
     }
@@ -242,10 +194,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     public function stopProfiler( $id = __CLASS__, $prettyPrint = true )
     {
-        if ( static::$_enableProfiler )
-        {
-            Log::debug( '~~ "' . $id . '" profile: ' . Profiler::stop( 'app.request', $prettyPrint ) );
-        }
+        static::$_enableProfiler && Log::debug( '~~ "' . $id . '" profile: ' . Profiler::stop( 'app.request', $prettyPrint ) );
 
         return $this;
     }
@@ -262,7 +211,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         if ( false === ( $_autoloadPath = $this->_appCache()->get( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
-            $_path = Platform::getPluginsPath();
+            $_path = $this->_resolver->getPluginsPath();
 
             if ( !is_dir( $_path ) )
             {
@@ -370,10 +319,10 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         if ( false === ( $_config = $this->_appCache()->get( 'platform.local_config' ) ) )
         {
             $_config = array();
-            $_configPath = Platform::getLocalConfigPath();
+            $_configPath = $this->_resolver->getPrivateConfigPath();
 
             $_files = FileSystem::glob(
-                $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN,
+                $_configPath . CorsDefaults::DEFAULT_LOCAL_CONFIG_PATTERN,
                 GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS
             );
 
@@ -481,33 +430,6 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     //*************************************************************************
 
     /**
-     * Checks to see if an origin is allowed to connect to this system
-     *
-     * @param string $origin
-     *
-     * @return bool|array If allowed, the host configuration is returned. False otherwise
-     */
-    protected function _isOriginAllowed( $origin )
-    {
-        $_whitelist = empty( $this->_corsWhitelist ) ? array() : $this->_corsWhitelist;
-
-        if ( in_array( $origin, array_keys( $_whitelist ) ) )
-        {
-            return $_whitelist[$origin];
-        }
-
-        return false;
-    }
-
-    protected function _isRequestAllowed( $origin, $method )
-    {
-        if ( false === ( $_methods = $this->_isOriginAllowed( $origin ) ) )
-        {
-            return false;
-        }
-    }
-
-    /**
      * @param array|bool $whitelist     Set to "false" to reset the internal method cache.
      * @param bool       $returnHeaders If true, the headers are return in an array and NOT sent
      * @param bool       $sendHeaders   If false, the headers will NOT be sent. Defaults to true. $returnHeaders takes
@@ -527,41 +449,17 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             return true;
         }
 
-        //	Find out if we actually received an origin header
-        if ( !isset( $_SERVER, $_SERVER['HTTP_ORIGIN'] ) || !array_key_exists( 'HTTP_ORIGIN', $_SERVER ) )
-        {
-            //  No origin header, no CORS...
-            //$this->_logCorsInfo && Log::debug( 'CORS: no origin received.' );
-
-            return $returnHeaders ? array() : false;
-        }
-
+        //  No cache? Initialize
         if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
         {
             $_cache = array();
-        }
-
-        $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
-
-        //  Bail if origin is 'file://', 'null', or empty.
-        if ( 'file://' == $_origin )
-        {
-            $this->_logCorsInfo && Log::debug( 'CORS: local file/empty resource origin received: ' . $_origin );
-        }
-        else
-        {
-            //  empty origin received we do nothing
-            if ( empty( $_origin ) )
-            {
-                return $returnHeaders ? array() : false;
-            }
         }
 
         $_isStar = false;
         $_allowedMethods = $_headers = array();
         $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
-        $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
+        $_origin = $this->_getRequestOrigin();
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
         {
@@ -570,7 +468,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             $_originParts = $_origin;
         }
 
-        $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
+        $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : CorsDefaults::CORS_STAR );
         $_key = sha1( $_requestUri . $_originUri );
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
@@ -601,10 +499,10 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
 
             $_headers = array(
                 'Access-Control-Allow-Credentials' => 'true',
-                'Access-Control-Allow-Headers'     => static::CORS_DEFAULT_ALLOWED_HEADERS,
+                'Access-Control-Allow-Headers'     => CorsDefaults::CORS_DEFAULT_ALLOWED_HEADERS,
                 'Access-Control-Allow-Methods'     => $_allowedMethods,
-                'Access-Control-Allow-Origin'      => $_isStar ? static::CORS_STAR : $_originUri,
-                'Access-Control-Max-Age'           => static::CORS_DEFAULT_MAX_AGE,
+                'Access-Control-Allow-Origin'      => $_isStar ? CorsDefaults::CORS_STAR : $_originUri,
+                'Access-Control-Max-Age'           => CorsDefaults::CORS_DEFAULT_MAX_AGE,
             );
 
             if ( $this->_extendedHeaders )
@@ -653,6 +551,33 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     }
 
     /**
+     * @return bool|string The origin received. False is returned for no origin and TRUE is returned for non-host origins (i.e. file://, null, etc.)
+     */
+    protected function _getRequestOrigin()
+    {
+        //	Find out if we actually received an origin header
+        if ( !isset( $_SERVER, $_SERVER['HTTP_ORIGIN'] ) || !array_key_exists( 'HTTP_ORIGIN', $_SERVER ) )
+        {
+            return false;
+        }
+
+        $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
+
+        $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
+
+        //  Local file?
+        if ( CorsDefaults::FILE_ORIGIN == $_origin )
+        {
+            $this->_logCorsInfo && Log::debug( 'CORS: local file origin received: ' . $_origin );
+
+            return true;
+        }
+
+        //  If empty, return false, else the origin
+        return empty( $_origin ) ? false : $_origin;
+    }
+
+    /**
      * @param string|array $origin     The parse_url value of origin
      * @param array        $additional Additional origins to allow
      * @param bool         $isStar     Set to true if the allowed origin is "*"
@@ -665,31 +590,48 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         $_allowedHosts = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
 
         //  Check out the origins
-        foreach ( $_allowedHosts as $_hostInfo )
+        foreach ( $_allowedHosts as $_index => $_hostInfo )
         {
+            //  Not an array or string? Later...
+            if ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) )
+            {
+                Log::error( 'CORS: invalid host entry id#' . $_index . ': ' . PHP_EOL . print_r( $_hostInfo, true ) );
+                continue;
+            }
+
+            //  Disabled entry? Skip.
+            if ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+            {
+                $this->_logCorsInfo && Log::debug( 'CORS: skipping disabled entry id#' . $_index );
+                continue;
+            }
+
             //  Get the verbs for this entry.
             $_verbs =
                 is_array( $_hostInfo )
-                    ? IfSet::get( $_hostInfo, 'verbs', array(static::CORS_OPTION_METHOD) )
-                    : explode( ',', static::CORS_DEFAULT_ALLOWED_METHODS );
+                    ? IfSet::get( $_hostInfo, 'verbs', array(CorsDefaults::CORS_OPTION_METHOD) )
+                    : explode( ',', CorsDefaults::CORS_DEFAULT_ALLOWED_METHODS );
 
-            //  Always add OPTIONS
-            !in_array( static::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = static::CORS_OPTION_METHOD;
+            //  *ALWAYS* add OPTIONS
+            !in_array( CorsDefaults::CORS_OPTION_METHOD, $_verbs ) && $_verbs[] = CorsDefaults::CORS_OPTION_METHOD;
 
-            //  If we don't have enabled array, or a string, skip
-            if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
-                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
-            )
+            //  Get the hostname
+            $_hostname =
+                is_array( $_hostInfo )
+                    ? IfSet::get( $_hostInfo, 'host', false )
+                    : $_hostInfo;
+
+            //  There should be a host name at least, if not, log and skip
+            if ( empty( $_hostname ) )
             {
+                Log::error( 'CORS: whitelist entry id#' . $_index . ' does not contain a "host" parameter!' );
                 continue;
             }
 
             //  Any "*" equals unfettered access, so check here and return quickly
-            if (
-                ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
-                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
-            )
+            if ( CorsDefaults::CORS_STAR == $_hostname )
             {
+                //  Yes, this is a star, but still may fail...
                 $isStar = true;
 
                 //  If the inbound verb is not allowed, bail
@@ -700,51 +642,36 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
                     return false;
                 }
 
+                //  Return the allowed verb list as a string
                 return implode( ', ', $_verbs );
             }
 
-            $_whiteGuy = null;
-
-            if ( is_array( $_hostInfo ) )
+            //  Parse the host and do the compare
+            if ( false === ( $_whiteParts = $this->_parseUri( $_hostname ) ) )
             {
-                //	If is_enabled prop not there, assuming enabled.
-                if ( null === ( $_whiteGuy = IfSet::get( $_hostInfo, 'host' ) ) )
-                {
-                    Log::error( 'CORS: whitelist info does not contain a "host" parameter!' );
-                    continue;
-                }
-            }
-            elseif ( is_string( $_hostInfo ) )
-            {
-                $_whiteGuy = $_hostInfo;
-            }
-
-            if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
-            {
-                Log::error( 'CORS: unable to parse "' . $_whiteGuy . '" whitelist entry' );
+                Log::error( 'CORS: unable to parse "' . $_hostname . '" whitelist entry' );
                 continue;
             }
 
-            $this->_logCorsInfo && Log::debug( 'CORS: whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
+            $this->_logCorsInfo && Log::debug( 'CORS: whitelist "' . $_hostname . '" > parts: ' . PHP_EOL . print_r( $_whiteParts, true ) );
 
-            //	Check for un-parsed origin, 'null' sent when testing js files locally
-            if ( is_array( $origin ) )
+            //	Compare with allowed...
+            if ( is_array( $origin ) && !$this->_compareUris( $origin, $_whiteParts ) )
             {
-                //	Is this origin on the whitelist?
-                if ( $this->_compareUris( $origin, $_whiteParts ) )
-                {
-                    //  If the inbound verb is not allowed, bail
-                    if ( !in_array( $_requestVerb, $_verbs ) )
-                    {
-                        Log::notice( 'CORS: host "' . $_whiteGuy . '" requested non-allowed verb "' . $_requestVerb . '"' );
-
-                        return false;
-                    }
-
-                    //  Return a string for the outbound header
-                    return implode( ', ', $_verbs );
-                }
+                $this->_logCorsInfo && Log::debug( 'CORS: rejecting non-whitelisted origin "' . IfSet::get( $_whiteParts, 'host' ) . '"' );
+                continue;
             }
+
+            //  Host is allowed, now check if the verb is cool...
+            if ( !in_array( $_requestVerb, $_verbs ) )
+            {
+                Log::notice( 'CORS: host "' . $_hostname . '" requested non-allowed verb "' . $_requestVerb . '"' );
+
+                return false;
+            }
+
+            //  All is good, return a string for the outbound header
+            return implode( ', ', $_verbs );
         }
 
         return false;
@@ -758,21 +685,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     protected function _compareUris( $first, $second )
     {
-        $_match =
-            ( ( $first['scheme'] == $second['scheme'] ) &&
-                ( $first['host'] == $second['host'] ) &&
-                ( $first['port'] == $second['port'] ) );
-
-        if ( $this->_logCorsInfo )
-        {
-            Log::debug(
-                'CORS: compare inbound origin to whitelisted host: ' . ( $_match ? 'Success' : 'FAIL' ) . PHP_EOL .
-                '  * ORIGIN: ' . print_r( $first, true ) . PHP_EOL .
-                '  *  WHITE: ' . print_r( $second, true ) . PHP_EOL
-            );
-        }
-
-        return $_match;
+        return ( 0 == strcasecmp( $this->_normalizeUri( $first ), $this->_normalizeUri( $second ) ) );
     }
 
     /**
@@ -886,9 +799,9 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    $this->_resolver->getPrivateConfigPath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    $this->_resolver->getPrivatePath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    $this->_resolver->getStoragePath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
 
             //	Find cors config file location
@@ -1005,7 +918,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     public function getRequestObject()
     {
-        return $this->_requestObject = $this->_requestObject ?: Request::createFromGlobals();
+        return $this->_requestObject ?: $this->_requestObject = Request::createFromGlobals();
     }
 
     /**
