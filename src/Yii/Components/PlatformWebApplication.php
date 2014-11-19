@@ -672,16 +672,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  If we don't have enabled array, or a string, skip
             if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
-                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+                 ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
             )
             {
                 continue;
             }
 
             //  Any "*" equals unfettered access, so check here and return quickly
-            if (
-                ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
-                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+            if ( ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
+                 ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
             )
             {
                 $isStar = true;
@@ -739,6 +738,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     return implode( ', ', $_verbs );
                 }
             }
+        }
+
+        //  Always return OPTIONS request, here nothing but OPTIONS
+        if ( static::CORS_OPTION_METHOD == $_requestVerb )
+        {
+            return static::CORS_OPTION_METHOD;
         }
 
         return false;
