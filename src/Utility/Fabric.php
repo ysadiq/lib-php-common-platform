@@ -171,6 +171,7 @@ class Fabric extends SeedUtility
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
             static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
+
             throw new \CHttpException(
                 HttpResponse::Forbidden,
                 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
@@ -527,6 +528,3 @@ if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option:
     header( 'Location: ' . Fabric::MAINTENANCE_URI );
     die();
 }
-
-//  Initialize
-Fabric::initialize();
