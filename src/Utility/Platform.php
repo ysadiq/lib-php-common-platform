@@ -19,7 +19,9 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use Doctrine\Common\Cache\CacheProvider;
+use DreamFactory\Library\Enterprise\Storage\Enums\EnterpriseDefaults;
+use DreamFactory\Library\Utility\AppInstance;
+use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Enums\FabricPlatformStates;
@@ -29,9 +31,7 @@ use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -71,7 +71,7 @@ class Platform
     /**
      * @var string
      */
-    const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+    const FABRIC_API_ENDPOINT = EnterpriseDefaults::DFE_ENDPOINT;
     /**
      * @type string The current version of the platform core
      */
@@ -115,8 +115,9 @@ class Platform
      */
     protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true, $includesFile = false )
     {
-        static $_cache = array();
+        static $_cache = array(), $_app = null;
 
+        $_app && $_app = AppInstance::getInstance();
         $_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
 
         if ( !LocalStorageTypes::contains( $type ) )
@@ -129,13 +130,11 @@ class Platform
 
         if ( null === ( $_path = IfSet::get( $_cache, $_cacheKey ) ) )
         {
-            $_path = Pii::getParam( $type );
+            $_path = $_app->getParameter( $type );
 
             if ( empty( $_path ) )
             {
-                $_path = \Kisma::get( 'app.project_root' ) . '/storage';
-//  May not be a logger set up when this is first called. So, axing this notice
-//              Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+                $_path = $_app->getParameter( 'app.base_path' ) . '/storage';
             }
 
             $_checkPath = $_path . $_appendage;
@@ -173,12 +172,7 @@ class Platform
      */
     public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath(
-            LocalStorageTypes::STORAGE_BASE_PATH,
-            $append,
-            $createIfMissing,
-            $includesFile
-        );
+        return static::getStoragePath( $append, $createIfMissing, $includesFile );
     }
 
     /**
@@ -386,7 +380,9 @@ class Platform
      */
     public static function registerAutoloaders( $autoloaders = array() )
     {
-        foreach ( Option::clean( $autoloaders ) as $_file )
+        $autoloaders = is_array( $autoloaders ) ? $autoloaders : array($autoloaders);
+
+        foreach ( $autoloaders as $_file )
         {
             if ( file_exists( $_file ) )
             {
@@ -675,7 +671,7 @@ class Platform
             $dspName = gethostname();
         }
 
-        if ( false === ( $_response = Fabric::api( HttpMethod::GET, '/state/' . $dspName ) ) )
+        if ( false === ( $_response = Fabric::api( Verbs::GET, '/state/' . $dspName ) ) )
         {
             return false;
         }
@@ -742,7 +738,7 @@ class Platform
                 }
 
                 $_result = Fabric::api(
-                    HttpMethod::POST,
+                    Verbs::POST,
                     '/state/' . $_instanceId,
                     array(
                         'instance_id' => $_instanceId,
