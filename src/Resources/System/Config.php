@@ -189,7 +189,7 @@ class Config extends BaseSystemRestResource
         $_refresh = ( static::GET != $this->_action );
 
         $_data = DataFormatter::flattenArray( $this->_response );
-        $_config = null; //static::getCurrentConfig( $_refresh );
+        $_config = static::getCurrentConfig( $_refresh );
         $_params = Pii::params();
 
         if ( $_params instanceof \CAttributeCollection )
@@ -206,7 +206,7 @@ class Config extends BaseSystemRestResource
                 //  General settings
                 'allow_admin_remote_logins' => IfSet::getBool( $_params, 'dsp.allow_admin_remote_logins' ),
                 'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) &&
-                    IfSet::getBool( $_data, 'allow_open_registration' ) ),
+                                                 IfSet::getBool( $_data, 'allow_open_registration' ) ),
                 'remote_login_providers'    => array(),
                 'restricted_verbs'          => IfSet::get( $_params, 'dsp.restricted_verbs', array() ),
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),

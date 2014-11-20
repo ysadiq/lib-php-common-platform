@@ -23,7 +23,7 @@
         }
     ],
     "minimum-stability": "dev",
-    "prefer-stable": false,
+    "prefer-stable": true,
     "require": {
         "php": "~5.3",
         "kisma/kisma": "~0.2",

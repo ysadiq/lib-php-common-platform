@@ -105,11 +105,8 @@ abstract class BaseUserRestResource extends BasePlatformRestResource
      */
     protected function _detectRequestMembers()
     {
-        // override - don't call parent class here
-        $_posted = Option::clean( RestData::getPostedData( true, true ) );
-
-        // MERGE URL parameters with posted data, posted data takes precedence
-        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+        //  Override - don't call parent class here
+        $this->_requestPayload = Option::clean( RestData::getPostedData( true, true ) );
 
         return $this;
     }
