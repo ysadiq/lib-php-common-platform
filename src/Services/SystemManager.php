@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -47,7 +48,6 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use Kisma\Core\Utility\Storage;
-use Yii;
 
 /**
  * SystemManager
@@ -612,20 +612,31 @@ SQL;
      */
     public static function getAllowedHosts()
     {
-        $_allowedHosts = array();
-        $_file = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-        if ( !file_exists( $_file ) )
+        static $_allowedHosts = null;
+
+        if ( $_allowedHosts )
         {
-            // old location
-            $_file = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
+            return $_allowedHosts;
         }
-        if ( file_exists( $_file ) )
+
+        if ( false === ( $_config = static::_locateCorsConfig() ) )
         {
-            $_content = file_get_contents( $_file );
-            if ( !empty( $_content ) )
+            return array();
+        }
+
+        try
+        {
+            $_allowedHosts = JsonFile::decodeFile( $_config );
+
+            //  Taint no good.
+            if ( !is_array( $_allowedHosts ) || empty( $_allowedHosts ) )
             {
-                $_allowedHosts = json_decode( $_content, true );
+                return array();
             }
+        }
+        catch ( \Exception $_ex )
+        {
+            return array();
         }
 
         return $_allowedHosts;
@@ -640,21 +651,8 @@ SQL;
     {
         static::validateHosts( $allowed_hosts );
 
-        $allowed_hosts = DataFormatter::jsonEncode( $allowed_hosts, true );
-        $_path = Pii::getParam( 'storage_base_path' );
-        $_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
-
-        //	Create directory if it doesn't exists
-        if ( !is_dir( $_path ) )
-        {
-            @\mkdir( $_path, 0777, true );
-        }
-
-        //	Write new cors config
-        if ( false === file_put_contents( $_config, $allowed_hosts ) )
-        {
-            throw new PlatformServiceException( 'Failed to update CORS configuration.' );
-        }
+        $_config = Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+        JsonFile::encodeFile( $_config, $allowed_hosts );
     }
 
     /**
@@ -1235,6 +1233,40 @@ MYSQL
     public static function getCurrentAppId()
     {
         return static::getAppIdFromName( static::$_currentAppName );
+    }
+
+    /**
+     * Looks for the CORS configuration file in a few places
+     *
+     * @return string|bool Returns the absolute path the config file, FALSE if not found
+     */
+    protected static function _locateCorsConfig()
+    {
+        static $_locations = null, $_config = null;
+
+        if ( null !== $_config )
+        {
+            return $_config;
+        }
+
+        $_locations = $_locations
+            ?: array(
+                Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+            );
+
+        //  Find cors config file location
+        foreach ( $_locations as $_path )
+        {
+            if ( file_exists( $_path ) )
+            {
+                $_config = $_path;
+                break;
+            }
+        }
+
+        return $_config ?: false;
     }
 
 }

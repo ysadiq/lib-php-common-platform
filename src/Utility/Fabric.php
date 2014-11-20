@@ -107,6 +107,10 @@ class Fabric extends SeedUtility
      * @var string
      */
     const DEFAULT_DOC_ROOT = '/var/www/launchpad/web';
+    /**
+     * @var string
+     */
+    const DEFAULT_DEV_DOC_ROOT = '/opt/dreamfactory/dsp/dsp-core/web';
 
     //*************************************************************************
     //* Methods
@@ -125,11 +129,12 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
+        static $_validRoots = array(self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT);
         static $_fabricHosted = null;
 
         return
             $_fabricHosted
-                ?: $_fabricHosted = static::DEFAULT_DOC_ROOT == FilterInput::server( 'DOCUMENT_ROOT' ) && file_exists( static::FABRIC_MARKER );
+                ?: $_fabricHosted = in_array( FilterInput::server( 'DOCUMENT_ROOT' ), $_validRoots ) && file_exists( static::FABRIC_MARKER );
     }
 
     /**
