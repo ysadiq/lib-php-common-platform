@@ -32,6 +32,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -44,6 +45,7 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
@@ -151,6 +153,22 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected $_modelNamespaces = array();
     /**
+     * @var Request
+     */
+    protected $_requestObject;
+    /**
+     * @var array Normalized array of inbound request body
+     */
+    protected $_requestBody;
+    /**
+     * @var  Response
+     */
+    protected $_responseObject;
+    /**
+     * @var bool If true, headers will be added to the response object instance of this run
+     */
+    protected $_useResponseObject = false;
+    /**
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
@@ -158,10 +176,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @type \CDbCache
      */
     protected $_cache = null;
-    /**
-     * @type Request
-     */
-    protected $_requestObject;
 
     //*************************************************************************
     //	Methods
@@ -181,7 +195,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_localInit();
 
         //	Setup the request handler and events
-        $this->_requestObject = Request::createFromGlobals();
         $this->onBeginRequest = array($this, '_onBeginRequest');
         $this->onEndRequest = array($this, '_onEndRequest');
     }
@@ -312,6 +325,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
+
+        //  A pristine copy of the request
+        $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
@@ -475,33 +491,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
-     * Checks to see if an origin is allowed to connect to this system
-     *
-     * @param string $origin
-     *
-     * @return bool|array If allowed, the host configuration is returned. False otherwise
-     */
-    protected function _isOriginAllowed( $origin )
-    {
-        $_whitelist = empty( $this->_corsWhitelist ) ? array() : $this->_corsWhitelist;
-
-        if ( in_array( $origin, array_keys( $_whitelist ) ) )
-        {
-            return $_whitelist[$origin];
-        }
-
-        return false;
-    }
-
-    protected function _isRequestAllowed( $origin, $method )
-    {
-        if ( false === ( $_methods = $this->_isOriginAllowed( $origin ) ) )
-        {
-            return false;
-        }
-    }
-
-    /**
      * @param array|bool $whitelist     Set to "false" to reset the internal method cache.
      * @param bool       $returnHeaders If true, the headers are return in an array and NOT sent
      * @param bool       $sendHeaders   If false, the headers will NOT be sent. Defaults to true. $returnHeaders takes
@@ -548,7 +537,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $_isStar = false;
         $_allowedMethods = $_headers = array();
-        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
+        $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
 
@@ -560,6 +549,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = ( is_array( $_originParts ) ? trim( $this->_normalizeUri( $_originParts ) ) : static::CORS_STAR );
+
         if ( $_requestUri === $_originUri )
         {
             //  Same origin, bail
@@ -890,7 +880,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_whitelist = array();
             $_locations = $_locations
                 ?: array(
-                    Platform::getPrivateConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+                    Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
@@ -936,7 +926,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setCorsWhitelist( $corsWhitelist )
     {
-        $this->_corsWhitelist = is_array( $corsWhitelist ) ? $corsWhitelist : array($corsWhitelist);
+        $this->_corsWhitelist = $corsWhitelist;
 
         //	Reset the header cache
         $this->addCorsHeaders( false );
@@ -990,6 +980,28 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function getExtendedHeaders()
     {
         return $this->_extendedHeaders;
+    }
+
+    /**
+     * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
+     * @param bool $sendHeaders
+     *
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
+    {
+        if ( null === $this->_responseObject && $createIfNull )
+        {
+            $this->_responseObject = Response::create();
+
+            if ( $this->_autoAddHeaders )
+            {
+                $this->addCorsHeaders( array(), false, $sendHeaders );
+            }
+        }
+
+        return $this->_responseObject;
     }
 
     /**
@@ -1162,6 +1174,34 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         return static::$_dispatcher;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getUseResponseObject()
+    {
+        return $this->_useResponseObject;
+    }
+
+    /**
+     * @param boolean $useResponseObject
+     *
+     * @return PlatformWebApplication
+     */
+    public function setUseResponseObject( $useResponseObject )
+    {
+        $this->_useResponseObject = $useResponseObject;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequestBody()
+    {
+        return $this->_requestBody;
     }
 
     /**

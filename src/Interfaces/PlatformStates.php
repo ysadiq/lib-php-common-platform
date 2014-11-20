@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Interfaces;
 
 /**
- * PlatformStates
  * Defines the various states in which a platform may exist
  */
 interface PlatformStates
