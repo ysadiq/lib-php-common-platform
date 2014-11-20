@@ -31,9 +31,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
-ini_set( 'display_errors', 1 );
-ini_set( 'error_reporting', -1 );
-
 //********************************************************************************
 //* Check for maintenance mode...
 //********************************************************************************
