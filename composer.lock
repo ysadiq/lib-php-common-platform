@@ -254,13 +254,14 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:dreamfactorysoftware/enterprise-storage.git",
-                "reference": "2e28f23d020dbd59697431be2a6a5b84179315e6"
+                "reference": "3b5a357e62357af1b46621c47172dc280a74aec1"
             },
             "require": {
+                "doctrine/cache": "@stable",
                 "dreamfactory/php-utils": "~1.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "*"
+                "phpunit/phpunit": "@stable"
             },
             "type": "library",
             "extra": {
@@ -289,7 +290,7 @@
                 "enterprise",
                 "storage"
             ],
-            "time": "2014-11-15 20:58:14"
+            "time": "2014-11-20 22:00:45"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -390,20 +391,19 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "1962a023d2338c3ee158b5ac3552d35d75b855a0"
+                "reference": "fd6fe255898f62f3073be80343b8c71df9994aee"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/1962a023d2338c3ee158b5ac3552d35d75b855a0",
-                "reference": "1962a023d2338c3ee158b5ac3552d35d75b855a0",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/fd6fe255898f62f3073be80343b8c71df9994aee",
+                "reference": "fd6fe255898f62f3073be80343b8c71df9994aee",
                 "shasum": ""
             },
             "require": {
                 "dreamfactory/lib-php-common": "~1.5.0",
                 "dreamfactory/php-utils": "*",
                 "dreamfactory/yii": "~1.1.13.10",
-                "kisma/kisma": "~0.2",
-                "php": "~5.3"
+                "kisma/kisma": "~0.2"
             },
             "require-dev": {
                 "phpunit/dbunit": "@stable",
@@ -450,7 +450,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-11-15 03:10:35"
+            "time": "2014-11-20 16:10:09"
         },
         {
             "name": "dreamfactory/oasys",
@@ -512,16 +512,17 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
-                "reference": "a66210a6edd08cb059cac29b629ec7053b9357f1"
+                "reference": "c853e5ea933e640e874c463a171c8232a9d9d410"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/a66210a6edd08cb059cac29b629ec7053b9357f1",
-                "reference": "a66210a6edd08cb059cac29b629ec7053b9357f1",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/c853e5ea933e640e874c463a171c8232a9d9d410",
+                "reference": "c853e5ea933e640e874c463a171c8232a9d9d410",
                 "shasum": ""
             },
             "require": {
-                "kisma/kisma": "*"
+                "kisma/kisma": "*",
+                "symfony/dependency-injection": "*"
             },
             "require-dev": {
                 "phpunit/phpunit": "*"
@@ -554,7 +555,7 @@
                 "dreamfactory",
                 "utility"
             ],
-            "time": "2014-11-15 03:07:47"
+            "time": "2014-11-20 02:07:40"
         },
         {
             "name": "dreamfactory/yii",
@@ -1436,18 +1437,75 @@
             "time": "2013-04-11 10:22:09"
         },
         {
+            "name": "symfony/dependency-injection",
+            "version": "dev-master",
+            "target-dir": "Symfony/Component/DependencyInjection",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/DependencyInjection.git",
+                "reference": "84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/DependencyInjection/zipball/84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd",
+                "reference": "84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "require-dev": {
+                "symfony/config": "~2.2",
+                "symfony/expression-language": "~2.4",
+                "symfony/yaml": "~2.0"
+            },
+            "suggest": {
+                "symfony/config": "",
+                "symfony/proxy-manager-bridge": "Generate service proxies to lazy load them",
+                "symfony/yaml": ""
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\DependencyInjection\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                },
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                }
+            ],
+            "description": "Symfony DependencyInjection Component",
+            "homepage": "http://symfony.com",
+            "time": "2014-11-16 17:28:29"
+        },
+        {
             "name": "symfony/event-dispatcher",
             "version": "2.7.x-dev",
             "target-dir": "Symfony/Component/EventDispatcher",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "8e5829263631e686bf4d1254b02411263b8fa228"
+                "reference": "30e571ce1bba949b44f49b977966898a41c77a01"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/8e5829263631e686bf4d1254b02411263b8fa228",
-                "reference": "8e5829263631e686bf4d1254b02411263b8fa228",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/30e571ce1bba949b44f49b977966898a41c77a01",
+                "reference": "30e571ce1bba949b44f49b977966898a41c77a01",
                 "shasum": ""
             },
             "require": {
@@ -1491,7 +1549,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-10 18:00:54"
+            "time": "2014-11-20 13:24:30"
         },
         {
             "name": "symfony/http-foundation",
@@ -1500,12 +1558,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "7efb1b7def9eebcb925bc8d1c05c056cbe7fe29c"
+                "reference": "3681fb2d09c35c405f0fe206f8d2f9af965e9984"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/7efb1b7def9eebcb925bc8d1c05c056cbe7fe29c",
-                "reference": "7efb1b7def9eebcb925bc8d1c05c056cbe7fe29c",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/3681fb2d09c35c405f0fe206f8d2f9af965e9984",
+                "reference": "3681fb2d09c35c405f0fe206f8d2f9af965e9984",
                 "shasum": ""
             },
             "require": {
@@ -1544,7 +1602,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-10 18:00:54"
+            "time": "2014-11-20 13:24:30"
         }
     ],
     "packages-dev": [
@@ -2192,12 +2250,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/comparator.git",
-                "reference": "6f67d2ae044ba17ba30573941f4ac96c4777be97"
+                "reference": "c484a80f97573ab934e37826dba0135a3301b26a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/comparator/zipball/6f67d2ae044ba17ba30573941f4ac96c4777be97",
-                "reference": "6f67d2ae044ba17ba30573941f4ac96c4777be97",
+                "url": "https://api.github.com/repos/sebastianbergmann/comparator/zipball/c484a80f97573ab934e37826dba0135a3301b26a",
+                "reference": "c484a80f97573ab934e37826dba0135a3301b26a",
                 "shasum": ""
             },
             "require": {
@@ -2248,7 +2306,7 @@
                 "compare",
                 "equality"
             ],
-            "time": "2014-10-21 10:04:18"
+            "time": "2014-11-16 21:32:38"
         },
         {
             "name": "sebastian/diff",
@@ -2459,12 +2517,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "6165f4b5224c22de2873deb6a3a4e622044f0705"
+                "reference": "75deb1b183d2bbf12f4b54c644c0caafca338fbe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/6165f4b5224c22de2873deb6a3a4e622044f0705",
-                "reference": "6165f4b5224c22de2873deb6a3a4e622044f0705",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/75deb1b183d2bbf12f4b54c644c0caafca338fbe",
+                "reference": "75deb1b183d2bbf12f4b54c644c0caafca338fbe",
                 "shasum": ""
             },
             "require": {
@@ -2497,7 +2555,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-10 18:00:54"
+            "time": "2014-11-20 13:24:30"
         }
     ],
     "aliases": [
