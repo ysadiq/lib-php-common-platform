@@ -455,9 +455,17 @@ MYSQL;
      */
     public function isStorageService( $id = null )
     {
-        $_id = $id ? : $this->type_id;
+        $_id = $id ?: $this->type_id;
 
-        return ( PlatformServiceTypes::FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id );
+        switch ( $_id )
+        {
+            case PlatformServiceTypes::FILE_STORAGE:
+            case PlatformServiceTypes::NOSQL_DB:
+            case PlatformServiceTypes::PUSH_SERVICE:
+                return true;
+        }
+
+        return false;
     }
 
     /**
@@ -471,10 +479,7 @@ MYSQL;
             if ( false === ( $_typeId = $this->getServiceTypeId() ) )
             {
                 Log::error(
-                    '  * Invalid service type "' .
-                    $this->type .
-                    '" found in row: ' .
-                    print_r( $this->getAttributes(), true )
+                    '  * Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true )
                 );
                 throw new InternalServerErrorException( 'Invalid service type "' . $this->type . '" specified.' );
             }
@@ -502,10 +507,7 @@ MYSQL;
             if ( false === ( $_typeId = $this->getStorageTypeId() ) )
             {
                 Log::error(
-                    '  * Invalid storage type "' .
-                    $this->storage_type .
-                    '" found in row: ' .
-                    print_r( $this->getAttributes(), true )
+                    '  * Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true )
                 );
             }
             else
@@ -519,10 +521,7 @@ MYSQL;
                 else
                 {
                     Log::notice(
-                        '  * Unable to update df_sys_service.storage_type_id to "' .
-                        $_typeId .
-                        '" in row ID#' .
-                        $this->id
+                        '  * Unable to update df_sys_service.storage_type_id to "' . $_typeId . '" in row ID#' . $this->id
                     );
                 }
             }
@@ -603,7 +602,7 @@ MYSQL;
         }
 
         // credentials needs to be returned as null if empty array, for JSON conversion to be correct
-        if (empty($this->credentials))
+        if ( empty( $this->credentials ) )
         {
             $this->credentials = null;
         }
@@ -655,7 +654,7 @@ MYSQL;
      */
     public function getStorageTypeId( $storageType = null )
     {
-        $_storageType = str_replace( ' ', '_', trim( strtoupper( $storageType ? : $this->storage_type ) ) );
+        $_storageType = str_replace( ' ', '_', trim( strtoupper( $storageType ?: $this->storage_type ) ) );
 
         try
         {
@@ -678,7 +677,7 @@ MYSQL;
      */
     public function getServiceTypeId( $type = null )
     {
-        $_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->type ) ) );
+        $_type = str_replace( ' ', '_', trim( strtoupper( $type ?: $this->type ) ) );
 
         if ( 'LOCAL_EMAIL_SERVICE' == $_type )
         {

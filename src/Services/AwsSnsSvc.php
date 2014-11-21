@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use Aws\Common\Enum\Region;
 use Aws\Sns\SnsClient;
+use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -39,7 +40,7 @@ class AwsSnsSvc extends BasePushSvc
     //	Constants
     //*************************************************************************
 
-    const DEFAULT_REGION = Region::US_WEST_1;
+    const DEFAULT_REGION = Region::US_EAST_1;
 
     //*************************************************************************
     //	Members
@@ -129,7 +130,7 @@ class AwsSnsSvc extends BasePushSvc
     /**
      * {@InheritDoc}
      */
-    public function correctTableName( &$name )
+    public function correctTopicName( &$name )
     {
         static $_existing = null;
 
@@ -140,12 +141,12 @@ class AwsSnsSvc extends BasePushSvc
 
         if ( empty( $name ) )
         {
-            throw new BadRequestException( 'Table name can not be empty.' );
+            throw new BadRequestException( 'Topic name can not be empty.' );
         }
 
         if ( false === array_search( $name, $_existing ) )
         {
-            throw new NotFoundException( "Table '$name' not found." );
+            throw new NotFoundException( "Topic '$name' not found." );
         }
 
         return $name;
@@ -187,10 +188,33 @@ class AwsSnsSvc extends BasePushSvc
         $_result = $this->_getTopicsAsArray();
         foreach ( $_result as $_topic )
         {
-            $_resources[] = array('name' => $_topic);
+            $_name = IfSet::get( $_topic, 'TopicArn');
+            $_topic['name'] = $_name;
+            $_resources[] = $_topic;
         }
 
         return $_resources;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    protected function _pushMessage( $resource, $message )
+    {
+        if (is_array($message))
+        {
+            $message['TopicArn'] = $resource;
+        }
+        else
+        {
+            $message = array(
+                'TopicArn' => $resource,
+                'Message' => $message,
+            );
+        }
+
+        $_result = $this->_dbConn->publish( $message );
+
+        return $_result;
+    }
 }

@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use Kisma\Core\Utility\Option;
 
@@ -33,7 +35,6 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
     //*************************************************************************
     //* Members
     //*************************************************************************
-
 
     //*************************************************************************
     //* Methods
@@ -112,16 +113,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
             }
         }
 
-        switch ( $this->_resource )
-        {
-            case static::SCHEMA_RESOURCE:
-                return $this->_handleSchema();
-                break;
-
-            default:
-                return parent::_handleResource();
-                break;
-        }
+        return parent::_handleResource();
     }
 
     /**
@@ -182,33 +174,91 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      */
     protected function _handlePost()
     {
-        if ( !empty( $this->_resourceId ) )
+        if ( empty( $this->_requestPayload ) )
         {
-            throw new BadRequestException( 'Create record by identifier not currently supported.' );
-        }
-
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
-        if ( empty( $_records ) )
-        {
-            throw new BadRequestException( 'No record(s) detected in request.' );
+            throw new BadRequestException( 'No post detected in request.' );
         }
 
         $this->_triggerActionEvent( $this->_response );
 
-        $_result = $this->createRecords( $this->_resource, $_records, $this->_requestPayload );
-
-        if ( $this->_singleRecordAmnesty )
-        {
-            return Option::get( $_result, 0, $_result );
-        }
-
-        $_meta = Option::get( $_result, 'meta', null, true );
-        $_result = array(static::RECORD_WRAPPER => $_result);
-        if ( !empty( $_meta ) )
-        {
-            $_result['meta'] = $_meta;
-        }
+        $_result = $this->_pushMessage( $this->_resource, $this->_requestPayload );
 
         return $_result;
+    }
+
+    /**
+     * @param array|null $options
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @return array
+     */
+    public function retrieveResources( $options = null )
+    {
+        $_refresh = Option::getBool( $options, 'refresh' );
+        $_namesOnly = Option::getBool( $options, 'names_only' );
+        $_asComponents = Option::getBool( $options, 'as_access_components' );
+        $_resources = array();
+
+        if ( $_asComponents )
+        {
+            $_resources = array('', '*');
+        }
+        try
+        {
+            $_result = static::_listTopics( $_refresh );
+            foreach ( $_result as $_topics )
+            {
+                if ( null != $_name = Option::get( $_topics, 'name' ) )
+                {
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        if ( $_asComponents || $_namesOnly )
+                        {
+                            $_resources[] = $_name;
+                        }
+                        else
+                        {
+                            $_topics['access'] = $_access;
+                            $_resources[] = $_topics;
+                        }
+                    }
+                }
+            }
+
+            return $_resources;
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param bool $refresh
+     *
+     * @return array
+     */
+    protected function _listTopics( /** @noinspection PhpUnusedParameterInspection */
+        $refresh = true )
+    {
+        return array();
+    }
+
+    /**
+     * @param string       $resource
+     * @param string|array $message
+     *
+     * @return array
+     */
+    protected function _pushMessage( $resource, $message )
+    {
+        return array();
     }
 }
