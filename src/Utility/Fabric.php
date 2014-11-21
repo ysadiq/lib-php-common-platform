@@ -31,22 +31,8 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
-ini_set( 'display_errors', 1 );
-ini_set( 'error_reporting', -1 );
-
-//********************************************************************************
-//* Check for maintenance mode...
-//********************************************************************************
-
-if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) )
-{
-    header( 'Location: ' . Fabric::MAINTENANCE_URI );
-    die();
-}
-
 /**
- * Fabric.php
- * The configuration file for fabric-hosted DSPs
+ * Hosted DSP system utilities
  */
 class Fabric extends SeedUtility
 {
@@ -172,12 +158,20 @@ class Fabric extends SeedUtility
      */
     public static function initialize()
     {
+        static $_settings = null;
+
+        if ( $_settings )
+        {
+            return $_settings;
+        }
+
         //	If this isn't a cloud request, bail
         $_host = static::getHostName();
 
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
             static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
+
             throw new \CHttpException(
                 HttpResponse::Forbidden,
                 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
@@ -191,7 +185,6 @@ class Fabric extends SeedUtility
             return $_settings;
         }
 
-        setcookie( static::PrivateFigNewton, '', 0, '/' );
         throw new \CHttpException( HttpResponse::BadRequest, 'Unable to find database configuration' );
     }
 
@@ -231,7 +224,7 @@ class Fabric extends SeedUtility
 
         if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
         {
-            throw  new FileSystemException( 'Unable to create cache directory' );
+            throw new FileSystemException( 'Unable to create cache directory' );
         }
 
         return $_path . DIRECTORY_SEPARATOR . sha1( $host . $_SERVER['REMOTE_ADDR'] );
@@ -386,14 +379,14 @@ PHP;
                     @mkdir( dirname( $_dbConfigFile ), 0777, true );
                 }
 
-                Log::debug( 'Writing config "' . $_dbConfigFile . '": ' . json_encode( $_instance, JSON_PRETTY_PRINT ) . PHP_EOL . $_dbConfig );
+                //Log::debug( 'Writing config "' . $_dbConfigFile . '": ' . json_encode( $_instance, JSON_PRETTY_PRINT ) . PHP_EOL . $_dbConfig );
 
                 if ( false === file_put_contents( $_dbConfigFile, $_dbConfig ) )
                 {
                     static::_errorLog( 'Cannot create database config file.' );
                 }
 
-                //  Try and create it...
+                //  Try and read again
                 if ( !file_exists( $_dbConfigFile ) )
                 {
                     static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
@@ -412,8 +405,6 @@ PHP;
                 //	Save it for later (don't run away and let me down <== extra points if you get the reference)
                 setcookie( static::FigNewton, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
                 setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
-
-                static::_cacheSettings( $host, $_settings, $_instance );
             }
             else
             {
@@ -421,6 +412,8 @@ PHP;
                 setcookie( static::FigNewton, '', 0, '/' );
                 setcookie( static::PrivateFigNewton, '', 0, '/' );
             }
+
+            static::_cacheSettings( $host, $_settings, $_instance );
         }
 
         //  Check for enterprise status
@@ -524,4 +517,14 @@ PHP;
             }
         }
     }
+}
+
+//********************************************************************************
+//* Check for maintenance mode...
+//********************************************************************************
+
+if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) )
+{
+    header( 'Location: ' . Fabric::MAINTENANCE_URI );
+    die();
 }

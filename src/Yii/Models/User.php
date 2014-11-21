@@ -553,6 +553,7 @@ class User extends BasePlatformSystemModel
 
         if ( 'y' !== $_user->confirm_code )
         {
+            Pii::user()->logout();
             throw new BadRequestException( 'User registration or password reset request has not been confirmed.' );
         }
 

@@ -307,7 +307,8 @@ class Portal extends BaseSystemRestService
         }
         else
         {
-            $_configPath = Platform::getPrivateConfigPath( DIRECTORY_SEPARATOR . 'portal' . DIRECTORY_SEPARATOR . $this->_resource . '.config.php' );
+            $_configPath =
+                Platform::getPrivateConfigPath( DIRECTORY_SEPARATOR . 'portal' . DIRECTORY_SEPARATOR . $this->_resource . '.config.php', true, true );
 
             if ( file_exists( $_configPath ) )
             {
