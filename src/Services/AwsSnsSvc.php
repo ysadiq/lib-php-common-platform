@@ -196,25 +196,84 @@ class AwsSnsSvc extends BasePushSvc
         return $_resources;
     }
 
+    protected function _retrieveTopic( $resource )
+    {
+        $_request = array('TopicArn' => $resource);
+
+        try
+        {
+            if (null !== $_result = $this->_dbConn->getTopicAttributes( $_request ))
+            {
+                return $_result->toArray();
+            }
+        }
+        catch ( \Aws\Sns\Exception\NotFoundException $_ex)
+        {
+            throw new NotFoundException( $_ex->getMessage() );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to retrieve properties for '$resource'.\n{$_ex->getMessage()}" );
+        }
+
+        return  array();
+    }
+
     /**
      * {@inheritdoc}
      */
-    protected function _pushMessage( $resource, $message )
+    protected function _pushMessage( $resource, $request )
     {
-        if (is_array($message))
+        $_msgFormat = '{
+        "default": "ENTER YOUR MESSAGE",
+    "email": "ENTER YOUR MESSAGE",
+    "sqs": "ENTER YOUR MESSAGE",
+    "http": "ENTER YOUR MESSAGE",
+    "https": "ENTER YOUR MESSAGE",
+    "sms": "ENTER YOUR MESSAGE",
+    "APNS": "{\"aps\":{\"alert\": \"ENTER YOUR MESSAGE\",\"sound\":\"default\"} }",
+    "GCM": "{ \"data\": { \"message\": \"ENTER YOUR MESSAGE\" } }",
+    "ADM": "{ \"data\": { \"message\": \"ENTER YOUR MESSAGE\" } }",
+    "BAIDU": "{\"title\":\"ENTER YOUR TITLE\",\"description\":\"ENTER YOUR DESCRIPTION\"}",
+    "MPNS" : "<?xml version=\"1.0\" encoding=\"utf-8\"?><wp:Notification xmlns:wp=\"WPNotification\"><wp:Tile><wp:Count>ENTER COUNT</wp:Count><wp:Title>ENTER YOUR MESSAGE</wp:Title></wp:Tile></wp:Notification>",
+    "WNS" : "<badge version=\"1\" value=\"23\"/>"
+}';
+
+        $_data = array('TopicArn' => $resource);
+        if (is_array($request))
         {
-            $message['TopicArn'] = $resource;
+            if (Ifset::has($request, 'Message'))
+            {
+                $_data = array_merge($_data, $request);
+            }
+            else
+            {
+                //  This is the message
+                $_data['Message'] = $request;
+                $_data['MessageStructure'] = 'json';
+            }
         }
         else
         {
-            $message = array(
-                'TopicArn' => $resource,
-                'Message' => $message,
-            );
+            $_data['Message'] = $request;
         }
 
-        $_result = $this->_dbConn->publish( $message );
+        try
+        {
+            if (null !== $_result = $this->_dbConn->publish( $_data ) )
+            {
+                return $_result->toArray();
+            }
+        }
+        catch ( \Aws\Sns\Exception\NotFoundException $_ex)
+        {
+            throw new NotFoundException( $_ex->getMessage() );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to push message to '$resource'.\n{$_ex->getMessage()}" );
+        }
 
-        return $_result;
+        return  array();
     }
 }

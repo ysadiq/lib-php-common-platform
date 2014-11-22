@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
+use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -69,6 +70,12 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
         parent::_detectResourceMembers( $resourcePath );
 
         return $this;
+    }
+
+    protected function _detectRequestMembers()
+    {
+        // override - don't call parent class here
+        $this->_requestPayload = Option::clean( RestData::getPostedData( true, true ) );
     }
 
     /**
@@ -121,47 +128,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      */
     protected function _handleGet()
     {
-        //	Single resource by ID
-        if ( !empty( $this->_resourceId ) )
-        {
-            $_result = null;
-            $this->_triggerActionEvent( $_result );
-
-            return $_result;
-        }
-
-        $_ids = Option::get( $this->_requestPayload, 'ids' );
-
-        //	Multiple resources by ID
-        if ( !empty( $_ids ) )
-        {
-            $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestPayload );
-        }
-        else
-        {
-            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
-
-            if ( !empty( $_records ) )
-            {
-                // passing records to have them updated with new or more values, id field required
-                $_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestPayload );
-            }
-            else
-            {
-                $_filter = Option::get( $this->_requestPayload, 'filter' );
-                $_params = Option::get( $this->_requestPayload, 'params', array() );
-
-                $_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
-            }
-        }
-
-        $_meta = Option::get( $_result, 'meta', null, true );
-        $_result = array(static::RECORD_WRAPPER => $_result);
-
-        if ( !empty( $_meta ) )
-        {
-            $_result['meta'] = $_meta;
-        }
+        $_result = $this->_retrieveTopic( $this->_resource, $this->_requestPayload );
 
         $this->_triggerActionEvent( $_result );
 
@@ -253,11 +220,21 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
 
     /**
      * @param string       $resource
-     * @param string|array $message
      *
      * @return array
      */
-    protected function _pushMessage( $resource, $message )
+    protected function _retrieveTopic( $resource )
+    {
+        return array();
+    }
+
+    /**
+     * @param string       $resource
+     * @param string|array $request
+     *
+     * @return array
+     */
+    protected function _pushMessage( $resource, $request )
     {
         return array();
     }
