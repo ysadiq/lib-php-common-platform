@@ -42,7 +42,7 @@
         "pear-pear.php.net/Mail_Mime": "*",
         "pear-pear.php.net/Mail_mimeDecode": "*",
         "dreamfactory/javascript-sdk": "~1.0",
-        "dreamfactory/php-utils": "~1.0",
+        "dreamfactory/php-utils": "dev-feature/es-refactor as dev-master",
         "dreamfactory/enterprise-storage": "dev-develop as dev-master",
         "dreamfactory/yii": "~1.1.13.12",
         "dreamfactory/lib-php-common": "~1.5.0",
