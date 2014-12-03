@@ -27,7 +27,7 @@
     "require": {
         "kisma/kisma": "~0.2",
         "swiftmailer/swiftmailer": "~4.3",
-        "aws/aws-sdk-php": "~2.4.0",
+        "aws/aws-sdk-php": "~2.7.0",
         "rackspace/php-opencloud": "~1.5.0@stable",
         "dready92/php-on-couch": "*",
         "phpforce/soap-client": "*",

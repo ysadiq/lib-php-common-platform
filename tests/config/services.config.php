@@ -25,10 +25,10 @@ use DreamFactory\Platform\Enums\PlatformStorageTypes;
  * This file contains the master service mapping for the DSP
  */
 return array(
-	PlatformServiceTypes::LOCAL_FILE_STORAGE   => array(
+	PlatformServiceTypes::NATIVE_FILE_STORAGE   => array(
 		'class' => 'DreamFactory\\Platform\\Services\\LocalFileSvc',
 	),
-	PlatformServiceTypes::REMOTE_FILE_STORAGE  => array(
+	PlatformServiceTypes::FILE_STORAGE  => array(
 		'class' => array(
 			PlatformStorageTypes::AZURE_BLOB               => array(
 				'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureBlobSvc',
@@ -44,19 +44,19 @@ return array(
 			),
 		),
 	),
-	PlatformServiceTypes::LOCAL_SQL_DB         => array(
+	PlatformServiceTypes::NATIVE_SQL_DB         => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
 		'local' => true,
 	),
-	PlatformServiceTypes::REMOTE_SQL_DB        => array(
+	PlatformServiceTypes::SQL_DB        => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
 		'local' => false,
 	),
-	PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA  => array(
+	PlatformServiceTypes::NATIVE_SQL_DB_SCHEMA  => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
 		'local' => true,
 	),
-	PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA => array(
+	PlatformServiceTypes::SQL_DB_SCHEMA => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
 		'local' => false,
 	),
@@ -82,7 +82,7 @@ return array(
 			),
 		),
 	),
-	PlatformServiceTypes::LOCAL_PORTAL_SERVICE => array(
+	PlatformServiceTypes::PORTAL_SERVICE => array(
 		'class' => 'DreamFactory\\Platform\\Services\\Portal',
 	),
 	PlatformServiceTypes::REMOTE_WEB_SERVICE   => array(

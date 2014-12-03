@@ -42,15 +42,15 @@ class PlatformServiceTypes extends SeedEnum
     /**
      * @var int
      */
-    const LOCAL_FILE_STORAGE = 0x0002;
+    const NATIVE_FILE_STORAGE = 0x0002;
     /**
      * @var int
      */
-    const LOCAL_SQL_DB = 0x0004;
+    const NATIVE_SQL_DB = 0x0004;
     /**
-     * @var int
+     * @var int - Deprecated! - use NATIVE_SQL_DB
      */
-    const LOCAL_SQL_DB_SCHEMA = 0x0008;
+    const NATIVE_SQL_DB_SCHEMA = 0x0008;
     /**
      * @var int
      */
@@ -62,19 +62,19 @@ class PlatformServiceTypes extends SeedEnum
     /**
      * @var int
      */
-    const LOCAL_PORTAL_SERVICE = 0x0040;
+    const PORTAL_SERVICE = 0x0040;
     /**
      * @var int
      */
-    const REMOTE_FILE_STORAGE = 0x1002;
+    const FILE_STORAGE = 0x1002;
     /**
      * @var int
      */
-    const REMOTE_SQL_DB = 0x1004;
+    const SQL_DB = 0x1004;
     /**
-     * @var int
+     * @var int - Deprecated! - use SQL_DB
      */
-    const REMOTE_SQL_DB_SCHEMA = 0x1008;
+    const SQL_DB_SCHEMA = 0x1008;
     /**
      * @var int
      */
@@ -83,6 +83,10 @@ class PlatformServiceTypes extends SeedEnum
      * @var int
      */
     const SCRIPT_SERVICE = 0x1040;
+    /**
+     * @var int
+     */
+    const PUSH_SERVICE = 0x1080;
     /**
      * @var string The system manager endpoint
      */
@@ -105,18 +109,20 @@ class PlatformServiceTypes extends SeedEnum
     protected static $_classMap = array(
         self::SYSTEM_MANAGER_SERVICE => 'SystemManager',
         self::USER_MANAGER_SERVICE   => 'UserManager',
-        self::LOCAL_PORTAL_SERVICE   => 'Portal',
-        self::LOCAL_FILE_STORAGE     => 'LocalFileSvc',
-        self::REMOTE_FILE_STORAGE    => 'RemoteFileSvc',
-        self::LOCAL_SQL_DB           => 'SqlDbSvc',
-        self::REMOTE_SQL_DB          => 'SqlDbSvc',
-        self::LOCAL_SQL_DB_SCHEMA    => 'SchemaSvc',
-        self::REMOTE_SQL_DB_SCHEMA   => 'SchemaSvc',
+        self::PORTAL_SERVICE         => 'Portal',
+        self::NATIVE_FILE_STORAGE    => 'LocalFileSvc',
+        self::FILE_STORAGE           => 'RemoteFileSvc',
+        self::NATIVE_SQL_DB          => 'SqlDbSvc',
+        self::SQL_DB                 => 'SqlDbSvc',
         self::EMAIL_SERVICE          => 'EmailSvc',
         self::NOSQL_DB               => 'NoSqlDbSvc',
         self::SALESFORCE             => 'SalesforceDbSvc',
         self::REMOTE_WEB_SERVICE     => 'RemoteWebSvc',
         self::SCRIPT_SERVICE         => 'Script',
+        self::PUSH_SERVICE           => 'BasePushSvc',
+        // Deprecated
+        self::NATIVE_SQL_DB_SCHEMA   => 'SchemaSvc',
+        self::SQL_DB_SCHEMA          => 'SchemaSvc',
     );
 
     //*************************************************************************
@@ -132,7 +138,7 @@ class PlatformServiceTypes extends SeedEnum
      */
     public static function getFileName( $type, $storage_type, $service_name )
     {
-        $_serviceName = $service_name ? : null;
+        $_serviceName = $service_name ?: null;
 
         if ( !empty( $storage_type ) )
         {
