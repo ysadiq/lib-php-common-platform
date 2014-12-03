@@ -50,7 +50,6 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
         {
             //	Default verb aliases
             $settings['verb_aliases'] = array(
-                static::PUT   => static::POST,
                 static::MERGE => static::PATCH,
             );
         }
@@ -58,24 +57,12 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
         parent::__construct( $settings );
     }
 
-    /**
-     * Setup container and paths
-     *
-     * @param string $resourcePath
-     *
-     * @return $this
-     */
-    protected function _detectResourceMembers( $resourcePath = null )
-    {
-        parent::_detectResourceMembers( $resourcePath );
-
-        return $this;
-    }
-
     protected function _detectRequestMembers()
     {
         // override - don't call parent class here
         $this->_requestPayload = Option::clean( RestData::getPostedData( true, true ) );
+        // MERGE URL parameters with posted data, posted data takes precedence
+        $this->_requestPayload = array_merge( $_REQUEST, $this->_requestPayload );
     }
 
     /**
@@ -96,10 +83,13 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
     {
         parent::_preProcess();
 
-        $this->checkPermission( $this->_action );
+        $this->checkPermission( $this->_action, $this->_resource );
     }
 
     /**
+     * @throws BadRequestException
+     * @throws InternalServerErrorException
+     * @throws \Exception
      * @return array|bool
      */
     protected function _handleResource()
@@ -128,7 +118,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      */
     protected function _handleGet()
     {
-        $_result = $this->_retrieveTopic( $this->_resource, $this->_requestPayload );
+        $_result = $this->retrieveTopic( $this->_resource, $this->_requestPayload );
 
         $this->_triggerActionEvent( $_result );
 
@@ -148,7 +138,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
 
         $this->_triggerActionEvent( $this->_response );
 
-        $_result = $this->_pushMessage( $this->_resource, $this->_requestPayload );
+        $_result = $this->pushMessage( $this->_resource, $this->_requestPayload );
 
         return $_result;
     }
@@ -212,8 +202,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      *
      * @return array
      */
-    protected function _listTopics( /** @noinspection PhpUnusedParameterInspection */
-        $refresh = true )
+    protected function _listTopics( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
     {
         return array();
     }
@@ -223,10 +212,7 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      *
      * @return array
      */
-    protected function _retrieveTopic( $resource )
-    {
-        return array();
-    }
+    abstract public function retrieveTopic( /** @noinspection PhpUnusedParameterInspection */ $resource );
 
     /**
      * @param string       $resource
@@ -234,8 +220,5 @@ abstract class BasePushSvc extends BasePlatformRestService implements ServiceOnl
      *
      * @return array
      */
-    protected function _pushMessage( $resource, $request )
-    {
-        return array();
-    }
+    abstract public function pushMessage( $resource, $request );
 }

@@ -40,7 +40,10 @@ class AwsSnsSvc extends BasePushSvc
     //	Constants
     //*************************************************************************
 
-    const DEFAULT_REGION = Region::US_EAST_1;
+    /**
+     * AWS Region when not defined in configuration
+     */
+    const DEFAULT_REGION = Region::US_WEST_1;
 
     //*************************************************************************
     //	Members
@@ -97,7 +100,12 @@ class AwsSnsSvc extends BasePushSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Amazon SimpleDb Service Exception:\n{$_ex->getMessage()}" );
+            if ( null === $_newEx = static::translateException( $_ex ) )
+            {
+                throw $_newEx;
+            }
+
+            throw new InternalServerErrorException( "Amazon SNS Exception:\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -152,27 +160,41 @@ class AwsSnsSvc extends BasePushSvc
         return $name;
     }
 
-
+    /**
+     * @return array
+     */
     protected function _getTopicsAsArray()
     {
         $_out = array();
         $_token = null;
-        do
+        try
         {
-            $_result = $this->_dbConn->listTopics(
-                array(
-                    'NextToken'         => $_token
-                )
-            );
-            $_topics = $_result['Topics'];
-            $_token = $_result['NextToken'];
-
-            if ( !empty( $_topics ) )
+            do
             {
-                $_out = array_merge( $_out, $_topics );
+                $_result = $this->_dbConn->listTopics(
+                    array(
+                        'NextToken' => $_token
+                    )
+                );
+                $_topics = $_result['Topics'];
+                $_token = $_result['NextToken'];
+
+                if ( !empty( $_topics ) )
+                {
+                    $_out = array_merge( $_out, $_topics );
+                }
             }
+            while ( $_token );
         }
-        while ( $_token );
+        catch ( \Exception $_ex )
+        {
+            if ( null === $_newEx = static::translateException( $_ex ) )
+            {
+                throw $_newEx;
+            }
+
+            throw new InternalServerErrorException( "Failed to retrieve topics.\n{$_ex->getMessage()}", $_ex->getCode() );
+        }
 
         return $_out;
     }
@@ -182,13 +204,14 @@ class AwsSnsSvc extends BasePushSvc
     /**
      * {@inheritdoc}
      */
-    protected function _listTopics( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
+    protected function _listTopics( /** @noinspection PhpUnusedParameterInspection */
+        $refresh = true )
     {
         $_resources = array();
         $_result = $this->_getTopicsAsArray();
         foreach ( $_result as $_topic )
         {
-            $_name = IfSet::get( $_topic, 'TopicArn');
+            $_name = IfSet::get( $_topic, 'TopicArn' );
             $_topic['name'] = $_name;
             $_resources[] = $_topic;
         }
@@ -196,36 +219,46 @@ class AwsSnsSvc extends BasePushSvc
         return $_resources;
     }
 
-    protected function _retrieveTopic( $resource )
+    /**
+     * @param $resource
+     *
+     * @return array
+     * @throws InternalServerErrorException
+     * @throws NotFoundException
+     */
+    public function retrieveTopic( $resource )
     {
         $_request = array('TopicArn' => $resource);
 
         try
         {
-            if (null !== $_result = $this->_dbConn->getTopicAttributes( $_request ))
+            if ( null !== $_result = $this->_dbConn->getTopicAttributes( $_request ) )
             {
                 return $_result->toArray();
             }
         }
-        catch ( \Aws\Sns\Exception\NotFoundException $_ex)
-        {
-            throw new NotFoundException( $_ex->getMessage() );
-        }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to retrieve properties for '$resource'.\n{$_ex->getMessage()}" );
+            if ( null === $_newEx = static::translateException( $_ex ) )
+            {
+                throw $_newEx;
+            }
+
+            throw new InternalServerErrorException( "Failed to retrieve properties for '$resource'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
-        return  array();
+        return array();
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function _pushMessage( $resource, $request )
+    public function pushMessage( $resource, $request )
     {
-        $_msgFormat = '{
-        "default": "ENTER YOUR MESSAGE",
+        /** @noinspection PhpUnusedLocalVariableInspection */
+        $_msgFormat = <<<JSON
+{
+    "default": "ENTER YOUR MESSAGE",
     "email": "ENTER YOUR MESSAGE",
     "sqs": "ENTER YOUR MESSAGE",
     "http": "ENTER YOUR MESSAGE",
@@ -237,14 +270,19 @@ class AwsSnsSvc extends BasePushSvc
     "BAIDU": "{\"title\":\"ENTER YOUR TITLE\",\"description\":\"ENTER YOUR DESCRIPTION\"}",
     "MPNS" : "<?xml version=\"1.0\" encoding=\"utf-8\"?><wp:Notification xmlns:wp=\"WPNotification\"><wp:Tile><wp:Count>ENTER COUNT</wp:Count><wp:Title>ENTER YOUR MESSAGE</wp:Title></wp:Tile></wp:Notification>",
     "WNS" : "<badge version=\"1\" value=\"23\"/>"
-}';
+}
+JSON;
 
         $_data = array('TopicArn' => $resource);
-        if (is_array($request))
+        if ( is_array( $request ) )
         {
-            if (Ifset::has($request, 'Message'))
+            if ( null !== $_message = Ifset::get( $request, 'Message' ) )
             {
-                $_data = array_merge($_data, $request);
+                $_data = array_merge( $_data, $request );
+                if ( is_array( $_message ) && !Ifset::has( $request, 'MessageStructure' ) )
+                {
+                    $_data['MessageStructure'] = 'json';
+                }
             }
             else
             {
@@ -260,20 +298,52 @@ class AwsSnsSvc extends BasePushSvc
 
         try
         {
-            if (null !== $_result = $this->_dbConn->publish( $_data ) )
+            if ( null !== $_result = $this->_dbConn->publish( $_data ) )
             {
                 return $_result->toArray();
             }
         }
-        catch ( \Aws\Sns\Exception\NotFoundException $_ex)
-        {
-            throw new NotFoundException( $_ex->getMessage() );
-        }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to push message to '$resource'.\n{$_ex->getMessage()}" );
+            if ( null !== $_newEx = static::translateException( $_ex ) )
+            {
+                throw $_newEx;
+            }
+
+            throw new InternalServerErrorException( "Failed to push message to '$resource'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
-        return  array();
+        return array();
+    }
+
+    /**
+     * Translates AWS SNS Exceptions to DF Exceptions
+     * If not an AWS SNS Exception, then null is returned.
+     *
+     * @param \Exception  $exception
+     * @param string|null $add_msg
+     *
+     * @return BadRequestException|InternalServerErrorException|NotFoundException|null
+     */
+    static public function translateException( \Exception $exception, $add_msg = null )
+    {
+        $_msg = strval( $add_msg ) . $exception->getMessage();
+        switch ( get_class( $exception ) )
+        {
+            case 'Aws\Sns\Exception\AuthorizationErrorException':
+            case 'Aws\Sns\Exception\EndpointDisabledException':
+            case 'Aws\Sns\Exception\InvalidParameterException':
+            case 'Aws\Sns\Exception\PlatformApplicationDisabledException':
+            case 'Aws\Sns\Exception\SubscriptionLimitExceededException':
+            case 'Aws\Sns\Exception\TopicLimitExceededException':
+                return new BadRequestException( $_msg, $exception->getCode() );
+            case 'Aws\Sns\Exception\NotFoundException':
+                return new NotFoundException( $_msg, $exception->getCode() );
+            case 'Aws\Sns\Exception\SnsException':
+            case 'Aws\Sns\Exception\InternalErrorException':
+                return new InternalServerErrorException( $_msg, $exception->getCode() );
+            default:
+                return null;
+        }
     }
 }
