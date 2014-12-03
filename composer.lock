@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "18ab0e8ca9832b706ec0054515ae158b",
+    "hash": "dabc325ccc2dd75bebc9165cc7959d41",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -80,12 +80,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/cache.git",
-                "reference": "912e8a11ce3c75a630b225dd82aed83e00943ed5"
+                "reference": "9354b720cc97db4a914ab5aa28dbaa822cb3d300"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/cache/zipball/912e8a11ce3c75a630b225dd82aed83e00943ed5",
-                "reference": "912e8a11ce3c75a630b225dd82aed83e00943ed5",
+                "url": "https://api.github.com/repos/doctrine/cache/zipball/9354b720cc97db4a914ab5aa28dbaa822cb3d300",
+                "reference": "9354b720cc97db4a914ab5aa28dbaa822cb3d300",
                 "shasum": ""
             },
             "require": {
@@ -96,6 +96,7 @@
             },
             "require-dev": {
                 "phpunit/phpunit": ">=3.7",
+                "predis/predis": "~0.8",
                 "satooshi/php-coveralls": "~0.6"
             },
             "type": "library",
@@ -141,7 +142,7 @@
                 "cache",
                 "caching"
             ],
-            "time": "2014-10-20 19:28:25"
+            "time": "2014-12-03 01:17:20"
         },
         {
             "name": "dready92/php-on-couch",
@@ -249,50 +250,6 @@
             "time": "2014-08-08 21:07:14"
         },
         {
-            "name": "dreamfactory/enterprise-storage",
-            "version": "dev-develop",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:dreamfactorysoftware/enterprise-storage.git",
-                "reference": "3b5a357e62357af1b46621c47172dc280a74aec1"
-            },
-            "require": {
-                "doctrine/cache": "@stable",
-                "dreamfactory/php-utils": "~1.0"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "@stable"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-develop": "1.0.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "DreamFactory\\Library\\Enterprise\\Storage\\": "src/"
-                }
-            },
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "Jerry Ablan",
-                    "email": "jerryablan@dreamfactory.com"
-                }
-            ],
-            "description": "DreamFactory Enterprise(tm) Storage Provider",
-            "homepage": "https://www.dreamfactory.com/",
-            "keywords": [
-                "dreamfactory",
-                "enterprise",
-                "storage"
-            ],
-            "time": "2014-11-20 22:00:45"
-        },
-        {
             "name": "dreamfactory/javascript-sdk",
             "version": "1.0.15",
             "source": {
@@ -337,12 +294,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "337cab979e1b0857f38abe91ad93094c5871ccf0"
+                "reference": "7c8325e01e0a2ab8efee83f073296822a601bd58"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/337cab979e1b0857f38abe91ad93094c5871ccf0",
-                "reference": "337cab979e1b0857f38abe91ad93094c5871ccf0",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/7c8325e01e0a2ab8efee83f073296822a601bd58",
+                "reference": "7c8325e01e0a2ab8efee83f073296822a601bd58",
                 "shasum": ""
             },
             "require": {
@@ -383,7 +340,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-11-15 03:08:53"
+            "time": "2014-11-27 02:39:57"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -391,12 +348,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "fd6fe255898f62f3073be80343b8c71df9994aee"
+                "reference": "228cdfa5e8c540dbf5ec32c61693f8e584c6237c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/fd6fe255898f62f3073be80343b8c71df9994aee",
-                "reference": "fd6fe255898f62f3073be80343b8c71df9994aee",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/228cdfa5e8c540dbf5ec32c61693f8e584c6237c",
+                "reference": "228cdfa5e8c540dbf5ec32c61693f8e584c6237c",
                 "shasum": ""
             },
             "require": {
@@ -450,20 +407,20 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-11-20 16:10:09"
+            "time": "2014-12-01 22:46:41"
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "dev-develop",
+            "version": "dev-master",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "4ed89160e70b2f8d68467eb5f92001c0abb94169"
+                "reference": "c5d95d6db4bd2d58d78bde0677cd39996275b018"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/4ed89160e70b2f8d68467eb5f92001c0abb94169",
-                "reference": "4ed89160e70b2f8d68467eb5f92001c0abb94169",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/c5d95d6db4bd2d58d78bde0677cd39996275b018",
+                "reference": "c5d95d6db4bd2d58d78bde0677cd39996275b018",
                 "shasum": ""
             },
             "require": {
@@ -504,7 +461,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-10-21 21:57:21"
+            "time": "2014-10-19 18:47:41"
         },
         {
             "name": "dreamfactory/php-utils",
@@ -512,12 +469,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/php-utils.git",
-                "reference": "c853e5ea933e640e874c463a171c8232a9d9d410"
+                "reference": "0969e5b04fc69a745793e95babc355b51c4448bf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/c853e5ea933e640e874c463a171c8232a9d9d410",
-                "reference": "c853e5ea933e640e874c463a171c8232a9d9d410",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/php-utils/zipball/0969e5b04fc69a745793e95babc355b51c4448bf",
+                "reference": "0969e5b04fc69a745793e95babc355b51c4448bf",
                 "shasum": ""
             },
             "require": {
@@ -555,7 +512,7 @@
                 "dreamfactory",
                 "utility"
             ],
-            "time": "2014-11-20 02:07:40"
+            "time": "2014-11-21 02:17:58"
         },
         {
             "name": "dreamfactory/yii",
@@ -1249,12 +1206,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpforce/soap-client.git",
-                "reference": "9f014c8d5e48f5d983600f37098f22d67e9cb1e1"
+                "reference": "2d397ad34e80a9caf092e33c09d9f16978c6112d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpforce/soap-client/zipball/9f014c8d5e48f5d983600f37098f22d67e9cb1e1",
-                "reference": "9f014c8d5e48f5d983600f37098f22d67e9cb1e1",
+                "url": "https://api.github.com/repos/phpforce/soap-client/zipball/2d397ad34e80a9caf092e33c09d9f16978c6112d",
+                "reference": "2d397ad34e80a9caf092e33c09d9f16978c6112d",
                 "shasum": ""
             },
             "require": {
@@ -1294,7 +1251,7 @@
                 "soap",
                 "web services"
             ],
-            "time": "2014-06-13 12:06:55"
+            "time": "2014-11-24 19:28:03"
         },
         {
             "name": "psr/log",
@@ -1443,12 +1400,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/DependencyInjection.git",
-                "reference": "84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd"
+                "reference": "a677fb89e2e161db5aea8aea05846a586962544c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/DependencyInjection/zipball/84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd",
-                "reference": "84fa0a1e46f1bd4da38dc624b1d7c26f90e221dd",
+                "url": "https://api.github.com/repos/symfony/DependencyInjection/zipball/a677fb89e2e161db5aea8aea05846a586962544c",
+                "reference": "a677fb89e2e161db5aea8aea05846a586962544c",
                 "shasum": ""
             },
             "require": {
@@ -1491,7 +1448,7 @@
             ],
             "description": "Symfony DependencyInjection Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-16 17:28:29"
+            "time": "2014-12-02 21:48:49"
         },
         {
             "name": "symfony/event-dispatcher",
@@ -1500,12 +1457,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "30e571ce1bba949b44f49b977966898a41c77a01"
+                "reference": "f0180bb23a94c4259c1b85abc61b6af15d77c186"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/30e571ce1bba949b44f49b977966898a41c77a01",
-                "reference": "30e571ce1bba949b44f49b977966898a41c77a01",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/f0180bb23a94c4259c1b85abc61b6af15d77c186",
+                "reference": "f0180bb23a94c4259c1b85abc61b6af15d77c186",
                 "shasum": ""
             },
             "require": {
@@ -1549,7 +1506,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-20 13:24:30"
+            "time": "2014-12-02 20:19:50"
         },
         {
             "name": "symfony/http-foundation",
@@ -1558,12 +1515,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "3681fb2d09c35c405f0fe206f8d2f9af965e9984"
+                "reference": "406b34d3fe83bc3b5daed0cd5ee8317350845be2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/3681fb2d09c35c405f0fe206f8d2f9af965e9984",
-                "reference": "3681fb2d09c35c405f0fe206f8d2f9af965e9984",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/406b34d3fe83bc3b5daed0cd5ee8317350845be2",
+                "reference": "406b34d3fe83bc3b5daed0cd5ee8317350845be2",
                 "shasum": ""
             },
             "require": {
@@ -1602,7 +1559,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-20 13:24:30"
+            "time": "2014-12-02 20:19:50"
         }
     ],
     "packages-dev": [
@@ -1725,12 +1682,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "991c4203ef3bdf8a1d197f2fe877028dc78dfda7"
+                "reference": "7ce9da20f96964bb7a4033f53834df13328dbeab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/991c4203ef3bdf8a1d197f2fe877028dc78dfda7",
-                "reference": "991c4203ef3bdf8a1d197f2fe877028dc78dfda7",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/7ce9da20f96964bb7a4033f53834df13328dbeab",
+                "reference": "7ce9da20f96964bb7a4033f53834df13328dbeab",
                 "shasum": ""
             },
             "require": {
@@ -1782,7 +1739,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-11-11 14:17:20"
+            "time": "2014-12-02 13:17:01"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -2314,12 +2271,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/diff.git",
-                "reference": "3e22c89be2e1cddf7db89699cb23a9159df12e0c"
+                "reference": "f38057b48125c2b421361da224a8aa800d70aeca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/diff/zipball/3e22c89be2e1cddf7db89699cb23a9159df12e0c",
-                "reference": "3e22c89be2e1cddf7db89699cb23a9159df12e0c",
+                "url": "https://api.github.com/repos/sebastianbergmann/diff/zipball/f38057b48125c2b421361da224a8aa800d70aeca",
+                "reference": "f38057b48125c2b421361da224a8aa800d70aeca",
                 "shasum": ""
             },
             "require": {
@@ -2358,7 +2315,7 @@
             "keywords": [
                 "diff"
             ],
-            "time": "2014-11-05 15:28:21"
+            "time": "2014-11-22 06:25:40"
         },
         {
             "name": "sebastian/environment",
@@ -2517,12 +2474,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "75deb1b183d2bbf12f4b54c644c0caafca338fbe"
+                "reference": "610f01968f2cd731fdf59dfeae904ed930afc35f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/75deb1b183d2bbf12f4b54c644c0caafca338fbe",
-                "reference": "75deb1b183d2bbf12f4b54c644c0caafca338fbe",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/610f01968f2cd731fdf59dfeae904ed930afc35f",
+                "reference": "610f01968f2cd731fdf59dfeae904ed930afc35f",
                 "shasum": ""
             },
             "require": {
@@ -2555,16 +2512,10 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-11-20 13:24:30"
+            "time": "2014-12-02 20:19:50"
         }
     ],
     "aliases": [
-        {
-            "alias": "dev-master",
-            "alias_normalized": "9999999-dev",
-            "version": "dev-develop",
-            "package": "dreamfactory/enterprise-storage"
-        },
         {
             "alias": "dev-master",
             "alias_normalized": "9999999-dev",
@@ -2575,7 +2526,6 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "rackspace/php-opencloud": 0,
-        "dreamfactory/enterprise-storage": 20,
         "dreamfactory/azure-sdk-for-php": 20,
         "phpunit/phpunit": 0,
         "phpunit/dbunit": 0,
@@ -2584,8 +2534,6 @@
         "phpunit/php-invoker": 0
     },
     "prefer-stable": false,
-    "platform": {
-        "php": "~5.3"
-    },
+    "platform": [],
     "platform-dev": []
 }
