@@ -92,6 +92,10 @@ class SystemManager extends BaseSystemRestService
      * @var string The exception message for bogus JSON config files
      */
     const BOGUS_INSTALL_MESSAGE = 'One or more of this DSP\'s configuration files cannot be loaded. Corrupt installation possible! :(';
+    /**
+     * @var string The registration marker
+     */
+    const REGISTRATION_MARKER = '/.registration_complete';
 
     //*************************************************************************
     // Members
@@ -299,8 +303,7 @@ class SystemManager extends BaseSystemRestService
                     {
                         $command->reset();
 
-                        $serviceId =
-                            $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
+                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
 
                         if ( false === $serviceId )
                         {
@@ -714,7 +717,7 @@ SQL;
             return false;
         }
 
-        $_marker = $_privatePath . Drupal::REGISTRATION_MARKER . '.' . sha1( $_tag );
+        $_marker = $_privatePath . static::REGISTRATION_MARKER . '.' . sha1( $_tag );
         $paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
 
         if ( !file_exists( $_marker ) )
@@ -778,17 +781,45 @@ SQL;
             return true;
         }
 
-        //	Call the API
-        return Drupal::registerPlatform(
-            $user,
-            $_paths,
-            array(
-                'field_first_name'           => $user->first_name,
-                'field_last_name'            => $user->last_name,
-                'field_installation_type'    => InstallationTypes::determineType( true ),
-                'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+        $_result = false;
+        try
+        {
+            //	Call the API
+            if ( !Drupal::registerPlatform(
+                $user,
+                array(
+                    'field_first_name'           => $user->first_name,
+                    'field_last_name'            => $user->last_name,
+                    'field_installation_type'    => InstallationTypes::determineType( true ),
+                    'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+                )
             )
-        );
+            )
+            {
+                Log::error( 'Posting DSP registration failed - possibly no connection.' );
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( 'Exception while posting DSP registration: ' . $_ex->getMessage() );
+        }
+
+        //	Make directory if not there
+        if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
+        {
+            Log::error( 'Unable to create private path directory.' );
+        }
+
+        //	Get touchy
+        if ( false === @file_put_contents( $_marker, null ) )
+        {
+            //	Kill any file there...
+            @unlink( $_marker );
+
+            Log::error( 'Error creating DSP registration marker "' . $_marker . '"' );
+        }
+
+        return $_result;
     }
 
     //.........................................................................
