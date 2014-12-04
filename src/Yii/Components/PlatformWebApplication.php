@@ -20,9 +20,6 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Library\Enterprise\Storage\Enums\EnterprisePaths;
-use DreamFactory\Library\Enterprise\Storage\Resolver;
-use DreamFactory\Library\Utility\Environment;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\Includer;
@@ -66,10 +63,6 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      * @var EventDispatcher
      */
     protected static $_dispatcher;
-    /**
-     * @type Resolver
-     */
-    protected static $_resolver;
     /**
      * @var bool If true, profiling information is output to the log
      */
@@ -150,9 +143,6 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
         $this->_requestObject = Request::createFromGlobals();
-
-        $this->_resolver = new Resolver();
-        $this->_resolver->initialize( Environment::getHostname( true, true ), EnterprisePaths::MOUNT_POINT );
 
         //  Load the CORS config file if we're not cli
         if ( 'cli' != PHP_SAPI )
@@ -551,7 +541,8 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     }
 
     /**
-     * @return bool|string The origin received. False is returned for no origin and TRUE is returned for non-host origins (i.e. file://, null, etc.)
+     * @return bool|string The origin received. False is returned for no origin and TRUE is returned for non-host origins (i.e. file://,
+     *                     null, etc.)
      */
     protected function _getRequestOrigin()
     {

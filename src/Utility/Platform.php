@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Library\Enterprise\Storage\Enums\EnterpriseDefaults;
 use DreamFactory\Library\Utility\AppInstance;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
@@ -61,9 +60,9 @@ class Platform
      */
     const MEMCACHE_PORT = 11211;
     /**
-     * @type int The default cache ttl, 5m = 300s
+     * @type int The default cache ttl, 5m = 3000ms
      */
-    const DEFAULT_CACHE_TTL = 300;
+    const DEFAULT_CACHE_TTL = 3000;
     /**
      * @type string The default date() format (YYYY-MM-DD HH:MM:SS)
      */
@@ -71,7 +70,12 @@ class Platform
     /**
      * @var string
      */
-    const FABRIC_API_ENDPOINT = EnterpriseDefaults::DFE_ENDPOINT;
+    const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
     /**
      * @type string The current version of the platform core
      */
@@ -99,66 +103,6 @@ class Platform
     public static function getPlatformApiVersion()
     {
         return static::PLATFORM_API_VERSION;
-    }
-
-    /**
-     * Constructs a virtual platform path
-     *
-     * @param string $type            The type of path, used as a key into config
-     * @param string $append
-     * @param bool   $createIfMissing If true and final directory does not exist, it is created.
-     *
-     * @param bool   $includesFile
-     *
-     * @throws FileSystemException
-     * @return string
-     */
-    protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true, $includesFile = false )
-    {
-        static $_cache = array(), $_app = null;
-
-        $_app && $_app = AppInstance::getInstance();
-        $_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
-
-        if ( !LocalStorageTypes::contains( $type ) )
-        {
-            throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
-        }
-
-        //	Make a cache tag that includes the requested path...
-        $_cacheKey = $type . $_appendage;
-
-        if ( null === ( $_path = IfSet::get( $_cache, $_cacheKey ) ) )
-        {
-            $_path = $_app->getParameter( $type );
-
-            if ( empty( $_path ) )
-            {
-                $_path = $_app->getParameter( 'app.base_path' ) . '/storage';
-            }
-
-            $_checkPath = $_path . $_appendage;
-
-            if ( $includesFile )
-            {
-                $_checkPath = dirname( $_checkPath );
-            }
-
-            if ( true === $createIfMissing && !is_dir( $_checkPath ) )
-            {
-                if ( false === @\mkdir( $_checkPath, 0777, true ) )
-                {
-                    throw new FileSystemException( 'File system error creating directory: ' . $_checkPath );
-                }
-            }
-
-            $_path .= $_appendage;
-
-            //	Store path for next time...
-            $_cache[$_cacheKey] = $_path;
-        }
-
-        return $_path;
     }
 
     /**
@@ -779,4 +723,65 @@ class Platform
             return false;
         }
     }
+
+    /**
+     * Constructs a virtual platform path
+     *
+     * @param string $type            The type of path, used as a key into config
+     * @param string $append
+     * @param bool   $createIfMissing If true and final directory does not exist, it is created.
+     *
+     * @param bool   $includesFile
+     *
+     * @throws FileSystemException
+     * @return string
+     */
+    protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true, $includesFile = false )
+    {
+        static $_cache = array(), $_app = null;
+
+        $_app && $_app = AppInstance::getInstance();
+        $_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
+
+        if ( !LocalStorageTypes::contains( $type ) )
+        {
+            throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
+        }
+
+        //	Make a cache tag that includes the requested path...
+        $_cacheKey = $type . $_appendage;
+
+        if ( null === ( $_path = IfSet::get( $_cache, $_cacheKey ) ) )
+        {
+            $_path = $_app->getParameter( $type );
+
+            if ( empty( $_path ) )
+            {
+                $_path = $_app->getParameter( 'app.base_path' ) . '/storage';
+            }
+
+            $_checkPath = $_path . $_appendage;
+
+            if ( $includesFile )
+            {
+                $_checkPath = dirname( $_checkPath );
+            }
+
+            if ( true === $createIfMissing && !is_dir( $_checkPath ) )
+            {
+                if ( false === @\mkdir( $_checkPath, 0777, true ) )
+                {
+                    throw new FileSystemException( 'File system error creating directory: ' . $_checkPath );
+                }
+            }
+
+            $_path .= $_appendage;
+
+            //	Store path for next time...
+            $_cache[$_cacheKey] = $_path;
+        }
+
+        return $_path;
+    }
+
 }
