@@ -159,7 +159,7 @@ class Platform
      */
     public static function getLocalConfigPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::getPrivateConfigPath( $append, $createIfMissing, $includesFile );
+        return static::_getPlatformPath( LocalStorageTypes::LOCAL_CONFIG_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
@@ -174,7 +174,7 @@ class Platform
      */
     public static function getPrivateConfigPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::PRIVATE_CONFIG_PATH, $append, $createIfMissing, $includesFile );
+        return static::getLocalConfigPath( $append, $createIfMissing, $includesFile );
     }
 
     /**

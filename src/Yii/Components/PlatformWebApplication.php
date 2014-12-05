@@ -32,6 +32,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -46,6 +47,7 @@ use Kisma\Core\Utility\Option;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
@@ -98,6 +100,22 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     protected $_modelNamespaces = array();
     /**
+     * @var Request
+     */
+    protected $_requestObject;
+    /**
+     * @var array Normalized array of inbound request body
+     */
+    protected $_requestBody;
+    /**
+     * @var  Response
+     */
+    protected $_responseObject;
+    /**
+     * @var bool If true, headers will be added to the response object instance of this run
+     */
+    protected $_useResponseObject = false;
+    /**
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
@@ -109,10 +127,6 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      * @type \CDbCache
      */
     protected $_cache = null;
-    /**
-     * @type Request
-     */
-    protected $_requestObject;
 
     //*************************************************************************
     //	Methods
@@ -257,6 +271,9 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     {
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
+
+        //  A pristine copy of the request
+        $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
@@ -447,7 +464,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
 
         $_isStar = false;
         $_allowedMethods = $_headers = array();
-        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
+        $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
 
         $_origin = $this->_getRequestOrigin();
 
@@ -462,6 +479,11 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         $_key = sha1( $_requestUri . $_originUri );
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
+
+        if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
+        {
+            $_cache = array();
+        }
 
         //	Not in cache, check it out...
         if ( in_array( $_key, $_cache ) )
@@ -498,8 +520,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             if ( $this->_extendedHeaders )
             {
                 $_headers['X-DreamFactory-Source'] = $_requestUri;
-                $_headers['X-DreamFactory-Origin-Whitelisted'] =
-                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -665,6 +686,12 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
             return implode( ', ', $_verbs );
         }
 
+        //  Always return OPTIONS request, here nothing but OPTIONS
+        if ( static::CORS_OPTION_METHOD == $_requestVerb )
+        {
+            return static::CORS_OPTION_METHOD;
+        }
+
         return false;
     }
 
@@ -793,6 +820,9 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
                     $this->_resolver->getPrivateConfigPath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     $this->_resolver->getPrivatePath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     $this->_resolver->getStoragePath( CorsDefaults::CORS_DEFAULT_CONFIG_FILE, true, true ),
+//                    Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+//                    Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
+//                    Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                 );
 
             //	Find cors config file location
@@ -836,7 +866,7 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
      */
     public function setCorsWhitelist( $corsWhitelist )
     {
-        $this->_corsWhitelist = is_array( $corsWhitelist ) ? $corsWhitelist : array($corsWhitelist);
+        $this->_corsWhitelist = $corsWhitelist;
 
         //	Reset the header cache
         $this->addCorsHeaders( false );
@@ -890,6 +920,28 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
     public function getExtendedHeaders()
     {
         return $this->_extendedHeaders;
+    }
+
+    /**
+     * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
+     * @param bool $sendHeaders
+     *
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
+    {
+        if ( null === $this->_responseObject && $createIfNull )
+        {
+            $this->_responseObject = Response::create();
+
+            if ( $this->_autoAddHeaders )
+            {
+                $this->addCorsHeaders( array(), false, $sendHeaders );
+            }
+        }
+
+        return $this->_responseObject;
     }
 
     /**
@@ -1062,6 +1114,34 @@ class PlatformWebApplication extends \CWebApplication implements ContainerAwareI
         }
 
         return static::$_dispatcher;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getUseResponseObject()
+    {
+        return $this->_useResponseObject;
+    }
+
+    /**
+     * @param boolean $useResponseObject
+     *
+     * @return PlatformWebApplication
+     */
+    public function setUseResponseObject( $useResponseObject )
+    {
+        $this->_useResponseObject = $useResponseObject;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequestBody()
+    {
+        return $this->_requestBody;
     }
 
     /**

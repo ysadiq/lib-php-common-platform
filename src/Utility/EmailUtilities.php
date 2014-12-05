@@ -55,8 +55,9 @@ class EmailUtilities
                     throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
                 }
 
-                $user = Session::replaceLookup( Option::get( $settings, 'user', '' ), true );
-                $pwd = Session::replaceLookup( Option::get( $settings, 'pwd', '' ), true );
+                Session::replaceLookups( $settings, true );
+                $user = Option::get( $settings, 'user', '' );
+                $pwd = Option::get( $settings, 'pwd', '' );
                 $port = Option::get( $settings, 'port', 25 );
                 $security = strtolower( Option::get( $settings, 'security', null ) );
 

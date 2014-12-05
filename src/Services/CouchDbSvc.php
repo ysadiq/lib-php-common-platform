@@ -75,11 +75,10 @@ class CouchDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_credentials = Option::get( $config, 'credentials' );
+        Session::replaceLookups( $_credentials, true );
 
-        if ( null ===
-             ( $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', null, false, true ), true ) )
-        )
+        if ( null === $_dsn = Option::get( $_credentials, 'dsn', null, false, true ) )
         {
             $_dsn = 'http://localhost:5984';
         }

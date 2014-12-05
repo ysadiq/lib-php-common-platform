@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -47,6 +48,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @var string
      */
     const DEFAULT_SERVICE_NAME = 'system';
+    /**
+     * Default maximum records returned on filter request
+     */
+    const MAX_RECORDS_RETURNED = 1000;
     /**
      * Default record wrapping tag for single or array of records
      */
@@ -370,14 +375,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             }
         }
 
-        if ( null !== ( $_value = Option::get( $this->_requestPayload, 'limit' ) ) )
+        $_value = intval( Option::get( $this->_requestPayload, 'limit' ) );
+        $_maxAllowed = intval( Pii::getParam( 'dsp.db_max_records_returned', static::MAX_RECORDS_RETURNED ) );
+        if ( ( $_value < 1 ) || ( $_value > $_maxAllowed ) )
         {
-            $_criteria['limit'] = $_value;
+            // impose a limit to protect server
+            $_value = $_maxAllowed;
+        }
+        $_criteria['limit'] = $_value;
 
-            if ( null !== ( $_value = Option::get( $this->_requestPayload, 'offset' ) ) )
-            {
-                $_criteria['offset'] = $_value;
-            }
+        if ( null !== ( $_value = Option::get( $this->_requestPayload, 'offset' ) ) )
+        {
+            $_criteria['offset'] = $_value;
         }
 
         if ( null !== ( $_value = Option::get( $this->_requestPayload, 'order' ) ) )

@@ -105,23 +105,19 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
-        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ), true );
+        $_credentials = Option::get( $config, 'credentials' );
+        Session::replaceLookups( $_credentials, true );
+
+        $_connectionString = Option::get( $_credentials, 'connection_string' );
         if ( empty( $_connectionString ) )
         {
-            $_name = Session::replaceLookup(
-                Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ),
-                true
-            );
+            $_name = Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) );
             if ( empty( $_name ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account name can not be empty.' );
             }
 
-            $_key = Session::replaceLookup(
-                Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ),
-                true
-            );
+            $_key = Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) );
             if ( empty( $_key ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account key can not be empty.' );
@@ -132,7 +128,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         }
 
         // set up a default partition key
-        $_partitionKey = Session::replaceLookup( Option::get( $_credentials, static::PARTITION_KEY ) );
+        $_partitionKey = Option::get( $_credentials, static::PARTITION_KEY );
         if ( !empty( $_partitionKey ) )
         {
             $this->_defaultPartitionKey = $_partitionKey;
@@ -746,7 +742,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         // build filter array if necessary, add server-side filters if necessary
         if ( !is_array( $filter ) )
         {
-            Session::replaceLookupsInStrings( $filter );
+            Session::replaceLookups( $filter );
             $_criteria = static::parseFilter( $filter, $params );
         }
         else

@@ -1045,48 +1045,40 @@ class Session extends BaseUserRestResource
         return false;
     }
 
-    public static function replaceLookup( $lookup, $use_private = false )
+    public static function replaceLookups( &$subject, $use_private = false )
     {
-        // filter string values should be wrapped in curly braces
-        if ( is_string( $lookup ) )
+        if ( is_string( $subject ) )
         {
-            $_end = strlen( $lookup ) - 1;
-            if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
+            // filter string values should be wrapped in curly braces
+            if ( false !== strpos( $subject, '{' ) )
             {
-                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value, $use_private ) )
+                $_search = array();
+                $_replace = array();
+                // brute force, yeah this could be better
+                foreach ( explode( '{', $subject ) as $_word )
                 {
-                    return $_value;
+                    $_lookup = strstr( $_word, '}', true );
+                    if ( !empty( $_lookup ) )
+                    {
+                        if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
+                        {
+                            $_search[] = '{' . $_lookup . '}';
+                            $_replace[] = $_value;
+                        }
+                    }
+                }
+
+                if ( !empty( $_search ) )
+                {
+                    $subject = str_replace( $_search, $_replace, $subject );
                 }
             }
         }
-
-        return $lookup;
-    }
-
-    public static function replaceLookupsInStrings( &$string, $use_private = false )
-    {
-        if ( false !== strpos( $string, '{' ) )
+        elseif ( is_array( $subject ) )
         {
-            $_search = array();
-            $_replace = array();
-            // brute force, yeah this could be better
-            $_exploded = explode( '{', $string );
-            foreach ( $_exploded as $_word )
+            foreach ( $subject as &$_value )
             {
-                $_lookup = strstr( $_word, '}', true );
-                if ( !empty( $_lookup ) )
-                {
-                    if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
-                    {
-                        $_search[] = '{' . $_lookup . '}';
-                        $_replace[] = $_value;
-                    }
-                }
-            }
-
-            if ( !empty( $_search ) )
-            {
-                $string = str_replace( $_search, $_replace, $string );
+                static::replaceLookups( $_value, $use_private );
             }
         }
     }

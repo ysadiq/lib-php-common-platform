@@ -23,6 +23,7 @@ use Aws\S3\S3Client;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\AwsSvcUtilities;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -31,6 +32,12 @@ use Kisma\Core\Utility\Option;
  */
 class AwsS3Svc extends RemoteFileSvc
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    const CLIENT_NAME = 'S3';
+
     //*************************************************************************
     //	Members
     //*************************************************************************
@@ -64,23 +71,10 @@ class AwsS3Svc extends RemoteFileSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
-        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ), true );
-        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ), true );
-        if ( !empty( $_accessKey ) && !empty( $_secretKey ) )
-        {
-            // old way
-            $_credentials = array('key' => $_accessKey, 'secret' => $_secretKey);
-        }
+        $_credentials = Option::clean( Option::get( $config, 'credentials' ) );
+        AwsSvcUtilities::updateCredentials( $_credentials, false );
 
-        try
-        {
-            $this->_blobConn = S3Client::factory( $_credentials );
-        }
-        catch ( \Exception $ex )
-        {
-            throw new BlobServiceException( 'Unexpected Amazon S3 Service Exception: ' . $ex->getMessage() );
-        }
+        $this->_blobConn = AwsSvcUtilities::createClient( $_credentials, static::CLIENT_NAME );
     }
 
     /**

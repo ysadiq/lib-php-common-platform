@@ -30,9 +30,6 @@ use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-ini_set( 'display_errors', 1 );
-ini_set( 'error_reporting', -1 );
-
 //********************************************************************************
 //* Check for maintenance mode...
 //********************************************************************************
@@ -43,12 +40,8 @@ if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option:
     die();
 }
 
-/** Initialize the class */
-Fabric::initialize();
-
 /**
- * Fabric.php
- * The configuration file for fabric-hosted DSPs
+ * Hosted DSP system utilities
  */
 class Fabric
 {
