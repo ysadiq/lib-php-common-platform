@@ -101,11 +101,12 @@ class SalesforceDbSvc extends BaseDbSvc
 
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_credentials = Option::get( $config, 'credentials' );
+        Session::replaceLookups( $_credentials, true );
 
-        $this->_username = Session::replaceLookup( Option::get( $_credentials, 'username' ), true );
-        $this->_password = Session::replaceLookup( Option::get( $_credentials, 'password' ), true );
-        $this->_securityToken = Session::replaceLookup( Option::get( $_credentials, 'security_token' ), true );
+        $this->_username = Option::get( $_credentials, 'username' );
+        $this->_password = Option::get( $_credentials, 'password' );
+        $this->_securityToken = Option::get( $_credentials, 'security_token' );
         if ( empty( $this->_securityToken ) )
         {
             $this->_securityToken = ''; // gets appended to password

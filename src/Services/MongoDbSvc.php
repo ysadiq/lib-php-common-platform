@@ -40,6 +40,14 @@ class MongoDbSvc extends NoSqlDbSvc
     //*************************************************************************
 
     /**
+     * Connection string prefix
+     */
+    const DSN_PREFIX = 'mongodb://';
+    /**
+     * Connection string prefix length
+     */
+    const DSN_PREFIX_LENGTH = 10;
+    /**
      * Default record identifier field
      */
     const DEFAULT_ID_FIELD = '_id';
@@ -73,53 +81,50 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ), true );
-        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ), true );
-        if ( empty( $_dsn ) )
+        $_credentials = Option::get( $config, 'credentials' );
+        Session::replaceLookups( $_credentials, true );
+
+        $_dsn = strval( Option::get( $_credentials, 'dsn', '', true, true ) );
+        if ( !empty( $_dsn ) )
         {
-            $_dsn = 'mongodb://localhost:27017';
-            if ( empty( $_db ) )
+            if ( 0 != substr_compare( $_dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true ) )
             {
-                throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
-            }
-        }
-        else
-        {
-            if ( 0 != substr_compare( $_dsn, 'mongodb://', 0, 10, true ) )
-            {
-                $_dsn = 'mongodb://' . $_dsn;
+                $_dsn = static::DSN_PREFIX . $_dsn;
             }
         }
 
-        $_options = array();
-        if ( !empty( $_db ) )
+        $_options = Option::clean( Option::get( $_credentials, 'options', $_credentials ) );
+
+        if ( null === $_db = Option::get( $_options, 'db', null, false, true ) )
         {
-            $_options['db'] = $_db;
-        }
-        else
-        {
-            $_db = trim( strstr( substr( $_dsn, strlen( 'mongodb://' ) ), '/' ), '/' );
-            if ( empty( $_db ) )
+            $_db = strstr( substr( $_dsn, static::DSN_PREFIX_LENGTH ), '/' );
+            if (false !== $_pos = strpos( $_db, '?' ) )
             {
-                throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
+                $_db = substr( $_db, 0, $_pos );
             }
+            $_db = trim( $_db, '/' );
         }
 
-        $_username = Session::replaceLookup( Option::get( $_credentials, 'user' ), true );
-        if ( !empty( $_username ) )
+        if ( empty( $_db ) )
+        {
+            throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
+        }
+
+        if ( null !== $_username = Option::get( $_options, 'user', null, true, true ) )
         {
             $_options['username'] = $_username;
-            $_password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true );
-            if ( !empty( $_password ) )
-            {
-                $_options['password'] = $_password;
-            }
         }
+        if ( null !== $_password = Option::get( $_options, 'pwd', null, true, true ) )
+        {
+            $_options['password'] = $_password;
+        }
+
+        $_driverOptions = Option::clean( Option::get( $_credentials, 'driver_options' ) );
 
         try
         {
-            $_client = new \MongoClient( $_dsn, $_options );
+            $_client = new \MongoClient( $_dsn, $_options, $_driverOptions );
+
             $this->_dbConn = $_client->selectDB( $_db );
         }
         catch ( \Exception $_ex )
@@ -167,6 +172,13 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_coll;
     }
 
+    /**
+     * @param string $name
+     *
+     * @return string
+     * @throws BadRequestException
+     * @throws NotFoundException
+     */
     public function correctTableName( &$name )
     {
         static $_existing = null;
@@ -518,6 +530,14 @@ class MongoDbSvc extends NoSqlDbSvc
         }
     }
 
+    /**
+     * @param      $table
+     * @param null $fields_info
+     * @param null $requested_fields
+     * @param null $requested_types
+     *
+     * @return array
+     */
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
@@ -771,6 +791,14 @@ class MongoDbSvc extends NoSqlDbSvc
         return $value;
     }
 
+    /**
+     * @param      $filter
+     * @param null $params
+     * @param null $ss_filters
+     *
+     * @return array|mixed
+     * @throws InternalServerErrorException
+     */
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
         // interpret any parameter values as lookups
@@ -780,7 +808,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_criteria = $filter;
         if ( !is_array( $filter ) )
         {
-            Session::replaceLookupsInStrings( $filter );
+            Session::replaceLookups( $filter );
             $_test = json_decode( $filter, true );
             if ( !is_null( $_test ) )
             {
@@ -804,6 +832,12 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_criteria;
     }
 
+    /**
+     * @param $ss_filters
+     *
+     * @return array
+     * @throws InternalServerErrorException
+     */
     protected static function buildSSFilterArray( $ss_filters )
     {
         if ( empty( $ss_filters ) )
@@ -844,15 +878,20 @@ class MongoDbSvc extends NoSqlDbSvc
         switch ( strtoupper( $_combiner ) )
         {
             case 'AND':
-                return array('$and' => $_criteria);
+                $_criteria = array('$and' => $_criteria);
+                break;
             case 'OR':
-                return array('$or' => $_criteria);
+                $_criteria = array('$or' => $_criteria);
+                break;
             case 'NOR':
-                return array('$nor' => $_criteria);
+                $_criteria = array('$nor' => $_criteria);
+                break;
             default:
                 // log and bail
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
         }
+
+        return $_criteria;
     }
 
     /**

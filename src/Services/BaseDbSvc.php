@@ -2989,7 +2989,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
 
         // the rest should be lookup keys, or plain strings
-        return Session::replaceLookup( $value );
+        Session::replaceLookups( $value );
+        return $value;
     }
 
     /**
@@ -3006,7 +3007,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         foreach ( $record as $_field => $_value )
         {
-            $record[$_field] = Session::replaceLookup( $_value );
+            Session::replaceLookups( $_value );
+            $record[$_field] = $_value;
         }
 
         return $record;

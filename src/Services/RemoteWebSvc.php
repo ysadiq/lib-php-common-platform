@@ -138,7 +138,7 @@ class RemoteWebSvc extends BasePlatformRestService
         }
         else
         {
-            $value = Session::replaceLookup( $value, true );
+            Session::replaceLookups( $value, true );
             $_part = urlencode( $name );
             if ( !empty( $value ) )
             {
@@ -241,7 +241,8 @@ class RemoteWebSvc extends BasePlatformRestService
                 if ( static::doesActionApply( $_header, $action ) )
                 {
                     $_name = Option::get( $_header, 'name' );
-                    $_value = Session::replaceLookup( Option::get( $_header, 'value' ), true );
+                    $_value = Option::get( $_header, 'value' );
+                    Session::replaceLookups( $_value, true );
 
                     if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
                     {
