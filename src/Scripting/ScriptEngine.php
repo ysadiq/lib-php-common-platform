@@ -583,7 +583,7 @@ JS;
         $_contentType = 'application/json';
 
         //  Run as administrator?
-        $_allowAdmin = Pii::getParam( 'dsp.enable_admin_scripts', false ) && $runAsAdmin;
+        $runAsAdmin = Pii::getParam( 'dsp.enable_admin_scripts', false ) && $runAsAdmin;
 
         if ( false === ( $_pos = strpos( $path, '/' ) ) )
         {
