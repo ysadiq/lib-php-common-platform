@@ -109,7 +109,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -280,7 +280,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -355,7 +355,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -485,7 +485,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -619,7 +619,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -677,7 +677,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1173,7 +1173,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1251,7 +1251,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1329,7 +1329,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1416,7 +1416,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1480,7 +1480,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1520,7 +1520,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
