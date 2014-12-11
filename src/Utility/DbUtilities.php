@@ -622,9 +622,9 @@ class DbUtilities
         if ( !empty( $out_format ) )
         {
             $in_value = ( is_string( $in_value ) || is_null( $in_value ) ) ? $in_value : strval( $in_value );
-            if (!empty($in_format))
+            if ( !empty( $in_format ) )
             {
-                if (false === $_date = \DateTime::createfromFormat( $in_format, $in_value ))
+                if ( false === $_date = \DateTime::createfromFormat( $in_format, $in_value ) )
                 {
                     Log::error( "Failed to format datetime from '$in_value'' to '$in_format'" );
 
