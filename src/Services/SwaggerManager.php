@@ -610,10 +610,10 @@ SQL;
 
         switch ( $service->getTypeId() )
         {
-            case PlatformServiceTypes::NATIVE_SQL_DB:
-            case PlatformServiceTypes::NATIVE_SQL_DB_SCHEMA:
-            case PlatformServiceTypes::SQL_DB:
-            case PlatformServiceTypes::SQL_DB_SCHEMA:
+            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+            case PlatformServiceTypes::REMOTE_SQL_DB:
+            case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
             case PlatformServiceTypes::NOSQL_DB:
                 $_swaps = array(
                     array(
@@ -627,8 +627,8 @@ SQL;
                 $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
                 break;
 
-            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
-            case PlatformServiceTypes::FILE_STORAGE:
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
                 if ( $service instanceof BaseFileSvc )
                 {
                     $_swaps = array(

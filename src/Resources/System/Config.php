@@ -205,8 +205,7 @@ class Config extends BaseSystemRestResource
             $_config = array(
                 //  General settings
                 'allow_admin_remote_logins' => IfSet::getBool( $_params, 'dsp.allow_admin_remote_logins' ),
-                'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) &&
-                                                 IfSet::getBool( $_data, 'allow_open_registration' ) ),
+                'allow_remote_logins'       => ( IfSet::getBool( $_params, 'dsp.allow_remote_logins' ) && IfSet::getBool( $_data, 'allow_open_registration' ) ),
                 'remote_login_providers'    => array(),
                 'restricted_verbs'          => IfSet::get( $_params, 'dsp.restricted_verbs', array() ),
                 'install_type'              => IfSet::get( $_params, 'dsp.install_type' ),
@@ -216,8 +215,7 @@ class Config extends BaseSystemRestResource
                 //  DSP version info
                 'dsp_version'               => $_currentVersion = SystemManager::getCurrentVersion(),
                 'server_os'                 => strtolower( php_uname( 's' ) ),
-                'latest_version'            => $_latestVersion =
-                    ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
+                'latest_version'            => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
                 'upgrade_available'         => version_compare( $_currentVersion, $_latestVersion, '<' ),
                 //  CORS Support
                 'allowed_hosts'             => SystemManager::getAllowedHosts(),
@@ -231,6 +229,13 @@ class Config extends BaseSystemRestResource
                     'swagger'      => IfSet::get( $_params, 'swagger_path' ),
                 ),
                 'timestamp_format'          => IfSet::get( $_params, 'platform.timestamp_format' ),
+                'db'                        => array(
+                    'date_format'          => IfSet::get( $_params, 'dsp.db_date_format' ),
+                    'time_format'          => IfSet::get( $_params, 'dsp.db_time_format' ),
+                    'datetime_format'      => IfSet::get( $_params, 'dsp.db_datetime_format' ),
+                    'timestamp_format'     => IfSet::get( $_params, 'dsp.db_timestamp_format' ),
+                    'max_records_returned' => IfSet::get( $_params, 'dsp.db_max_records_returned' ),
+                ),
             );
 
             //  Get the login provider array
@@ -325,18 +330,16 @@ class Config extends BaseSystemRestResource
     {
         $flushCache && Platform::storeDelete( static::LOOKUP_CACHE_KEY );
 
-        if ( null ===
-            ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        if ( null === ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             /** @var LookupKey[] $_models */
-            $_models =
-                ResourceStore::model( 'lookup_key' )->findAll(
-                    array(
-                        'select'    => 'name, value, private',
-                        'condition' => 'user_id IS NULL AND role_id IS NULL',
-                    )
-                );
+            $_models = ResourceStore::model( 'lookup_key' )->findAll(
+                array(
+                    'select'    => 'name, value, private',
+                    'condition' => 'user_id IS NULL AND role_id IS NULL',
+                )
+            );
 
             $_lookups = array();
 
@@ -413,13 +416,12 @@ class Config extends BaseSystemRestResource
         //*************************************************************************
 
         /** @var Provider[] $_models */
-        $_models =
-            ResourceStore::model( 'provider' )->findAll(
-                array(
-                    'select' => 'id, provider_name, api_name, config_text, is_active, is_system, is_login_provider',
-                    'order'  => 'provider_name',
-                )
-            );
+        $_models = ResourceStore::model( 'provider' )->findAll(
+            array(
+                'select' => 'id, provider_name, api_name, config_text, is_active, is_system, is_login_provider',
+                'order'  => 'provider_name',
+            )
+        );
 
         if ( !empty( $_models ) )
         {

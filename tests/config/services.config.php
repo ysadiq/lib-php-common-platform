@@ -25,10 +25,10 @@ use DreamFactory\Platform\Enums\PlatformStorageTypes;
  * This file contains the master service mapping for the DSP
  */
 return array(
-	PlatformServiceTypes::NATIVE_FILE_STORAGE   => array(
+	PlatformServiceTypes::LOCAL_FILE_STORAGE   => array(
 		'class' => 'DreamFactory\\Platform\\Services\\LocalFileSvc',
 	),
-	PlatformServiceTypes::FILE_STORAGE  => array(
+	PlatformServiceTypes::REMOTE_FILE_STORAGE  => array(
 		'class' => array(
 			PlatformStorageTypes::AZURE_BLOB               => array(
 				'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureBlobSvc',
@@ -44,19 +44,19 @@ return array(
 			),
 		),
 	),
-	PlatformServiceTypes::NATIVE_SQL_DB         => array(
+	PlatformServiceTypes::LOCAL_SQL_DB         => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
 		'local' => true,
 	),
-	PlatformServiceTypes::SQL_DB        => array(
+	PlatformServiceTypes::REMOTE_SQL_DB        => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
 		'local' => false,
 	),
-	PlatformServiceTypes::NATIVE_SQL_DB_SCHEMA  => array(
+	PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA  => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
 		'local' => true,
 	),
-	PlatformServiceTypes::SQL_DB_SCHEMA => array(
+	PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
 		'local' => false,
 	),
@@ -82,7 +82,7 @@ return array(
 			),
 		),
 	),
-	PlatformServiceTypes::PORTAL_SERVICE => array(
+	PlatformServiceTypes::LOCAL_PORTAL_SERVICE => array(
 		'class' => 'DreamFactory\\Platform\\Services\\Portal',
 	),
 	PlatformServiceTypes::REMOTE_WEB_SERVICE   => array(
@@ -91,4 +91,11 @@ return array(
 	PlatformServiceTypes::SALESFORCE           => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SalesforceDbSvc',
 	),
+    PlatformServiceTypes::PUSH_SERVICE             => array(
+        'class' => array(
+            PlatformStorageTypes::AWS_SNS => array(
+                'class' => 'DreamFactory\\Platform\\Services\\AwsSnsSvc',
+            ),
+        ),
+    ),
 );

@@ -436,11 +436,11 @@ MYSQL;
     {
         switch ( $this->getServiceTypeId() )
         {
-            case PlatformServiceTypes::NATIVE_SQL_DB:
+            case PlatformServiceTypes::LOCAL_SQL_DB:
                 throw new BadRequestException( 'System generated database services can not be deleted.' );
                 break;
 
-            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
                 throw new BadRequestException( 'System generated application storage service can not be deleted.' );
                 break;
         }
@@ -459,7 +459,7 @@ MYSQL;
 
         switch ( $_id )
         {
-            case PlatformServiceTypes::FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
             case PlatformServiceTypes::NOSQL_DB:
             case PlatformServiceTypes::PUSH_SERVICE:
                 return true;
@@ -544,8 +544,8 @@ MYSQL;
         //	Add fake field for client
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::NATIVE_SQL_DB:
-            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
+            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
                 $this->is_system = true;
                 break;
 
@@ -560,8 +560,8 @@ MYSQL;
         // backwards compatibility helper
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::NATIVE_FILE_STORAGE:
-            case PlatformServiceTypes::FILE_STORAGE:
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
                 $_creds = $this->credentials;
                 if ( is_array( $_creds ) && !array_key_exists( 'private_paths', $_creds ) )
                 {
@@ -679,9 +679,11 @@ MYSQL;
     {
         $_type = str_replace( ' ', '_', trim( strtoupper( $type ?: $this->type ) ) );
 
-        if ( 'LOCAL_EMAIL_SERVICE' == $_type )
+        switch ( $_type )
         {
-            $_type = PlatformServiceTypes::EMAIL_SERVICE;
+            // convert old nomenclature
+            case 'LOCAL_EMAIL_SERVICE':
+                return PlatformServiceTypes::EMAIL_SERVICE;
         }
 
         try

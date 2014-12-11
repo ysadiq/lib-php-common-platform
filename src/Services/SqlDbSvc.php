@@ -118,18 +118,11 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
             {
-                throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
+                throw new \InvalidArgumentException( 'Database connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Option::get( $_credentials, 'user' ) ) )
-            {
-                throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
-            }
-
-            if ( null === ( $password = Option::get( $_credentials, 'pwd' ) ) )
-            {
-                throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
-            }
+            $user = Option::get( $_credentials, 'user' );
+            $password = Option::get( $_credentials, 'pwd' );
 
             /** @var \CDbConnection $_db */
             $_db = Pii::createComponent(
@@ -334,7 +327,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_resource = rtrim( $main, '/' ) . '/';
                     if ( !empty( $sub ) )
                     {
-                        $_resource .= rtrim( (false !== strpos($sub, '(')) ?  strstr( $sub, '(', true )  : $sub );
+                        $_resource .= rtrim( ( false !== strpos( $sub, '(' ) ) ? strstr( $sub, '(', true ) : $sub );
                     }
 
                     $this->checkPermission( $action, $_resource );
@@ -612,17 +605,17 @@ class SqlDbSvc extends BaseDbSvc
                 {
                     $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
                     $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
-                    $_result = $this->listProcedures($_namesOnly, $_refresh);
+                    $_result = $this->listProcedures( $_namesOnly, $_refresh );
 
                     return array('resource' => $_result);
                 }
 
             case static::POST:
-                if ( false !== strpos($this->_resourceId, '('))
+                if ( false !== strpos( $this->_resourceId, '(' ) )
                 {
                     $_inlineParams = strstr( $this->_resourceId, '(' );
                     $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
-                    $_params = Option::get( $this->_requestPayload, 'params', trim( $_inlineParams, '()') );
+                    $_params = Option::get( $this->_requestPayload, 'params', trim( $_inlineParams, '()' ) );
                 }
                 else
                 {
@@ -651,7 +644,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listProcedures($names_only = false, $refresh = false)
+    public function listProcedures( $names_only = false, $refresh = false )
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -722,15 +715,15 @@ class SqlDbSvc extends BaseDbSvc
                 {
                     $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
                     $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
-                    $_result = $this->listFunctions($_namesOnly, $_refresh);
+                    $_result = $this->listFunctions( $_namesOnly, $_refresh );
 
                     return array('resource' => $_result);
                 }
 
             case static::POST:
-                if ( false !== strpos($this->_resourceId, '('))
+                if ( false !== strpos( $this->_resourceId, '(' ) )
                 {
-                    $_inlineParams = trim( strstr( $this->_resourceId, '(' ), '()');
+                    $_inlineParams = trim( strstr( $this->_resourceId, '(' ), '()' );
                     $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
                     $_params = Option::get( $this->_requestPayload, 'params', $_inlineParams );
                 }
@@ -761,7 +754,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listFunctions($names_only = false, $refresh = false)
+    public function listFunctions( $names_only = false, $refresh = false )
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -1433,9 +1426,11 @@ class SqlDbSvc extends BaseDbSvc
                         // overwrite some undercover fields
                         if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
                         {
+                            // should I error this?
+                            // drop for now
                             unset( $_keys[$_pos] );
                             unset( $_values[$_pos] );
-                            continue; // should I error this?
+                            continue;
                         }
                         if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
                         {
@@ -1461,6 +1456,7 @@ class SqlDbSvc extends BaseDbSvc
                         )
                         )
                         {
+                            // if invalid and exception not thrown, drop it
                             unset( $_keys[$_pos] );
                             unset( $_values[$_pos] );
                             continue;
@@ -1468,6 +1464,7 @@ class SqlDbSvc extends BaseDbSvc
 
                         if ( !is_null( $_fieldVal ) )
                         {
+                            // handle special cases
                             switch ( $this->_driverType )
                             {
                                 case SqlDbUtilities::DRV_DBLIB:
@@ -1491,7 +1488,7 @@ class SqlDbSvc extends BaseDbSvc
                                     switch ( $_dbType )
                                     {
                                         case 'SMALLINT':
-                                            if (is_bool($_fieldVal))
+                                            if ( is_bool( $_fieldVal ) )
                                             {
                                                 $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                             }
@@ -1499,7 +1496,8 @@ class SqlDbSvc extends BaseDbSvc
                                     }
                                     break;
                             }
-                            switch ( SqlDbUtilities::determinePhpConversionType( $_type ) )
+
+                            switch ( $_cnvType = SqlDbUtilities::determinePhpConversionType( $_type ) )
                             {
                                 case 'int':
                                     if ( !is_int( $_fieldVal ) )
@@ -1518,7 +1516,86 @@ class SqlDbSvc extends BaseDbSvc
                                         }
                                     }
                                     break;
+
+                                case 'time':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_time_format' );
+                                    $_outFormat = 'H:i:s.u';
+                                    switch ( $this->_driverType )
+                                    {
+                                        case SqlDbUtilities::DRV_MYSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_PGSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_DBLIB:
+                                        case SqlDbUtilities::DRV_SQLSRV:
+                                            break;
+                                        case SqlDbUtilities::DRV_OCSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_IBMDB2:
+                                            break;
+                                    }
+                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'date':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_date_format' );
+                                    $_outFormat = 'Y-m-d';
+                                    switch ( $this->_driverType )
+                                    {
+                                        case SqlDbUtilities::DRV_MYSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_PGSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_DBLIB:
+                                        case SqlDbUtilities::DRV_SQLSRV:
+                                            break;
+                                        case SqlDbUtilities::DRV_OCSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_IBMDB2:
+                                            break;
+                                    }
+                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'datetime':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_datetime_format' );
+                                    $_outFormat = 'Y-m-d H:i:s';
+                                    switch ( $this->_driverType )
+                                    {
+                                        case SqlDbUtilities::DRV_MYSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_PGSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_DBLIB:
+                                        case SqlDbUtilities::DRV_SQLSRV:
+                                            break;
+                                        case SqlDbUtilities::DRV_OCSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_IBMDB2:
+                                            break;
+                                    }
+                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'timestamp':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_timestamp_format' );
+                                    $_outFormat = 'Y-m-d H:i:s';
+                                    switch ( $this->_driverType )
+                                    {
+                                        case SqlDbUtilities::DRV_MYSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_PGSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_DBLIB:
+                                        case SqlDbUtilities::DRV_SQLSRV:
+                                            break;
+                                        case SqlDbUtilities::DRV_OCSQL:
+                                            break;
+                                        case SqlDbUtilities::DRV_IBMDB2:
+                                            break;
+                                    }
+                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+
                                 default:
+                                    break;
                             }
                         }
                         $_parsed[$_name] = $_fieldVal;
