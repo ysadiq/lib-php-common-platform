@@ -302,6 +302,11 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     public function checkPermission( $operation, $resource = null )
     {
+        if ( $this->_runAsAdmin )
+        {
+            return true;
+        }
+
         return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
     }
 
@@ -614,7 +619,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
                 }
             }
         }
-        catch (\Exception $_ex)
+        catch ( \Exception $_ex )
         {
             // do nothing, not a model with schema
         }

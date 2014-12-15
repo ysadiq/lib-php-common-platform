@@ -101,14 +101,17 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
      * @param string     $resource
      * @param string     $action
      * @param string|int $output_format
+     * @param bool       $run_as_admin  If true, request will be processed as admin
      *
      * @throws \InvalidArgumentException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @throws \DreamFactory\Platform\Exceptions\MisconfigurationException
      * @return mixed
      */
-    public function processRequest( $resource = null, $action = self::GET, $output_format = null )
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null, $run_as_admin = false )
     {
+        $this->_runAsAdmin = $run_as_admin;
+
         $this->_setAction( $action );
 
         //	Require app name for security check

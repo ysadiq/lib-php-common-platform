@@ -151,6 +151,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      * @var int
      */
     protected $_serviceId = null;
+    /**
+     * @var boolean If set, requests are processed as system administrator
+     */
+    protected $_runAsAdmin = false;
 
     //*************************************************************************
     //* Methods
@@ -172,12 +176,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      * @param string $resource      Optional resource for the REST call
      * @param string $action        HTTP action for this request
      * @param string $output_format Optional override for detecting output format
+     * @param bool   $run_as_admin  If true, request will be processed as admin
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return mixed
      */
-    public function processRequest( $resource = null, $action = self::GET, $output_format = null )
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null, $run_as_admin = false )
     {
+        $this->_runAsAdmin = $run_as_admin;
+
         $this->_setAction( $action );
 
         //  Get and validate all the request parameters
@@ -611,6 +618,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function checkPermission( $operation, $resource = null )
     {
+        if ( $this->_runAsAdmin )
+        {
+            return true;
+        }
+
         return ResourceStore::checkPermission( $operation, $this->_apiName, $resource );
     }
 

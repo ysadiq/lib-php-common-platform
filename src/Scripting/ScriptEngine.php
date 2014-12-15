@@ -658,7 +658,7 @@ JS;
             Pii::app()->setRequestObject( $_request );
 
             $_service = ServiceHandler::getService( $_serviceId );
-            $_result = $_service->processRequest( $_resource, $method, false );
+            $_result = $_service->processRequest( $_resource, $method, false, $runAsAdmin );
         }
         catch ( \Exception $_ex )
         {
