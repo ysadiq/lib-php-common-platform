@@ -547,70 +547,76 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
         $_data = $this->_response;
 
-        $_schema = ResourceStore::getSchemaForPayload( ResourceStore::model() );
-        $_schemaFields = Option::get( $_schema, 'field', array() );
-        if ( !empty( $_schemaFields ) && !empty( $_data ) )
+        try
         {
-            //  Additional formatting needed?
-            foreach ( $_data as $_key => &$_row )
+            $_schema = ResourceStore::getSchemaForPayload( ResourceStore::model() );
+            $_schemaFields = Option::get( $_schema, 'field', array() );
+            if ( !empty( $_schemaFields ) && !empty( $_data ) )
             {
-                if ( is_array( $_row ) )
+                //  Additional formatting needed?
+                foreach ( $_data as $_key => &$_row )
                 {
-                    if ( isset( $_row[0] ) )
+                    if ( is_array( $_row ) )
                     {
-                        //  Multi-row set, dig a little deeper
-                        foreach ( $_row as &$_sub )
+                        if ( isset( $_row[0] ) )
                         {
-                            if ( is_array( $_sub ) )
+                            //  Multi-row set, dig a little deeper
+                            foreach ( $_row as &$_sub )
                             {
-                                foreach ( $_sub as $_name => $_value )
+                                if ( is_array( $_sub ) )
                                 {
-                                    if ( !is_null( $_value ) && !is_array( $_value ) )
+                                    foreach ( $_sub as $_name => $_value )
                                     {
-                                        if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
+                                        if ( !is_null( $_value ) && !is_array( $_value ) )
                                         {
-                                            if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                            if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
                                             {
-                                                $_type = SqlDbUtilities::determinePhpConversionType( $_type );
-                                                $_sub[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                                if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                                {
+                                                    $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                                    $_sub[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    else
-                    {
-                        foreach ( $_row as $_name => $_value )
+                        else
                         {
-                            if ( !is_null( $_value ) && !is_array( $_value ) )
+                            foreach ( $_row as $_name => $_value )
                             {
-                                if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
+                                if ( !is_null( $_value ) && !is_array( $_value ) )
                                 {
-                                    if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                    if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
                                     {
-                                        $_type = SqlDbUtilities::determinePhpConversionType( $_type );
-                                        $_row[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                        if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                        {
+                                            $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                            $_row[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                elseif ( !is_null( $_row ) && !is_array( $_row ) )
-                {
-                    if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_key, $_schemaFields ) )
+                    elseif ( !is_null( $_row ) && !is_array( $_row ) )
                     {
-                        if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                        if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_key, $_schemaFields ) )
                         {
-                            $_type = SqlDbUtilities::determinePhpConversionType( $_type );
-                            $_row = SqlDbUtilities::formatValue( $_row, $_type );
+                            if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                            {
+                                $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                $_row = SqlDbUtilities::formatValue( $_row, $_type );
+                            }
                         }
                     }
                 }
             }
-
+        }
+        catch (\Exception $_ex)
+        {
+            // do nothing, not a model with schema
         }
 
         switch ( $this->_responseFormat )
