@@ -1019,8 +1019,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             'default'            => $column->defaultValue,
             'required'           => static::determineRequired( $column, $validation ),
             'allow_null'         => $column->allowNull,
-            'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
-            'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
+            'fixed_length'       => $column->fixedLength,
+            'supports_multibyte' => $column->supportsMultibyte,
             'auto_increment'     => $column->autoIncrement,
             'is_primary_key'     => $column->isPrimaryKey,
             'is_foreign_key'     => $column->isForeignKey,
@@ -1074,42 +1074,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         return $_simpleType;
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineMultiByteSupport( $type )
-    {
-        switch ( $type )
-        {
-            case ( false !== strpos( $type, 'national' ) ):
-            case ( false !== strpos( $type, 'nchar' ) ):
-            case ( false !== strpos( $type, 'nvarchar' ) ):
-                return true;
-            // todo mysql shows these are varchar with a utf8 character set, not in column data
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineIfFixedLength( $type )
-    {
-        switch ( $type )
-        {
-            case ( ( false !== strpos( $type, 'char' ) ) && ( false === strpos( $type, 'var' ) ) ):
-            case 'binary':
-                return true;
-            default:
-                return false;
-        }
     }
 
     /**
