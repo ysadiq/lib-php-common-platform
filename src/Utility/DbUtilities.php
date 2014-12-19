@@ -641,4 +641,17 @@ class DbUtilities
 
         return $in_value;
     }
+
+    public static function findRecordByNameValue( $data, $field, $value )
+    {
+        foreach ($data as $_record)
+        {
+            if (Option::get($_record, $field) === $value)
+            {
+                return $_record;
+            }
+        }
+
+        return null;
+    }
 }
