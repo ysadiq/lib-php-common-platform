@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Platform\Components\StateStack;
 use DreamFactory\Platform\Enums\DataFormats;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -562,11 +563,10 @@ JS;
      * @param string $path
      * @param array  $payload
      * @param array  $curlOptions Additional CURL options for external requests
-     * @param bool   $runAsAdmin  If true, script will be run as admin
      *
      * @return array
      */
-    public static function inlineRequest( $method, $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+    public static function inlineRequest( $method, $path, $payload = null, $curlOptions = array() )
     {
         if ( null === $payload || 'null' == $payload )
         {
@@ -598,11 +598,9 @@ JS;
             }
             $path = substr( $path, 0, $_pos );
         }
+
         $_requestUri = '/rest/' . ltrim( $path, '/' );
         $_contentType = 'application/json';
-
-        //  Run as administrator?
-        $runAsAdmin = Pii::getParam( 'dsp.enable_admin_scripts', false ) && $runAsAdmin;
 
         if ( false === ( $_pos = strpos( $path, '/' ) ) )
         {
@@ -658,7 +656,7 @@ JS;
             Pii::app()->setRequestObject( $_request );
 
             $_service = ServiceHandler::getService( $_serviceId );
-            $_result = $_service->processRequest( $_resource, $method, false, $runAsAdmin );
+            $_result = $_service->processRequest( $_resource, $method, false, ServiceRequestorTypes::SCRIPT );
         }
         catch ( \Exception $_ex )
         {
@@ -703,39 +701,39 @@ JS;
 
         $_api = new \stdClass();
 
-        $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( $method, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( $method, $path, $payload, $curlOptions );
         };
 
-        $_api->get = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->get = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::GET, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::GET, $path, $payload, $curlOptions );
         };
 
-        $_api->put = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->put = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::PUT, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::PUT, $path, $payload, $curlOptions );
         };
 
-        $_api->post = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->post = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::POST, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::POST, $path, $payload, $curlOptions );
         };
 
-        $_api->delete = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->delete = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::DELETE, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::DELETE, $path, $payload, $curlOptions );
         };
 
-        $_api->merge = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->merge = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::MERGE, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::MERGE, $path, $payload, $curlOptions );
         };
 
-        $_api->patch = function ( $path, $payload = null, $curlOptions = array(), $runAsAdmin = false )
+        $_api->patch = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions, $runAsAdmin );
+            return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
         };
 
         $_api->includeUserScript = function ( $fileName )

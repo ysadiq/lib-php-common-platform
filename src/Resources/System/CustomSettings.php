@@ -90,12 +90,8 @@ class CustomSettings extends BasePlatformRestResource
 		{
 			return true;
 		}
-        if ( $this->_runAsAdmin )
-        {
-            return true;
-        }
 
-        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource, $this->_requestorType );
 	}
 
 	/**

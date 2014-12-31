@@ -23,11 +23,9 @@ use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Option;
 
 /**

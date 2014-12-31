@@ -103,6 +103,8 @@ class UserManager extends BaseSystemRestService
             return false;
         }
 
+        $obj = null;
+        $result = null;
         switch ( $this->_resource )
         {
             case 'session':
@@ -118,34 +120,28 @@ class UserManager extends BaseSystemRestService
                 }
 
                 $obj = new Session( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'custom':
                 $obj = new CustomSettings( $this, $this->_resourceArray );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'device':
                 $obj = new Device( $this, $this->_resourceArray );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'profile':
                 $obj = new Profile( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'challenge': // backward compatibility
             case 'password':
                 $obj = new Password( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'confirm': // backward compatibility
             case 'register':
                 $obj = new Register( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'ticket':
@@ -164,7 +160,11 @@ class UserManager extends BaseSystemRestService
                 break;
         }
 
-        //  Send out an event
+        if ( $obj )
+        {
+            $result = $obj->processRequest( null, $this->_action, null, $this->_requestorType );
+        }
+
         return $result;
     }
 

@@ -302,12 +302,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     public function checkPermission( $operation, $resource = null )
     {
-        if ( $this->_runAsAdmin )
-        {
-            return true;
-        }
-
-        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource, $this->_requestorType );
     }
 
     /**

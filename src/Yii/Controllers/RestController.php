@@ -84,7 +84,7 @@ class RestController extends BaseFactoryController
 	 */
 	public function actionGet()
 	{
-		$this->_handleAction( HttpMethod::Get );
+		$this->_handleAction( HttpMethod::GET );
 	}
 
 	/**
@@ -92,7 +92,7 @@ class RestController extends BaseFactoryController
 	 */
 	public function actionPost()
 	{
-		$_action = HttpMethod::Post;
+		$_action = HttpMethod::POST;
 
 		try
 		{
@@ -109,12 +109,12 @@ class RestController extends BaseFactoryController
 				$_tunnelMethod = strtoupper( $_tunnelMethod );
 				switch ( $_tunnelMethod )
 				{
-					case HttpMethod::Post:
-					case HttpMethod::Get:
-					case HttpMethod::Put:
-					case HttpMethod::Merge:
-					case HttpMethod::Patch:
-					case HttpMethod::Delete:
+					case HttpMethod::POST:
+					case HttpMethod::GET:
+					case HttpMethod::PUT:
+					case HttpMethod::MERGE:
+					case HttpMethod::PATCH:
+					case HttpMethod::DELETE:
 						$_action = $_tunnelMethod;
 						break;
 
@@ -136,7 +136,7 @@ class RestController extends BaseFactoryController
 	 */
 	public function actionMerge()
 	{
-		$this->_handleAction( HttpMethod::Merge );
+		$this->_handleAction( HttpMethod::MERGE );
 	}
 
 	/**
@@ -144,7 +144,7 @@ class RestController extends BaseFactoryController
 	 */
 	public function actionPut()
 	{
-		$this->_handleAction( HttpMethod::Put );
+		$this->_handleAction( HttpMethod::PUT );
 	}
 
 	/**
@@ -152,7 +152,7 @@ class RestController extends BaseFactoryController
 	 */
 	public function actionDelete()
 	{
-		$this->_handleAction( HttpMethod::Delete );
+		$this->_handleAction( HttpMethod::DELETE );
 	}
 
 	/**

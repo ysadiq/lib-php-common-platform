@@ -880,7 +880,7 @@ SQL;
         $_resource = ResourceStore::resource( $_resource, $this->_resourceArray );
         $_resource->setService( $this );
 
-        return $_resource->processRequest( $this->_resourcePath, $this->_action, null, $this->_runAsAdmin );
+        return $_resource->processRequest( $this->_resourcePath, $this->_action, null, $this->_requestorType );
     }
 
     /**

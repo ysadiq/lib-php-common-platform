@@ -19,34 +19,35 @@
  */
 namespace DreamFactory\Platform\Enums;
 
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 use Kisma\Core\Enums\SeedEnum;
-use Kisma\Core\Exceptions\NotImplementedException;
 
 /**
- * Various API Documentation Format types
+ * Various service requestor types as bitmask-able values
  */
-class ApiDocFormatTypes extends SeedEnum
+class ServiceRequestorTypes extends SeedEnum
 {
     //*************************************************************************
     //	Constants
     //*************************************************************************
 
     /**
-     * @var int Swagger json format, default
+     * @var int No service requestor type is allowed
      */
-    const SWAGGER = 0;
+    const NONE = 0;
     /**
-     * @var int RAML, RESTful API modeling language
+     * @var int Service is being called from a client through the API
      */
-    const RAML = 1;
+    const API = 1; // 0b0001
     /**
-     * @var int API Blueprint format
+     * @var int Service is being called from the scripting environment
      */
-    const API_BLUEPRINT = 2;
+    const SCRIPT = 2; // 0b0010
+
     /**
-     * @var int Pipe-separated values
+     * @var int
      */
-    const IO_DOCS = 3;
+    const __default = self::NONE;
 
     //*************************************************************************
     //* Members
@@ -56,10 +57,9 @@ class ApiDocFormatTypes extends SeedEnum
      * @var array A hash of level names
      */
     protected static $_strings = array(
-        'swagger'  => self::SWAGGER,
-        'raml'  => self::RAML,
-        'api_blueprint'  => self::API_BLUEPRINT,
-        'io_docs' => self::IO_DOCS,
+        'none'   => self::NONE,
+        'api'    => self::API,
+        'script' => self::SCRIPT,
     );
 
     //*************************************************************************
@@ -67,44 +67,42 @@ class ApiDocFormatTypes extends SeedEnum
     //*************************************************************************
 
     /**
-     * @param string $formatType
+     * @param string $requestorType
      *
-     * @throws \Kisma\Core\Exceptions\NotImplementedException
-     * @throws \InvalidArgumentException
+     * @throws NotImplementedException
      * @return string
      */
-    public static function toNumeric( $formatType = 'swagger' )
+    public static function toNumeric( $requestorType = 'none' )
     {
-        if ( !is_string( $formatType ) )
+        if ( !is_string( $requestorType ) )
         {
-            throw new \InvalidArgumentException( 'The format type "' . $formatType . '" is not a string.' );
+            throw new \InvalidArgumentException( 'The requestor type "' . $requestorType . '" is not a string.' );
         }
 
-        if ( !in_array( strtolower( $formatType ), array_keys( static::$_strings ) ) )
+        if ( !in_array( strtolower( $requestorType ), array_keys( static::$_strings ) ) )
         {
-            throw new NotImplementedException( 'The format type "' . $formatType . '" is not supported.' );
+            throw new NotImplementedException( 'The requestor type "' . $requestorType . '" is not supported.' );
         }
 
-        return static::defines( strtoupper( $formatType ), true );
+        return static::defines( strtoupper( $requestorType ), true );
     }
 
     /**
      * @param int $numericLevel
      *
-     * @throws \Kisma\Core\Exceptions\NotImplementedException
-     * @throws \InvalidArgumentException
+     * @throws NotImplementedException
      * @return string
      */
-    public static function toString( $numericLevel = self::SWAGGER )
+    public static function toString( $numericLevel = self::NONE )
     {
         if ( !is_numeric( $numericLevel ) )
         {
-            throw new \InvalidArgumentException( 'The format type "' . $numericLevel . '" is not numeric.' );
+            throw new \InvalidArgumentException( 'The requestor type "' . $numericLevel . '" is not numeric.' );
         }
 
         if ( !in_array( $numericLevel, static::$_strings ) )
         {
-            throw new NotImplementedException( 'The format type "' . $numericLevel . '" is not supported.' );
+            throw new NotImplementedException( 'The requestor type "' . $numericLevel . '" is not supported.' );
         }
 
         return static::nameOf( $numericLevel );

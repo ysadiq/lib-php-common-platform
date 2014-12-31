@@ -120,6 +120,11 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         $_driverOptions = Option::clean( Option::get( $_credentials, 'driver_options' ) );
+        if ( null !== $_context = Option::get( $_driverOptions, 'context' ) )
+        {
+            //  Automatically creates a stream from context
+            $_driverOptions['context'] = stream_context_create( $_context );
+        }
 
         try
         {

@@ -30,5 +30,5 @@ interface RestResourceLike extends HttpMethod, ResourceLike
 	 *
 	 * @return mixed
 	 */
-	public function processRequest( $action = self::Get );
+	public function processRequest( $action = self::GET );
 }

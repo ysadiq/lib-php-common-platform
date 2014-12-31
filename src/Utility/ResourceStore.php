@@ -21,6 +21,8 @@ namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Enums\RestVerbs;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -785,42 +787,76 @@ class ResourceStore implements UtilityLike
                 /**
                  * @var BasePlatformSystemModel[] $_relations
                  */
-                foreach ( $_related as $_extra )
+                if ('*' === $_related )
                 {
-                    $_extraName = $_extra['name'];
-
-                    if ( !in_array( $_extraName, $_availableRelations ) )
+                    foreach ( $_availableRelations as $_extra )
                     {
-                        Log::error( 'Invalid relation "' . $_extraName . '" requested. Available are: ' . implode( ', ', $_availableRelations ) );
-                        continue;
-                    }
+                        $_relations = $resource->getRelated( $_extra, true );
+                        $_relatedPayload = array();
 
-                    $_extraFields = $_extra['fields'];
-                    $_relations = $resource->getRelated( $_extraName, true );
-                    $_relatedPayload = array();
-
-                    //	Got relations?
-                    if ( !empty( $_relations ) )
-                    {
-                        $_relations = Option::clean( $_relations );
-                        $_relative = current( $_relations );
-
-                        if ( !empty( $_relative ) )
+                        //	Got relations?
+                        if ( !empty( $_relations ) )
                         {
-                            $_relatedFields = $_relative->getRetrievableAttributes( $_extraFields );
+                            $_relations = Option::clean( $_relations );
+                            $_relative = current( $_relations );
 
-                            foreach ( $_relations as $_relation )
+                            if ( !empty( $_relative ) )
                             {
-                                $_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
-                                unset( $_relation );
+                                $_relatedFields = $_relative->getRetrievableAttributes();
+
+                                foreach ( $_relations as $_relation )
+                                {
+                                    $_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
+                                    unset( $_relation );
+                                }
                             }
+
+                            unset( $_relatedFields );
                         }
 
-                        unset( $_relatedFields );
+                        $_relatedData[$_extra] = $_relatedPayload;
+                        unset( $_relations, $_relative );
                     }
+                }
+                elseif ( is_array( $_related ) )
+                {
+                    foreach ( $_related as $_extra )
+                    {
+                        $_extraName = $_extra['name'];
 
-                    $_relatedData[$_extraName] = $_relatedPayload;
-                    unset( $_extra, $_relations, $_relative, $_extraFields );
+                        if ( !in_array( $_extraName, $_availableRelations ) )
+                        {
+                            Log::error( 'Invalid relation "' . $_extraName . '" requested. Available are: ' . implode( ', ', $_availableRelations ) );
+                            continue;
+                        }
+
+                        $_extraFields = $_extra['fields'];
+                        $_relations = $resource->getRelated( $_extraName, true );
+                        $_relatedPayload = array();
+
+                        //	Got relations?
+                        if ( !empty( $_relations ) )
+                        {
+                            $_relations = Option::clean( $_relations );
+                            $_relative = current( $_relations );
+
+                            if ( !empty( $_relative ) )
+                            {
+                                $_relatedFields = $_relative->getRetrievableAttributes( $_extraFields );
+
+                                foreach ( $_relations as $_relation )
+                                {
+                                    $_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
+                                    unset( $_relation );
+                                }
+                            }
+
+                            unset( $_relatedFields );
+                        }
+
+                        $_relatedData[$_extraName] = $_relatedPayload;
+                        unset( $_extra, $_relations, $_relative, $_extraFields );
+                    }
                 }
 
                 unset( $_availableRelations );
@@ -964,16 +1000,17 @@ class ResourceStore implements UtilityLike
     /**
      * Generic permission checker
      *
-     * @param string $operation
-     * @param string $service
-     * @param string $resource
+     * @param string                $operation
+     * @param string                $service
+     * @param string                $resource
+     * @param ServiceRequestorTypes $requestor
      *
      * @return bool
      */
-    public static function checkPermission( $operation, $service = null, $resource = null )
+    public static function checkPermission( $operation, $service = null, $resource = null, $requestor = ServiceRequestorTypes::API )
     {
         Session::checkAppPermission();
-        Session::checkServicePermission( $operation, $service ?: static::$_service, $resource );
+        Session::checkServicePermission( $operation, $service ?: static::$_service, $resource, $requestor );
 
         return true;
     }
@@ -981,14 +1018,17 @@ class ResourceStore implements UtilityLike
     /**
      * Generic permission getter
      *
-     * @param string $service
-     * @param string $resource
+     * @param string                $service
+     * @param string                $resource
+     * @param ServiceRequestorTypes $requestor
      *
      * @return string
      */
-    public static function getPermissions( $service = null, $resource = null )
+    public static function getPermissions( $service = null, $resource = null, $requestor = ServiceRequestorTypes::API )
     {
-        return Session::getServicePermissions( $service ?: static::$_service, $resource );
+        $_mask = Session::getServicePermissions( $service ?: static::$_service, $resource, $requestor );
+
+        return RestVerbs::maskToArray( $_mask );
     }
 
     /**
