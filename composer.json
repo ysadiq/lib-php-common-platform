@@ -19,7 +19,7 @@
     "repositories": [
         {
             "type": "pear",
-            "url": "http://pear2.php.net"
+            "url": "http://pear.php.net"
         }
     ],
     "minimum-stability": "dev",
