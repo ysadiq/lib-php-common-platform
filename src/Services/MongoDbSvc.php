@@ -93,10 +93,25 @@ class MongoDbSvc extends NoSqlDbSvc
             }
         }
 
-        $_options = Option::clean( Option::get( $_credentials, 'options', $_credentials ) );
+        $_options = Option::get( $_credentials, 'options', array() );
 
-        if ( null === $_db = Option::get( $_options, 'db', null, false, true ) )
+        // support old configuration options of user, pwd, and db in credentials directly
+        if ( !isset($_options['username']) && (null !== $_username = Option::get( $_credentials, 'user', null, true, true ) ) )
         {
+            $_options['username'] = $_username;
+        }
+        if ( !isset($_options['password']) && (null !== $_password = Option::get( $_credentials, 'pwd', null, true, true ) ) )
+        {
+            $_options['password'] = $_password;
+        }
+        if ( !isset($_options['db']) && (null !== $_db = Option::get( $_credentials, 'db', null, true, true ) ) )
+        {
+            $_options['db'] = $_db;
+        }
+
+        if ( !isset( $_db ) && ( null === $_db = Option::get( $_options, 'db', null, false, true ) ) )
+        {
+            //  Attempt to find db in connection string
             $_db = strstr( substr( $_dsn, static::DSN_PREFIX_LENGTH ), '/' );
             if (false !== $_pos = strpos( $_db, '?' ) )
             {
@@ -108,15 +123,6 @@ class MongoDbSvc extends NoSqlDbSvc
         if ( empty( $_db ) )
         {
             throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
-        }
-
-        if ( null !== $_username = Option::get( $_options, 'user', null, true, true ) )
-        {
-            $_options['username'] = $_username;
-        }
-        if ( null !== $_password = Option::get( $_options, 'pwd', null, true, true ) )
-        {
-            $_options['password'] = $_password;
         }
 
         $_driverOptions = Option::clean( Option::get( $_credentials, 'driver_options' ) );
