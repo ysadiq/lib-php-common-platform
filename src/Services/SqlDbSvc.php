@@ -1536,7 +1536,7 @@ class SqlDbSvc extends BaseDbSvc
                                         case SqlDbUtilities::DRV_IBMDB2:
                                             break;
                                     }
-                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'date':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_date_format' );
@@ -1555,7 +1555,7 @@ class SqlDbSvc extends BaseDbSvc
                                         case SqlDbUtilities::DRV_IBMDB2:
                                             break;
                                     }
-                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'datetime':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_datetime_format' );
@@ -1574,7 +1574,7 @@ class SqlDbSvc extends BaseDbSvc
                                         case SqlDbUtilities::DRV_IBMDB2:
                                             break;
                                     }
-                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'timestamp':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_timestamp_format' );
@@ -1593,7 +1593,7 @@ class SqlDbSvc extends BaseDbSvc
                                         case SqlDbUtilities::DRV_IBMDB2:
                                             break;
                                     }
-                                    $_fieldVal =  SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
 
                                 default:
@@ -1623,6 +1623,44 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         return $_parsed;
+    }
+
+    /**
+     * @param array $record
+     *
+     * @return array
+     */
+    public static function interpretRecordValues( $record )
+    {
+        if ( !is_array( $record ) || empty( $record ) )
+        {
+            return $record;
+        }
+
+        foreach ( $record as $_field => $_value )
+        {
+            Session::replaceLookups( $_value );
+            static::valueToExpression( $_value );
+            $record[$_field] = $_value;
+        }
+
+        return $record;
+    }
+
+    public static function valueToExpression( &$value )
+    {
+        if ( is_array( $value ) && isset( $value['expression'] ) )
+        {
+            $_expression = $value['expression'];
+            $_params = array();
+            if ( is_array( $_expression ) && isset( $_expression['value'] ) )
+            {
+                $_params = isset( $_expression['params'] ) ? $_expression['params'] : array();
+                $_expression = $_expression['value'];
+            }
+
+            $value = new \CDbExpression( $_expression, $_params );
+        }
     }
 
     /**
@@ -2206,9 +2244,9 @@ class SqlDbSvc extends BaseDbSvc
                 $_matchIds = $this->_recordQuery( $many_table, $_fields, $_where, $_params, $_bindings, null );
                 unset( $_matchIds['meta'] );
 
-                foreach ($_upsertMany as $_uId => $_record)
+                foreach ( $_upsertMany as $_uId => $_record )
                 {
-                    if ($_found = DbUtilities::findRecordByNameValue($_matchIds, $_pkField, $_uId))
+                    if ( $_found = DbUtilities::findRecordByNameValue( $_matchIds, $_pkField, $_uId ) )
                     {
                         $_updateMany[] = $_record;
                     }
@@ -2581,9 +2619,9 @@ class SqlDbSvc extends BaseDbSvc
                 $_matchIds = $this->_recordQuery( $many_table, $_fields, $_where, $_params, $_bindings, null );
                 unset( $_matchIds['meta'] );
 
-                foreach ($_upsertMany as $_uId => $_record)
+                foreach ( $_upsertMany as $_uId => $_record )
                 {
-                    if ($_found = DbUtilities::findRecordByNameValue($_matchIds, $_pkField, $_uId))
+                    if ( $_found = DbUtilities::findRecordByNameValue( $_matchIds, $_pkField, $_uId ) )
                     {
                         $_updateMany[] = $_record;
                     }
