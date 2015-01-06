@@ -134,7 +134,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_client = new \MongoClient( $_dsn, $_options, $_driverOptions );
+            $_client = @new \MongoClient( $_dsn, $_options, $_driverOptions );
 
             $this->_dbConn = $_client->selectDB( $_db );
         }

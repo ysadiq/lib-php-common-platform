@@ -85,7 +85,7 @@ class CouchDbSvc extends NoSqlDbSvc
 
         try
         {
-            $this->_dbConn = new \couchClient( $_dsn, 'default' );
+            $this->_dbConn = @new \couchClient( $_dsn, 'default' );
         }
         catch ( \Exception $_ex )
         {
