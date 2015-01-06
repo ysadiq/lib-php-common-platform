@@ -1464,7 +1464,7 @@ class SqlDbSvc extends BaseDbSvc
                             continue;
                         }
 
-                        if ( !is_null( $_fieldVal ) )
+                        if ( !is_null( $_fieldVal ) && !( $_fieldVal instanceof \CDbExpression ) )
                         {
                             // handle special cases
                             switch ( $this->_driverType )
@@ -1522,77 +1522,35 @@ class SqlDbSvc extends BaseDbSvc
                                 case 'time':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_time_format' );
                                     $_outFormat = 'H:i:s.u';
-                                    switch ( $this->_driverType )
-                                    {
-                                        case SqlDbUtilities::DRV_MYSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_PGSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_DBLIB:
-                                        case SqlDbUtilities::DRV_SQLSRV:
-                                            break;
-                                        case SqlDbUtilities::DRV_OCSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_IBMDB2:
-                                            break;
-                                    }
+//                                    switch ( $this->_driverType )
+//                                    {
+//                                        case SqlDbUtilities::DRV_MYSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_PGSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_DBLIB:
+//                                        case SqlDbUtilities::DRV_SQLSRV:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_OCSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_IBMDB2:
+//                                            break;
+//                                    }
                                     $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'date':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_date_format' );
                                     $_outFormat = 'Y-m-d';
-                                    switch ( $this->_driverType )
-                                    {
-                                        case SqlDbUtilities::DRV_MYSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_PGSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_DBLIB:
-                                        case SqlDbUtilities::DRV_SQLSRV:
-                                            break;
-                                        case SqlDbUtilities::DRV_OCSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_IBMDB2:
-                                            break;
-                                    }
                                     $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'datetime':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_datetime_format' );
                                     $_outFormat = 'Y-m-d H:i:s';
-                                    switch ( $this->_driverType )
-                                    {
-                                        case SqlDbUtilities::DRV_MYSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_PGSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_DBLIB:
-                                        case SqlDbUtilities::DRV_SQLSRV:
-                                            break;
-                                        case SqlDbUtilities::DRV_OCSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_IBMDB2:
-                                            break;
-                                    }
                                     $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
                                 case 'timestamp':
                                     $_cfgFormat = Pii::getParam( 'dsp.db_timestamp_format' );
                                     $_outFormat = 'Y-m-d H:i:s';
-                                    switch ( $this->_driverType )
-                                    {
-                                        case SqlDbUtilities::DRV_MYSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_PGSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_DBLIB:
-                                        case SqlDbUtilities::DRV_SQLSRV:
-                                            break;
-                                        case SqlDbUtilities::DRV_OCSQL:
-                                            break;
-                                        case SqlDbUtilities::DRV_IBMDB2:
-                                            break;
-                                    }
                                     $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
                                     break;
 
