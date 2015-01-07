@@ -23,7 +23,7 @@
         }
     ],
     "minimum-stability": "dev",
-    "prefer-stable": false,
+    "prefer-stable": true,
     "require": {
         "kisma/kisma": "~0.2",
         "swiftmailer/swiftmailer": "~4.3",
@@ -38,7 +38,7 @@
         "pear-pear.php.net/Mail_mimeDecode": "*",
         "dreamfactory/javascript-sdk": "~1.0",
         "dreamfactory/php-utils": "~1.0",
-        "dreamfactory/yii": "~1.1.13.12",
+        "dreamfactory/yii": "~1.1.13.14",
         "dreamfactory/lib-php-common": "~1.5.0",
         "dreamfactory/lib-php-common-yii": "~1.5.0",
         "dreamfactory/oasys": "*",
