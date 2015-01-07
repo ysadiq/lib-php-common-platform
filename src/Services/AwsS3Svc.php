@@ -471,7 +471,7 @@ class AwsS3Svc extends RemoteFileSvc
                 {
                     if ( 0 != strcasecmp( $prefix, $_object['Key'] ) )
                     {
-                        $_keys[] = $_object['Key'];
+                        $_keys[$_object['Key']] = true;
                     }
                 }
             }
@@ -484,7 +484,10 @@ class AwsS3Svc extends RemoteFileSvc
                 {
                     if ( 0 != strcasecmp( $prefix, $_object['Prefix'] ) )
                     {
-                        $_keys[] = $_object['Prefix'];
+                        if ( !isset( $_keys[$_object['Prefix']] ) )
+                        {
+                            $_keys[$_object['Prefix']] = false;
+                        }
                     }
                 }
             }
@@ -498,21 +501,32 @@ class AwsS3Svc extends RemoteFileSvc
             'Key'    => ''
         );
 
-        $_keys = array_unique( $_keys );
         $_out = array();
-        foreach ( $_keys as $_key )
+        foreach ( $_keys as $_key => $_isObject )
         {
             $_options['Key'] = $_key;
 
-            /** @var \Aws\S3\Iterator\ListObjectsIterator $_meta */
-            $_meta = $this->_blobConn->headObject( $_options );
+            if ($_isObject)
+            {
+                /** @var \Aws\S3\Iterator\ListObjectsIterator $_meta */
+                $_meta = $this->_blobConn->headObject( $_options );
 
-            $_out[] = array(
-                'name'           => $_key,
-                'content_type'   => $_meta->get( 'ContentType' ),
-                'content_length' => intval( $_meta->get( 'ContentLength' ) ),
-                'last_modified'  => $_meta->get( 'LastModified' )
-            );
+                $_out[] = array(
+                    'name'           => $_key,
+                    'content_type'   => $_meta->get( 'ContentType' ),
+                    'content_length' => intval( $_meta->get( 'ContentLength' ) ),
+                    'last_modified'  => $_meta->get( 'LastModified' )
+                );
+            }
+            else
+            {
+                $_out[] = array(
+                    'name'           => $_key,
+                    'content_type'   => null,
+                    'content_length' => 0,
+                    'last_modified'  => null
+                );
+            }
         }
 
         return $_out;
@@ -581,9 +595,7 @@ class AwsS3Svc extends RemoteFileSvc
             header( 'Content-Type: ' . $_result->get( 'ContentType' ) );
             header( 'Content-Length:' . intval( $_result->get( 'ContentLength' ) ) );
 
-            $_disposition =
-                ( isset( $params['disposition'] ) && !empty( $params['disposition'] ) ) ? $params['disposition']
-                    : 'inline';
+            $_disposition = ( isset( $params['disposition'] ) && !empty( $params['disposition'] ) ) ? $params['disposition'] : 'inline';
 
             header( 'Content-Disposition: ' . $_disposition . '; filename="' . $name . '";' );
             echo $_result->get( 'Body' );
