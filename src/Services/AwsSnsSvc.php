@@ -57,7 +57,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     /**
      * Resource tag for dealing with subscription
      */
-    const APPLICATION_RESOURCE = 'application';
+    const APPLICATION_RESOURCE = 'app';
     /**
      * Resource tag for dealing with subscription
      */
@@ -66,6 +66,12 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * Resource tag for dealing with subscription
      */
     const ARN_PREFIX = 'arn:aws:sns:';
+    /**
+     * List types when requesting resources
+     */
+    const FORMAT_SIMPLE = 'simple';
+    const FORMAT_ARN = 'arn';
+    const FORMAT_FULL = 'full';
 
     //*************************************************************************
     //	Members
@@ -267,6 +273,13 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                         }
                     }
                     break;
+                case static::ENDPOINT_RESOURCE:
+                    $fullResourcePath = rtrim( $this->_resource, '/' ) . '/';
+                    if ( !empty( $this->_resourceId ) )
+                    {
+                        $fullResourcePath .= $this->correctEndpointName( $this->_resourceId );
+                    }
+                    break;
                 default:
                     break;
             }
@@ -320,6 +333,9 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
                 return $this->_handleApplications();
 
+            case static::ENDPOINT_RESOURCE:
+                return $this->_handleEndpoints();
+
             default:
                 throw new BadRequestException( "Invalid resource '{$this->_resource}'." );
                 break;
@@ -348,7 +364,6 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function retrieveResources( $options = null )
     {
-        $_refresh = Option::getBool( $options, 'refresh' );
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_asComponents = Option::getBool( $options, 'as_access_components' );
         $_resources = array();
@@ -378,26 +393,14 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             }
             if ( $_asComponents )
             {
-                $_result = static::retrieveTopics( $_refresh );
+                $_result = static::retrieveTopics( static::FORMAT_SIMPLE );
                 foreach ( $_result as $_topic )
                 {
-                    if ( null != $_name = Option::get( $_topic, 'Name' ) )
+                    $_name = static::TOPIC_RESOURCE . '/' . $_topic;
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
                     {
-                        $_name = static::TOPIC_RESOURCE . '/' . $_name;
-                        $_access = $this->getPermissions( $_name );
-                        if ( !empty( $_access ) )
-                        {
-                            if ( $_namesOnly || $_asComponents )
-                            {
-                                $_resources[] = $_name;
-                            }
-                            else
-                            {
-                                $_topic['name'] = $_name;
-                                $_topic['access'] = $_access;
-                                $_resources[] = $_topic;
-                            }
-                        }
+                        $_resources[] = $_name;
                     }
                 }
             }
@@ -421,26 +424,14 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             }
             if ( $_asComponents )
             {
-                $_result = static::retrieveSubscriptions( $_refresh );
+                $_result = static::retrieveSubscriptions( null, static::FORMAT_SIMPLE );
                 foreach ( $_result as $_sub )
                 {
-                    if ( null != $_name = Option::get( $_sub, 'Name' ) )
+                    $_name = static::SUBSCRIPTION_RESOURCE . '/' . $_sub;
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
                     {
-                        $_name = static::SUBSCRIPTION_RESOURCE . '/' . $_name;
-                        $_access = $this->getPermissions( $_name );
-                        if ( !empty( $_access ) )
-                        {
-                            if ( $_namesOnly || $_asComponents )
-                            {
-                                $_resources[] = $_name;
-                            }
-                            else
-                            {
-                                $_sub['name'] = $_name;
-                                $_sub['access'] = $_access;
-                                $_resources[] = $_sub;
-                            }
-                        }
+                        $_resources[] = $_name;
                     }
                 }
             }
@@ -464,34 +455,46 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             }
             if ( $_asComponents )
             {
-                $_result = static::retrieveApplications( $_refresh );
+                $_result = static::retrieveApplications( static::FORMAT_SIMPLE );
                 foreach ( $_result as $_app )
                 {
-                    if ( null != $_name = Option::get( $_app, 'Name' ) )
+                    $_name = static::APPLICATION_RESOURCE . '/' . $_app;
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
                     {
-                        $_name = static::APPLICATION_RESOURCE . '/' . $_name;
-                        $_access = $this->getPermissions( $_name );
-                        if ( !empty( $_access ) )
-                        {
-                            if ( $_namesOnly || $_asComponents )
-                            {
-                                $_resources[] = $_name;
-                            }
-                            else
-                            {
-                                $_app['name'] = $_name;
-                                $_app['access'] = $_access;
-                                $_resources[] = $_app;
-                            }
-                        }
+                        $_resources[] = $_name;
                     }
                 }
+            }
 
-                $_access = $this->getPermissions( static::ENDPOINT_RESOURCE );
-                if ( !empty( $_access ) )
+            $_access = $this->getPermissions( static::ENDPOINT_RESOURCE );
+            if ( !empty( $_access ) )
+            {
+                if ( $_namesOnly )
+                {
+                    $_resources[] = static::ENDPOINT_RESOURCE;
+                }
+                elseif ( $_asComponents )
                 {
                     $_resources[] = static::ENDPOINT_RESOURCE . '/';
                     $_resources[] = static::ENDPOINT_RESOURCE . '/*';
+                }
+                else
+                {
+                    $_resources[] = array('name' => static::ENDPOINT_RESOURCE, 'access' => $_access);
+                }
+            }
+            if ( $_asComponents )
+            {
+                $_result = static::retrieveEndpoints( null, static::FORMAT_SIMPLE );
+                foreach ( $_result as $_end )
+                {
+                    $_name = static::ENDPOINT_RESOURCE . '/' . $_end;
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        $_resources[] = $_name;
+                    }
                 }
             }
 
@@ -621,19 +624,30 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     }
 
     /**
-     * @param bool $refresh
+     * @param string $format
      *
      * @return array
      */
-    protected function retrieveTopics( /** @noinspection PhpUnusedParameterInspection */
-        $refresh = true )
+    protected function retrieveTopics( $format = null )
     {
         $_resources = array();
         $_result = $this->_getTopicsAsArray();
         foreach ( $_result as $_topic )
         {
-            $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_topic, 'TopicArn' ) );
-            $_resources[] = $_topic;
+            switch ( $format )
+            {
+                case static::FORMAT_SIMPLE:
+                    $_resources[] = $this->stripArnPrefix( IfSet::get( $_topic, 'TopicArn' ) );
+                    break;
+                case static::FORMAT_ARN:
+                    $_resources[] = IfSet::get( $_topic, 'TopicArn' );
+                    break;
+                case static::FORMAT_FULL:
+                default:
+                    $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_topic, 'TopicArn' ) );
+                    $_resources[] = $_topic;
+                    break;
+            }
         }
 
         return $_resources;
@@ -654,7 +668,10 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( null !== $_result = $this->_conn->getTopicAttributes( $_request ) )
             {
-                return Option::get( $_result->toArray(), 'Attributes' );
+                $_out = Option::get( $_result->toArray(), 'Attributes' );
+                $_out['Name'] = $this->stripArnPrefix( $resource );
+
+                return $_out;
             }
         }
         catch ( \Exception $_ex )
@@ -756,7 +773,10 @@ JSON;
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_result = array('resource' => $this->retrieveTopics());
+                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
+                    $_result = array('resource' => $this->retrieveTopics( $_format ));
                 }
                 else
                 {
@@ -838,7 +858,9 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->createTopic( $_data ) )
             {
-                return $_result->toArray();
+                $_arn = IfSet::get( $_result->toArray(), 'TopicArn', '' );
+
+                return array('Name' => $this->stripArnPrefix( $_arn ), 'TopicArn' => $_arn);
             }
         }
         catch ( \Exception $_ex )
@@ -875,7 +897,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->setTopicAttributes( $request ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -885,7 +907,7 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to delete topic '{$request['TopicArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update topic '{$request['TopicArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
         return array();
@@ -913,7 +935,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->deleteTopic( $_data ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -936,17 +958,20 @@ JSON;
     protected function _handleSubscriptions()
     {
         $_result = false;
+        $_related = ($this->_relatedResource === static::SUBSCRIPTION_RESOURCE);
+        $_theId = ($_related) ? $this->_relatedResourceId : $this->_resourceId;
+        $_parent = ($_related) ? $this->_resourceId : null;
 
         switch ( $this->_action )
         {
             case static::GET:
-                if ( empty( $this->_resourceId ) )
+                if ( empty( $_theId ) )
                 {
-                    $_result = array('resource' => $this->retrieveSubscriptions());
+                    $_result = array('resource' => $this->retrieveSubscriptions($_parent));
                 }
                 else
                 {
-                    $_result = $this->retrieveSubscription( $this->_resourceId );
+                    $_result = $this->retrieveSubscription( $_theId );
                 }
                 break;
 
@@ -956,8 +981,9 @@ JSON;
                     throw new BadRequestException( 'No data in subscription post request.' );
                 }
 
-                if ( empty( $this->_resourceId ) )
+                if ( empty( $_theId ) )
                 {
+                    $this->_requestPayload['TopicName'] = $_parent;
                     $_result = $this->createSubscription( $this->_requestPayload );
                 }
                 else
@@ -974,28 +1000,27 @@ JSON;
                     throw new BadRequestException( 'No data in subscription update request.' );
                 }
 
-                if ( !empty( $this->_resourceId ) )
+                if ( !empty( $_theId ) )
                 {
-                    $this->_requestPayload['Name'] = $this->_resourceId;
+                    $this->_requestPayload['Name'] = $_theId;
                 }
                 $_result = $this->updateSubscription( $this->_requestPayload );
                 break;
 
             case static::DELETE:
-                if ( empty( $this->_resourceId ) )
+                if ( empty( $_theId ) )
                 {
                     if ( empty( $this->_requestPayload ) )
                     {
                         throw new BadRequestException( 'No data in subscription delete request.' );
                     }
 
-                    $this->deleteSubscription( $this->_requestPayload );
+                    $_result = $this->deleteSubscription( $this->_requestPayload );
                 }
                 else
                 {
-                    $this->deleteSubscription( $this->_resourceId );
+                    $_result = $this->deleteSubscription( $_theId );
                 }
-                $_result = array('success' => true);
                 break;
         }
 
@@ -1009,19 +1034,35 @@ JSON;
      * @throws NotFoundException
      * @throws null
      */
-    protected function _getSubscriptionsAsArray()
+    protected function _getSubscriptionsAsArray( $topic = null )
     {
         $_out = array();
         $_token = null;
+        if (!empty($topic))
+        {
+            $topic = $this->addArnPrefix( $topic );
+        }
         try
         {
             do
             {
-                $_result = $this->_conn->listSubscriptions(
-                    array(
-                        'NextToken' => $_token
-                    )
-                );
+                if (empty( $topic))
+                {
+                    $_result = $this->_conn->listSubscriptions(
+                        array(
+                            'NextToken' => $_token
+                        )
+                    );
+                }
+                else
+                {
+                    $_result = $this->_conn->listSubscriptionsByTopic(
+                        array(
+                            'TopicArn' => $topic,
+                            'NextToken' => $_token
+                        )
+                    );
+                }
                 $_topics = $_result['Subscriptions'];
                 $_token = $_result['NextToken'];
 
@@ -1046,19 +1087,30 @@ JSON;
     }
 
     /**
-     * @param bool $refresh
+     * @param string $format
      *
      * @return array
      */
-    protected function retrieveSubscriptions( /** @noinspection PhpUnusedParameterInspection */
-        $refresh = true )
+    protected function retrieveSubscriptions( $topic = null, $format = null )
     {
         $_resources = array();
-        $_result = $this->_getSubscriptionsAsArray();
+        $_result = $this->_getSubscriptionsAsArray($topic);
         foreach ( $_result as $_sub )
         {
-            $_sub['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'SubscriptionArn' ) );
-            $_resources[] = $_sub;
+            switch ( $format )
+            {
+                case static::FORMAT_SIMPLE:
+                    $_resources[] = $this->stripArnPrefix( IfSet::get( $_sub, 'SubscriptionArn' ) );
+                    break;
+                case static::FORMAT_ARN:
+                    $_resources[] = IfSet::get( $_sub, 'SubscriptionArn' );
+                    break;
+                case static::FORMAT_FULL:
+                default:
+                    $_sub['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'SubscriptionArn' ) );
+                    $_resources[] = $_sub;
+                    break;
+            }
         }
 
         return $_resources;
@@ -1079,7 +1131,10 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->getSubscriptionAttributes( $_request ) )
             {
-                return Option::get( $_result->toArray(), 'Attributes' );
+                $_out = array_merge( $_request, Option::get( $_result->toArray(), 'Attributes', array() ) );
+                $_out['Name'] = $this->stripArnPrefix( $resource );
+
+                return $_out;
             }
         }
         catch ( \Exception $_ex )
@@ -1102,7 +1157,13 @@ JSON;
             $_name = Ifset::get( $request, 'TopicArn' );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Create Subscription request contains no 'TopicArn' field." );
+                $_name = Ifset::get( $request, 'TopicName' );
+                if ( empty( $_name ) )
+                {
+                    throw new BadRequestException( "Create Subscription request contains no 'TopicName' or 'TopicArn' field." );
+                }
+
+                $request['TopicArn'] = $this->addArnPrefix($_name);
             }
         }
         else
@@ -1114,7 +1175,8 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->subscribe( $request ) )
             {
-                return $_result->toArray();
+                $_arn = IfSet::get( $_result->toArray(), 'SubscriptionArn', '' );
+                return array('Name' => $this->stripArnPrefix( $_arn), 'SubscriptionArn' => $_arn );
             }
         }
         catch ( \Exception $_ex )
@@ -1151,7 +1213,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->setTopicAttributes( $request ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -1189,7 +1251,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->unsubscribe( $_data ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -1322,19 +1384,30 @@ JSON;
     }
 
     /**
-     * @param bool $refresh
+     * @param string $format
      *
      * @return array
      */
-    protected function retrieveApplications( /** @noinspection PhpUnusedParameterInspection */
-        $refresh = true )
+    protected function retrieveApplications( $format = null )
     {
         $_resources = array();
         $_result = $this->_getApplicationsAsArray();
         foreach ( $_result as $_sub )
         {
-            $_sub['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'PlatformApplicationArn' ) );
-            $_resources[] = $_sub;
+            switch ( $format )
+            {
+                case static::FORMAT_SIMPLE:
+                    $_resources[] = $this->stripArnPrefix( IfSet::get( $_sub, 'PlatformApplicationArn' ) );
+                    break;
+                case static::FORMAT_ARN:
+                    $_resources[] = IfSet::get( $_sub, 'PlatformApplicationArn' );
+                    break;
+                case static::FORMAT_FULL:
+                default:
+                    $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'PlatformApplicationArn' ) );
+                    $_resources[] = $_topic;
+                    break;
+            }
         }
 
         return $_resources;
@@ -1357,9 +1430,10 @@ JSON;
             {
                 $_attributes = Option::get( $_result->toArray(), 'Attributes' );
 
-                return array('Name'                   => $this->stripArnPrefix( $resource ),
-                             'PlatformApplicationArn' => $this->addArnPrefix( $resource ),
-                             'Attributes'             => $_attributes
+                return array(
+                    'Name'                   => $this->stripArnPrefix( $resource ),
+                    'PlatformApplicationArn' => $this->addArnPrefix( $resource ),
+                    'Attributes'             => $_attributes
                 );
             }
         }
@@ -1617,19 +1691,39 @@ JSON;
     }
 
     /**
-     * @param bool $refresh
+     * @param string $format
      *
      * @return array
      */
-    public function retrieveEndpoints( $application, /** @noinspection PhpUnusedParameterInspection */
-        $refresh = true )
+    public function retrieveEndpoints( $applications, $format = null )
     {
         $_resources = array();
-        $_result = $this->_getEndpointsAsArray( $this->addArnPrefix( $application ) );
-        foreach ( $_result as $_sub )
+        $applications = Option::clean( $applications );
+        if ( empty( $applications ) )
         {
-            $_sub['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'EndpointArn' ) );
-            $_resources[] = $_sub;
+            $applications = $this->retrieveApplications( static::FORMAT_ARN );
+        }
+
+        foreach ( $applications as $application )
+        {
+            $_result = $this->_getEndpointsAsArray( $application );
+            foreach ( $_result as $_end )
+            {
+                switch ( $format )
+                {
+                    case static::FORMAT_SIMPLE:
+                        $_resources[] = $this->stripArnPrefix( IfSet::get( $_end, 'EndpointArn' ) );
+                        break;
+                    case static::FORMAT_ARN:
+                        $_resources[] = IfSet::get( $_end, 'EndpointArn' );
+                        break;
+                    case static::FORMAT_FULL:
+                    default:
+                        $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_end, 'EndpointArn' ) );
+                        $_resources[] = $_topic;
+                        break;
+                }
+            }
         }
 
         return $_resources;

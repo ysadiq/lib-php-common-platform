@@ -155,7 +155,7 @@ $_base['apis'] = array(
                 'summary'          => 'createTopic() - Create a topic.',
                 'nickname'         => 'createTopic',
                 'notes'            => 'Post data should be an array of topic attributes including \'Name\'.',
-                'type'             => 'TopicResponse',
+                'type'             => 'TopicIdentifier',
                 'event_name'       => array('{api_name}.topic.create'),
                 'parameters'       => array(
                     array(
@@ -181,7 +181,7 @@ $_base['apis'] = array(
                 'nickname'         => 'getTopicAttributes',
                 'notes'            => 'This retrieves the topic, detailing its available properties.',
                 'event_name'       => array('{api_name}.topic.{topic_name}.retrieve', '{api_name}.topic_retrieved'),
-                'type'             => 'GetTopicResponse',
+                'type'             => 'TopicAttributesResponse',
                 'parameters'       => array(
                     array(
                         'name'          => 'topic_name',
@@ -351,7 +351,7 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'subscribeTopic() - Create a subscription for the given topic.',
                 'nickname'         => 'subscribeTopic',
-                'type'             => 'SubscriptionResponse',
+                'type'             => 'SubscriptionIdentifier',
                 'event_name'       => array('{api_name}.topic.{topic_name}.subscription.create'),
                 'parameters'       => array(
                     array(
@@ -366,7 +366,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of subscription attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'SubscribeTopicRequest',
+                        'type'          => 'SubscriptionTopicRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -413,14 +413,14 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'subscribe() - Create a subscription.',
                 'nickname'         => 'subscribe',
-                'type'             => 'SubscribeResponse',
+                'type'             => 'SubscriptionIdentifier',
                 'event_name'       => array('{api_name}.subscription.create'),
                 'parameters'       => array(
                     array(
                         'name'          => 'body',
                         'description'   => 'Array of subscription attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'SubscribeRequest',
+                        'type'          => 'SubscriptionRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -439,7 +439,7 @@ $_base['apis'] = array(
                 'summary'          => 'getSubscriptionAttributes() - Retrieve attributes for the given subscription.',
                 'nickname'         => 'getSubscriptionAttributes',
                 'event_name'       => array('{api_name}.subscription.{subscription_name}.retrieve', '{api_name}.subscription_retrieved'),
-                'type'             => 'GetSubscriptionResponse',
+                'type'             => 'SubscriptionAttributesResponse',
                 'parameters'       => array(
                     array(
                         'name'          => 'name',
@@ -472,7 +472,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of subscription attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'SubscriptionRequest',
+                        'type'          => 'SubscriptionAttributesRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -538,7 +538,7 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'createApp() - Create a given app.',
                 'nickname'         => 'createApp',
-                'type'             => 'AppResponse',
+                'type'             => 'AppIdentifier',
                 'event_name'       => array('{api_name}.app.create'),
                 'parameters'       => array(
                     array(
@@ -564,7 +564,7 @@ $_base['apis'] = array(
                 'summary'          => 'getAppAttributes() - Retrieve app definition for the given app.',
                 'nickname'         => 'getAppAttributes',
                 'event_name'       => array('{api_name}.app.{app_name}.retrieve', '{api_name}.app_retrieved'),
-                'type'             => 'GetAppResponse',
+                'type'             => 'AppAttributesResponse',
                 'parameters'       => array(
                     array(
                         'name'          => 'name',
@@ -673,7 +673,7 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'createEndpoint() - Create a given endpoint.',
                 'nickname'         => 'createEndpoint',
-                'type'             => 'EndpointResponse',
+                'type'             => 'EndpointIdentifier',
                 'event_name'       => array('{api_name}.endpoint.create'),
                 'parameters'       => array(
                     array(
@@ -699,7 +699,7 @@ $_base['apis'] = array(
                 'summary'          => 'getEndpointAttributes() - Retrieve endpoint definition for the given endpoint.',
                 'nickname'         => 'getEndpointAttributes',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.retrieve', '{api_name}.endpoint_retrieved'),
-                'type'             => 'GetEndpointResponse',
+                'type'             => 'EndpointAttributesResponse',
                 'parameters'       => array(
                     array(
                         'name'          => 'name',
@@ -717,7 +717,7 @@ $_base['apis'] = array(
                 'method'           => 'PUT',
                 'summary'          => 'updateEndpoint() - Update a given endpoint.',
                 'nickname'         => 'updateEndpoint',
-                'type'             => 'EndpointResponse',
+                'type'             => 'Success',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.update', '{api_name}.endpoint_updated'),
                 'parameters'       => array(
                     array(
@@ -732,7 +732,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of endpoint attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'EndpointRequest',
+                        'type'          => 'EndpointAttributesRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -745,7 +745,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteEndpoint() - Delete a given endpoint.',
                 'nickname'         => 'deleteEndpoint',
                 'notes'            => '',
-                'type'             => 'EndpointResponse',
+                'type'             => 'Success',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.delete', '{api_name}.endpoint_deleted'),
                 'parameters'       => array(
                     array(
@@ -808,7 +808,7 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'createEndpoint() - Create a given endpoint.',
                 'nickname'         => 'createEndpoint',
-                'type'             => 'EndpointResponse',
+                'type'             => 'EndpointIdentifier',
                 'event_name'       => array('{api_name}.endpoint.create'),
                 'parameters'       => array(
                     array(
@@ -834,7 +834,7 @@ $_base['apis'] = array(
                 'summary'          => 'getEndpointAttributes() - Retrieve endpoint definition for the given endpoint.',
                 'nickname'         => 'getEndpointAttributes',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.retrieve', '{api_name}.endpoint_retrieved'),
-                'type'             => 'GetEndpointResponse',
+                'type'             => 'EndpointAttributesResponse',
                 'parameters'       => array(
                     array(
                         'name'          => 'name',
@@ -906,7 +906,7 @@ $_base['apis'] = array(
                 'method'           => 'PUT',
                 'summary'          => 'setEndpointAttributes() - Update a given endpoint.',
                 'nickname'         => 'setEndpointAttributes',
-                'type'             => 'EndpointResponse',
+                'type'             => 'Success',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.update', '{api_name}.endpoint_updated'),
                 'parameters'       => array(
                     array(
@@ -921,7 +921,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of endpoint attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'EndpointRequest',
+                        'type'          => 'EndpointAttributesRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -934,7 +934,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteEndpoint() - Delete a given endpoint.',
                 'nickname'         => 'deleteEndpoint',
                 'notes'            => '',
-                'type'             => 'EndpointResponse',
+                'type'             => 'Success',
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.delete', '{api_name}.endpoint_deleted'),
                 'parameters'       => array(
                     array(
@@ -952,23 +952,75 @@ $_base['apis'] = array(
     ),
 );
 
+$_commonAppAttributes = array(
+    'PlatformCredential'   => array(
+        'type'        => 'string',
+        'description' => 'The credential received from the notification service.',
+    ),
+    'PlatformPrincipal'    => array(
+        'type'        => 'string',
+        'description' => 'The principal received from the notification service.',
+    ),
+    'EventEndpointCreated' => array(
+        'type'        => 'string',
+        'description' => 'Topic ARN to which EndpointCreated event notifications should be sent.',
+    ),
+    'EventEndpointUpdated' => array(
+        'type'        => 'string',
+        'description' => 'Topic ARN to which EndpointUpdated event notifications should be sent.',
+    ),
+    'EventEndpointDeleted' => array(
+        'type'        => 'string',
+        'description' => 'Topic ARN to which EndpointDeleted event notifications should be sent.',
+    ),
+    'EventDeliveryFailure' => array(
+        'type'        => 'string',
+        'description' => 'Topic ARN to which DeliveryFailure event notifications should be sent upon Direct Publish delivery failure (permanent) to one of the application\'s endpoints.',
+    ),
+);
+
 $_models = array(
-    'GetTopicResponse'          => array(
-        'id'         => 'GetTopicResponse',
+    'GetTopicsResponse'              => array(
+        'id'         => 'GetTopicsResponse',
         'properties' => array(
-            'Attributes'       => array(
-                'type'        => 'TopicAttributes',
-                'description' => 'Identifier/Name for the topic.',
-            ),
-            'ResponseMetadata' => array(
-                'type'        => 'ResponseMetadata',
-                'description' => 'Displayable singular name for the topic.',
+            'resource' => array(
+                'type'        => 'Array',
+                'description' => 'An array of identifying attributes for a topic, use either in requests.',
+                'items'       => array(
+                    '$ref' => 'TopicIdentifier',
+                ),
             ),
         ),
     ),
-    'TopicAttributes'       => array(
-        'id'         => 'TopicAttributes',
+    'TopicRequest'                   => array(
+        'id'         => 'TopicRequest',
         'properties' => array(
+            'Name' => array(
+                'type'        => 'string',
+                'description' => 'The name of the topic you want to create.',
+            ),
+        ),
+    ),
+    'TopicIdentifier'                => array(
+        'id'         => 'TopicIdentifier',
+        'properties' => array(
+            'Name'     => array(
+                'type'        => 'string',
+                'description' => 'The topic\'s simplified name.',
+            ),
+            'TopicArn' => array(
+                'type'        => 'string',
+                'description' => 'The topic\'s Amazon Resource Name.',
+            ),
+        ),
+    ),
+    'TopicAttributesResponse'        => array(
+        'id'         => 'TopicAttributesResponse',
+        'properties' => array(
+            'Name'                    => array(
+                'type'        => 'string',
+                'description' => 'The topic\'s simplified name.',
+            ),
             'TopicArn'                => array(
                 'type'        => 'string',
                 'description' => 'The topic\'s Amazon Resource Name.',
@@ -1007,79 +1059,327 @@ $_models = array(
             ),
         ),
     ),
-    'PublishSimpleRequest'   => array(
-        'id'         => 'PublishSimpleRequest',
+    'TopicAttributesRequest'         => array(
+        'id'         => 'TopicAttributesRequest',
         'properties' => array(
-            'TopicArn'          => array(
+            'AttributeName'         => array(
                 'type'        => 'string',
-                'description' => 'The topic you want to publish to.',
+                'description' => 'The name of the attribute you want to set.',
+                'enum' => array('Policy', 'DisplayName', 'DeliveryPolicy'),
+                'default' => 'DisplayName',
+                'required' => true,
             ),
-            'TargetArn'         => array(
+            'AttributeValue'    => array(
                 'type'        => 'string',
-                'description' => 'Either TopicArn or EndpointArn, but not both.',
+                'description' => 'The value of the attribute you want to set.',
             ),
-            'Message'           => array(
-                'type'        => 'string',
-                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
-            ),
-            'Subject'           => array(
-                'type'        => 'string',
-                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
-            ),
-            'MessageStructure'  => array(
-                'type'        => 'string',
-                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
-            ),
-            'MessageAttributes' => array(
+        ),
+    ),
+    'GetSubscriptionsResponse'       => array(
+        'id'         => 'GetSubscriptionsResponse',
+        'properties' => array(
+            'resource' => array(
                 'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'description' => 'An array of identifying attributes for a subscription, use either in requests.',
                 'items'       => array(
-                    '$ref' => 'TopicMessageAttribute',
+                    '$ref' => 'SubscriptionIdentifier',
                 ),
             ),
         ),
     ),
-    'PublishRequest'   => array(
-        'id'         => 'PublishRequest',
+    'SubscriptionRequest'            => array(
+        'id'         => 'SubscriptionRequest',
         'properties' => array(
-            'TopicArn'          => array(
+            'TopicName' => array(
                 'type'        => 'string',
-                'description' => 'The topic you want to publish to.',
+                'description' => 'The topic\'s simplified name.',
             ),
-            'TargetArn'         => array(
+            'TopicArn'  => array(
                 'type'        => 'string',
-                'description' => 'Either TopicArn or EndpointArn, but not both.',
+                'description' => 'The topic\'s Amazon Resource Name.',
             ),
-            'Message'           => array(
-                'type'        => 'TopicMessage',
-                'description' => 'The message you want to send to the topic. The \'default\' field is required.',
-                'required' => true,
-            ),
-            'Subject'           => array(
+            'Protocol'  => array(
                 'type'        => 'string',
-                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+                'description' => 'The protocol you want to use.',
+                'enum'        => array('http', 'https', 'email', 'email-json', 'sms', 'sqs', 'application'),
             ),
-            'MessageStructure'  => array(
+            'Endpoint'  => array(
                 'type'        => 'string',
-                'description' => 'Set MessageStructure to "json".',
-                'default' => 'json',
+                'description' => 'The endpoint that you want to receive notifications, formats vary by protocol.',
             ),
-            'MessageAttributes' => array(
+        ),
+    ),
+    'SubscriptionTopicRequest'       => array(
+        'id'         => 'SubscriptionTopicRequest',
+        'properties' => array(
+            'Protocol' => array(
+                'type'        => 'string',
+                'description' => 'The protocol you want to use.',
+                'enum'        => array('http', 'https', 'email', 'email-json', 'sms', 'sqs', 'application'),
+                'required'    => true,
+            ),
+            'Endpoint' => array(
+                'type'        => 'string',
+                'description' => 'The endpoint that you want to receive notifications, formats vary by protocol.',
+            ),
+        ),
+    ),
+    'SubscriptionIdentifier'         => array(
+        'id'         => 'SubscriptionIdentifier',
+        'properties' => array(
+            'Name'            => array(
+                'type'        => 'string',
+                'description' => 'The subscription\'s simplified name.',
+            ),
+            'SubscriptionArn' => array(
+                'type'        => 'string',
+                'description' => 'The subscription\'s Amazon Resource Name.',
+            ),
+        ),
+    ),
+    'SubscriptionAttributesResponse' => array(
+        'id'         => 'SubscriptionAttributesResponse',
+        'properties' => array(
+            'Name'                         => array(
+                'type'        => 'string',
+                'description' => 'The subscription\'s simplified name.',
+            ),
+            'SubscriptionArn'              => array(
+                'type'        => 'string',
+                'description' => 'The subscription\'s Amazon Resource Name.',
+            ),
+            'TopicName'                    => array(
+                'type'        => 'string',
+                'description' => 'The topic\'s simplified name.',
+            ),
+            'TopicArn'                     => array(
+                'type'        => 'string',
+                'description' => 'The topic\'s Amazon Resource Name.',
+            ),
+            'Owner'                        => array(
+                'type'        => 'string',
+                'description' => 'The AWS account ID of the topic\'s owner.',
+            ),
+            'ConfirmationWasAuthenticated' => array(
+                'type'        => 'boolean',
+                'description' => 'True if the subscription confirmation request was authenticated.',
+            ),
+            'DeliveryPolicy'               => array(
+                'type'        => 'string',
+                'description' => 'The JSON serialization of the topic\'s delivery policy.',
+            ),
+            'EffectiveDeliveryPolicy'      => array(
+                'type'        => 'string',
+                'description' => 'The JSON serialization of the effective delivery policy that takes into account system defaults.',
+            ),
+        ),
+    ),
+    'SubscriptionAttributesRequest'  => array(
+        'id'         => 'SubscriptionAttributesRequest',
+        'properties' => array(
+            'DeliveryPolicy'     => array(
+                'type'        => 'string',
+                'description' => 'The JSON serialization of the topic\'s delivery policy.',
+            ),
+            'RawMessageDelivery' => array(
+                'type'        => 'string',
+                'description' => 'The human-readable name used in the "From" field for notifications to email and email-json endpoints.',
+            ),
+        ),
+    ),
+    'GetAppResponse'                 => array(
+        'id'         => 'GetAppResponse',
+        'properties' => array(
+            'resource' => array(
                 'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'description' => 'An array of identifying attributes for a app, use either in requests.',
+                'items'       => array(
+                    '$ref' => 'AppIdentifier',
+                ),
+            ),
+        ),
+    ),
+    'AppAttributes'                  => array(
+        'id'         => 'AppAttributes',
+        'properties' => $_commonAppAttributes,
+    ),
+    'AppRequest'                     => array(
+        'id'         => 'AppRequest',
+        'properties' => array(
+            'Name'       => array(
+                'type'        => 'string',
+                'description' => 'Desired platform application name.',
+            ),
+            'Protocol'   => array(
+                'type'        => 'string',
+                'description' => 'One of the following supported platforms.',
+                'enum'        => array('ADM', 'APNS', 'APNS_SANDBOX', 'GCM'),
+                'required'    => true,
+            ),
+            'Attributes' => array(
+                'type'        => 'AppAttributes',
+                'description' => 'An array of key-value pairs containing platform-specified application attributes.',
+            ),
+        ),
+    ),
+    'AppIdentifier'                  => array(
+        'id'         => 'AppIdentifier',
+        'properties' => array(
+            'Name'                   => array(
+                'type'        => 'string',
+                'description' => 'The app\'s simplified name.',
+            ),
+            'PlatformApplicationArn' => array(
+                'type'        => 'string',
+                'description' => 'The app\'s Amazon Resource Name.',
+            ),
+        ),
+    ),
+    'AppAttributesResponse'          => array(
+        'id'         => 'AppAttributesResponse',
+        'properties' => array(
+            'Name'                   => array(
+                'type'        => 'string',
+                'description' => 'The app\'s simplified name.',
+            ),
+            'PlatformApplicationArn' => array(
+                'type'        => 'string',
+                'description' => 'The app\'s Amazon Resource Name.',
+            ),
+            'EventEndpointCreated'   => array(
+                'type'        => 'string',
+                'description' => 'Topic ARN to which EndpointCreated event notifications should be sent.',
+            ),
+            'EventEndpointUpdated'   => array(
+                'type'        => 'string',
+                'description' => 'Topic ARN to which EndpointUpdated event notifications should be sent.',
+            ),
+            'EventEndpointDeleted'   => array(
+                'type'        => 'string',
+                'description' => 'Topic ARN to which EndpointDeleted event notifications should be sent.',
+            ),
+            'EventDeliveryFailure'   => array(
+                'type'        => 'string',
+                'description' => 'Topic ARN to which DeliveryFailure event notifications should be sent upon Direct Publish delivery failure (permanent) to one of the application\'s endpoints.',
+            ),
+        ),
+    ),
+    'AppAttributesRequest'           => array(
+        'id'         => 'AppAttributesRequest',
+        'properties' => $_commonAppAttributes,
+    ),
+    'GetEndpointsResponse'           => array(
+        'id'         => 'GetEndpointsResponse',
+        'properties' => array(
+            'resource' => array(
+                'type'        => 'Array',
+                'description' => 'An array of identifying attributes for a topic, use either in requests.',
+                'items'       => array(
+                    '$ref' => 'EndpointIdentifier',
+                ),
+            ),
+        ),
+    ),
+    'EndpointRequest'                => array(
+        'id'         => 'EndpointRequest',
+        'properties' => array(
+            'AppName'                => array(
+                'type'        => 'string',
+                'description' => 'The application\'s simplified name.',
+            ),
+            'PlatformApplicationArn' => array(
+                'type'        => 'string',
+                'description' => 'The application\'s Amazon Resource Name.',
+            ),
+            'Token'                  => array(
+                'type'        => 'string',
+                'description' => 'The protocol you want to use.',
+                'enum'        => array('http', 'https', 'email', 'email-json', 'sms', 'sqs', 'application'),
+                'required'    => true,
+            ),
+            'CustomUserData'         => array(
+                'type'        => 'string',
+                'description' => 'Arbitrary user data to associate with the endpoint.',
+            ),
+            'Attributes'             => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing endpoint attributes.',
                 'items'       => array(
                     '$ref' => 'MessageAttribute',
                 ),
             ),
         ),
     ),
-    'TopicMessage'          => array(
+    'EndpointIdentifier'             => array(
+        'id'         => 'EndpointIdentifier',
+        'properties' => array(
+            'Name'        => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s simplified name.',
+            ),
+            'EndpointArn' => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s Amazon Resource Name.',
+            ),
+        ),
+    ),
+    'EndpointAttributesResponse'     => array(
+        'id'         => 'EndpointAttributesResponse',
+        'properties' => array(
+            'Name'           => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s simplified name.',
+            ),
+            'EndpointArn'    => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s Amazon Resource Name.',
+            ),
+            'CustomUserData' => array(
+                'type'        => 'string',
+                'description' => 'Arbitrary user data to associate with the endpoint.',
+            ),
+            'Enabled'        => array(
+                'type'        => 'boolean',
+                'description' => 'The flag that enables/disables delivery to the endpoint.',
+            ),
+            'Token'          => array(
+                'type'        => 'string',
+                'description' => 'The device token, also referred to as a registration id, for an app and mobile device.',
+            ),
+        ),
+    ),
+    'EndpointAttributesRequest'      => array(
+        'id'         => 'EndpointAttributesRequest',
+        'properties' => array(
+            'Name'           => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s simplified name.',
+            ),
+            'EndpointArn'    => array(
+                'type'        => 'string',
+                'description' => 'The endpoint\'s Amazon Resource Name.',
+            ),
+            'CustomUserData' => array(
+                'type'        => 'string',
+                'description' => 'Arbitrary user data to associate with the endpoint.',
+            ),
+            'Enabled'        => array(
+                'type'        => 'boolean',
+                'description' => 'The flag that enables/disables delivery to the endpoint.',
+            ),
+            'Token'          => array(
+                'type'        => 'string',
+                'description' => 'The device token, also referred to as a registration id, for an app and mobile device.',
+            ),
+        ),
+    ),
+    'TopicMessage'                   => array(
         'id'         => 'TopicMessage',
         'properties' => array(
             'default' => array(
                 'type'        => 'string',
                 'description' => 'Amazon SNS supports the following logical data types: String, Number, and Binary.',
-                'required' => true,
+                'required'    => true,
             ),
             'email'   => array(
                 'type'        => 'string',
@@ -1127,13 +1427,13 @@ $_models = array(
             ),
         ),
     ),
-    'MessageAttribute' => array(
+    'MessageAttribute'               => array(
         'id'         => 'MessageAttribute',
         'properties' => array(
             'DataType'    => array(
                 'type'        => 'string',
                 'description' => 'Amazon SNS supports the following logical data types: String, Number, and Binary.',
-                'required' => true,
+                'required'    => true,
             ),
             'StringValue' => array(
                 'type'        => 'string',
@@ -1145,16 +1445,178 @@ $_models = array(
             ),
         ),
     ),
-    'PublishResponse'  => array(
+    'SimplePublishRequest'           => array(
+        'id'         => 'SimplePublishRequest',
+        'properties' => array(
+            'TopicArn'          => array(
+                'type'        => 'string',
+                'description' => 'The topic you want to publish to.',
+            ),
+            'TargetArn'         => array(
+                'type'        => 'string',
+                'description' => 'Either TopicArn or EndpointArn, but not both.',
+            ),
+            'Message'           => array(
+                'type'        => 'string',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'PublishRequest'                 => array(
+        'id'         => 'PublishRequest',
+        'properties' => array(
+            'TopicArn'          => array(
+                'type'        => 'string',
+                'description' => 'The topic you want to publish to.',
+            ),
+            'TargetArn'         => array(
+                'type'        => 'string',
+                'description' => 'Either TopicArn or EndpointArn, but not both.',
+            ),
+            'Message'           => array(
+                'type'        => 'TopicMessage',
+                'description' => 'The message you want to send to the topic. The \'default\' field is required.',
+                'required'    => true,
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json".',
+                'default'     => 'json',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'SimplePublishTopicRequest'      => array(
+        'id'         => 'SimplePublishTopicRequest',
+        'properties' => array(
+            'Message'           => array(
+                'type'        => 'string',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'PublishTopicRequest'            => array(
+        'id'         => 'PublishTopicRequest',
+        'properties' => array(
+            'Message'           => array(
+                'type'        => 'TopicMessage',
+                'description' => 'The message you want to send to the topic. The \'default\' field is required.',
+                'required'    => true,
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json".',
+                'default'     => 'json',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'SimplePublishEndpointRequest'   => array(
+        'id'         => 'SimplePublishEndpointRequest',
+        'properties' => array(
+            'Message'           => array(
+                'type'        => 'string',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'PublishEndpointRequest'         => array(
+        'id'         => 'PublishEndpointRequest',
+        'properties' => array(
+            'Message'           => array(
+                'type'        => 'TopicMessage',
+                'description' => 'The message you want to send to the topic. The \'default\' field is required.',
+                'required'    => true,
+            ),
+            'Subject'           => array(
+                'type'        => 'string',
+                'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
+            ),
+            'MessageStructure'  => array(
+                'type'        => 'string',
+                'description' => 'Set MessageStructure to "json".',
+                'default'     => 'json',
+            ),
+            'MessageAttributes' => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing user-specified message attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'PublishResponse'                => array(
         'id'         => 'PublishResponse',
         'properties' => array(
-            'MessageId'        => array(
+            'MessageId' => array(
                 'type'        => 'string',
                 'description' => 'Unique identifier assigned to the published message.',
-            ),
-            'ResponseMetadata' => array(
-                'type'        => 'ResponseMetadata',
-                'description' => 'Metadata for the response.',
             ),
         ),
     ),
