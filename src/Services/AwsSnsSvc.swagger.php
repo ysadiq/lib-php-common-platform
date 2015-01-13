@@ -442,7 +442,7 @@ $_base['apis'] = array(
                 'type'             => 'SubscriptionAttributesResponse',
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'sub_name',
                         'description'   => 'Full ARN or simplified name of the subscription to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -461,7 +461,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.subscription.{subscription_name}.update', '{api_name}.subscription_updated'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'sub_name',
                         'description'   => 'Full ARN or simplified name of the subscription to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -489,7 +489,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.subscription.{subscription_name}.delete', '{api_name}.subscription_deleted'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'sub_name',
                         'description'   => 'Full ARN or simplified name of the subscription to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -567,7 +567,7 @@ $_base['apis'] = array(
                 'type'             => 'AppAttributesResponse',
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'app_name',
                         'description'   => 'Full ARN or simplified name of the app to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -586,7 +586,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.app.{app_name}.update', '{api_name}.app_updated'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'app_name',
                         'description'   => 'Full ARN or simplified name of the app to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -614,7 +614,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.app.{app_name}.delete', '{api_name}.app_deleted'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'app_name',
                         'description'   => 'Full ARN or simplified name of the app to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -638,8 +638,8 @@ $_base['apis'] = array(
                 'type'             => 'GetEndpointsResponse',
                 'parameters'       => array(
                     array(
-                        'name'          => 'endpoint_name',
-                        'description'   => 'Name of the endpoint to perform operations on.',
+                        'name'          => 'app_name',
+                        'description'   => 'Name of the application to get endpoints on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -647,7 +647,7 @@ $_base['apis'] = array(
                     ),
                 ),
                 'responseMessages' => $_commonResponses,
-                'notes'            => 'This describes the endpoint, detailing its available properties.',
+                'notes'            => 'This describes the endpoints, detailing its available properties.',
             ),
             array(
                 'method'           => 'GET',
@@ -657,6 +657,14 @@ $_base['apis'] = array(
                 'type'             => 'ComponentList',
                 'event_name'       => array('{api_name}.endpoint.list'),
                 'parameters'       => array(
+                    array(
+                        'name'          => 'app_name',
+                        'description'   => 'Name of the application to get endpoints on.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
                     array(
                         'name'          => 'names_only',
                         'description'   => 'Return only the names of the endpoints in an array.',
@@ -671,58 +679,14 @@ $_base['apis'] = array(
             ),
             array(
                 'method'           => 'POST',
-                'summary'          => 'createEndpoint() - Create a given endpoint.',
-                'nickname'         => 'createEndpoint',
+                'summary'          => 'createAppEndpoint() - Create a endpoint for a given application.',
+                'nickname'         => 'createAppEndpoint',
                 'type'             => 'EndpointIdentifier',
                 'event_name'       => array('{api_name}.endpoint.create'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'body',
-                        'description'   => 'Array of endpoint attributes.',
-                        'allowMultiple' => false,
-                        'type'          => 'EndpointRequest',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of endpoint attributes including \'Name\'.',
-            ),
-        ),
-    ),
-    array(
-        'path'        => '/{api_name}/app/{app_name}/endpoint/{endpoint_name}',
-        'description' => 'Operations for a specific push application endpoint.',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'getEndpointAttributes() - Retrieve endpoint definition for the given endpoint.',
-                'nickname'         => 'getEndpointAttributes',
-                'event_name'       => array('{api_name}.endpoint.{endpoint_name}.retrieve', '{api_name}.endpoint_retrieved'),
-                'type'             => 'EndpointAttributesResponse',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'name',
-                        'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'This retrieves the endpoint, detailing its available properties.',
-            ),
-            array(
-                'method'           => 'PUT',
-                'summary'          => 'updateEndpoint() - Update a given endpoint.',
-                'nickname'         => 'updateEndpoint',
-                'type'             => 'Success',
-                'event_name'       => array('{api_name}.endpoint.{endpoint_name}.update', '{api_name}.endpoint_updated'),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'name',
-                        'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
+                        'name'          => 'app_name',
+                        'description'   => 'Name of the application to create endpoints on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -732,32 +696,13 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of endpoint attributes.',
                         'allowMultiple' => false,
-                        'type'          => 'EndpointAttributesRequest',
+                        'type'          => 'AppEndpointRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                 ),
                 'responseMessages' => $_commonResponses,
                 'notes'            => 'Post data should be an array of endpoint attributes including \'Name\'.',
-            ),
-            array(
-                'method'           => 'DELETE',
-                'summary'          => 'deleteEndpoint() - Delete a given endpoint.',
-                'nickname'         => 'deleteEndpoint',
-                'notes'            => '',
-                'type'             => 'Success',
-                'event_name'       => array('{api_name}.endpoint.{endpoint_name}.delete', '{api_name}.endpoint_deleted'),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'name',
-                        'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
             ),
         ),
     ),
@@ -769,20 +714,10 @@ $_base['apis'] = array(
                 'method'           => 'GET',
                 'summary'          => 'getEndpoints() - Retrieve endpoint definition for the given endpoint.',
                 'nickname'         => 'getEndpoints',
+                'notes'            => 'This describes the endpoint, detailing its available properties.',
                 'event_name'       => array('{api_name}.endpoint.list'),
                 'type'             => 'GetEndpointsResponse',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'endpoint_name',
-                        'description'   => 'Name of the endpoint to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
                 'responseMessages' => $_commonResponses,
-                'notes'            => 'This describes the endpoint, detailing its available properties.',
             ),
             array(
                 'method'           => 'GET',
@@ -837,7 +772,7 @@ $_base['apis'] = array(
                 'type'             => 'EndpointAttributesResponse',
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'endpoint_name',
                         'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -857,8 +792,8 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.topic.{topic_name}.publish', '{api_name}.topic_published'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'topic_name',
-                        'description'   => 'Full ARN or simplified name of the topic to perform operations on.',
+                        'name'          => 'endpoint_name',
+                        'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -868,7 +803,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of topic publish parameters.',
                         'allowMultiple' => false,
-                        'type'          => 'SimplePublishTopicRequest',
+                        'type'          => 'SimplePublishEndpointRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -884,8 +819,8 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.topic.{endpoint_name}.publish', '{api_name}.endpoint_published'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'topic_name',
-                        'description'   => 'Full ARN or simplified name of the topic to perform operations on.',
+                        'name'          => 'endpoint_name',
+                        'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -895,7 +830,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Array of topic message parameters.',
                         'allowMultiple' => false,
-                        'type'          => 'PublishTopicRequest',
+                        'type'          => 'PublishEndpointRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -910,7 +845,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.update', '{api_name}.endpoint_updated'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'endpoint_name',
                         'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -938,7 +873,7 @@ $_base['apis'] = array(
                 'event_name'       => array('{api_name}.endpoint.{endpoint_name}.delete', '{api_name}.endpoint_deleted'),
                 'parameters'       => array(
                     array(
-                        'name'          => 'name',
+                        'name'          => 'endpoint_name',
                         'description'   => 'Full ARN or simplified name of the endpoint to perform operations on.',
                         'allowMultiple' => false,
                         'type'          => 'string',
@@ -979,6 +914,20 @@ $_commonAppAttributes = array(
     ),
 );
 
+$_commonEndpointAttributes = array(
+    'CustomUserData' => array(
+        'type'        => 'string',
+        'description' => 'Arbitrary user data to associate with the endpoint.',
+    ),
+    'Enabled'        => array(
+        'type'        => 'boolean',
+        'description' => 'The flag that enables/disables delivery to the endpoint.',
+    ),
+    'Token'          => array(
+        'type'        => 'string',
+        'description' => 'The device token, also referred to as a registration id, for an app and mobile device.',
+    ),
+);
 $_models = array(
     'GetTopicsResponse'              => array(
         'id'         => 'GetTopicsResponse',
@@ -998,13 +947,14 @@ $_models = array(
             'Name' => array(
                 'type'        => 'string',
                 'description' => 'The name of the topic you want to create.',
+                'required'    => true,
             ),
         ),
     ),
     'TopicIdentifier'                => array(
         'id'         => 'TopicIdentifier',
         'properties' => array(
-            'Name'     => array(
+            'Topic'    => array(
                 'type'        => 'string',
                 'description' => 'The topic\'s simplified name.',
             ),
@@ -1017,7 +967,7 @@ $_models = array(
     'TopicAttributesResponse'        => array(
         'id'         => 'TopicAttributesResponse',
         'properties' => array(
-            'Name'                    => array(
+            'Topic'                   => array(
                 'type'        => 'string',
                 'description' => 'The topic\'s simplified name.',
             ),
@@ -1062,14 +1012,14 @@ $_models = array(
     'TopicAttributesRequest'         => array(
         'id'         => 'TopicAttributesRequest',
         'properties' => array(
-            'AttributeName'         => array(
+            'AttributeName'  => array(
                 'type'        => 'string',
                 'description' => 'The name of the attribute you want to set.',
-                'enum' => array('Policy', 'DisplayName', 'DeliveryPolicy'),
-                'default' => 'DisplayName',
-                'required' => true,
+                'enum'        => array('Policy', 'DisplayName', 'DeliveryPolicy'),
+                'default'     => 'DisplayName',
+                'required'    => true,
             ),
-            'AttributeValue'    => array(
+            'AttributeValue' => array(
                 'type'        => 'string',
                 'description' => 'The value of the attribute you want to set.',
             ),
@@ -1090,20 +1040,18 @@ $_models = array(
     'SubscriptionRequest'            => array(
         'id'         => 'SubscriptionRequest',
         'properties' => array(
-            'TopicName' => array(
+            'Topic'    => array(
                 'type'        => 'string',
-                'description' => 'The topic\'s simplified name.',
+                'description' => 'The topic\'s simplified name or Amazon Resource Name.',
+                'required'    => true,
             ),
-            'TopicArn'  => array(
-                'type'        => 'string',
-                'description' => 'The topic\'s Amazon Resource Name.',
-            ),
-            'Protocol'  => array(
+            'Protocol' => array(
                 'type'        => 'string',
                 'description' => 'The protocol you want to use.',
                 'enum'        => array('http', 'https', 'email', 'email-json', 'sms', 'sqs', 'application'),
+                'required'    => true,
             ),
-            'Endpoint'  => array(
+            'Endpoint' => array(
                 'type'        => 'string',
                 'description' => 'The endpoint that you want to receive notifications, formats vary by protocol.',
             ),
@@ -1127,7 +1075,7 @@ $_models = array(
     'SubscriptionIdentifier'         => array(
         'id'         => 'SubscriptionIdentifier',
         'properties' => array(
-            'Name'            => array(
+            'Subscription'    => array(
                 'type'        => 'string',
                 'description' => 'The subscription\'s simplified name.',
             ),
@@ -1140,17 +1088,13 @@ $_models = array(
     'SubscriptionAttributesResponse' => array(
         'id'         => 'SubscriptionAttributesResponse',
         'properties' => array(
-            'Name'                         => array(
+            'Subscription'                 => array(
                 'type'        => 'string',
                 'description' => 'The subscription\'s simplified name.',
             ),
             'SubscriptionArn'              => array(
                 'type'        => 'string',
                 'description' => 'The subscription\'s Amazon Resource Name.',
-            ),
-            'TopicName'                    => array(
-                'type'        => 'string',
-                'description' => 'The topic\'s simplified name.',
             ),
             'TopicArn'                     => array(
                 'type'        => 'string',
@@ -1177,13 +1121,16 @@ $_models = array(
     'SubscriptionAttributesRequest'  => array(
         'id'         => 'SubscriptionAttributesRequest',
         'properties' => array(
-            'DeliveryPolicy'     => array(
+            'AttributeName'  => array(
                 'type'        => 'string',
-                'description' => 'The JSON serialization of the topic\'s delivery policy.',
+                'description' => 'The name of the attribute you want to set.',
+                'enum'        => array('DeliveryPolicy', 'RawMessageDelivery'),
+                'default'     => 'DeliveryPolicy',
+                'required'    => true,
             ),
-            'RawMessageDelivery' => array(
+            'AttributeValue' => array(
                 'type'        => 'string',
-                'description' => 'The human-readable name used in the "From" field for notifications to email and email-json endpoints.',
+                'description' => 'The value of the attribute you want to set.',
             ),
         ),
     ),
@@ -1209,8 +1156,9 @@ $_models = array(
             'Name'       => array(
                 'type'        => 'string',
                 'description' => 'Desired platform application name.',
+                'required'    => true,
             ),
-            'Protocol'   => array(
+            'Platform'   => array(
                 'type'        => 'string',
                 'description' => 'One of the following supported platforms.',
                 'enum'        => array('ADM', 'APNS', 'APNS_SANDBOX', 'GCM'),
@@ -1225,7 +1173,7 @@ $_models = array(
     'AppIdentifier'                  => array(
         'id'         => 'AppIdentifier',
         'properties' => array(
-            'Name'                   => array(
+            'Application'            => array(
                 'type'        => 'string',
                 'description' => 'The app\'s simplified name.',
             ),
@@ -1238,7 +1186,7 @@ $_models = array(
     'AppAttributesResponse'          => array(
         'id'         => 'AppAttributesResponse',
         'properties' => array(
-            'Name'                   => array(
+            'Application'            => array(
                 'type'        => 'string',
                 'description' => 'The app\'s simplified name.',
             ),
@@ -1266,7 +1214,13 @@ $_models = array(
     ),
     'AppAttributesRequest'           => array(
         'id'         => 'AppAttributesRequest',
-        'properties' => $_commonAppAttributes,
+        'properties' => array(
+            'Attributes' => array(
+                'type'        => 'AppAttributes',
+                'description' => 'Mutable attributes on the endpoint.',
+                'required'    => true,
+            ),
+        ),
     ),
     'GetEndpointsResponse'           => array(
         'id'         => 'GetEndpointsResponse',
@@ -1280,28 +1234,45 @@ $_models = array(
             ),
         ),
     ),
-    'EndpointRequest'                => array(
-        'id'         => 'EndpointRequest',
+    'AppEndpointRequest'             => array(
+        'id'         => 'AppEndpointRequest',
         'properties' => array(
-            'AppName'                => array(
+            'Token'          => array(
                 'type'        => 'string',
-                'description' => 'The application\'s simplified name.',
-            ),
-            'PlatformApplicationArn' => array(
-                'type'        => 'string',
-                'description' => 'The application\'s Amazon Resource Name.',
-            ),
-            'Token'                  => array(
-                'type'        => 'string',
-                'description' => 'The protocol you want to use.',
-                'enum'        => array('http', 'https', 'email', 'email-json', 'sms', 'sqs', 'application'),
+                'description' => 'Unique identifier created by the notification service for an app on a device.',
                 'required'    => true,
             ),
-            'CustomUserData'         => array(
+            'CustomUserData' => array(
                 'type'        => 'string',
                 'description' => 'Arbitrary user data to associate with the endpoint.',
             ),
-            'Attributes'             => array(
+            'Attributes'     => array(
+                'type'        => 'Array',
+                'description' => 'An array of key-value pairs containing endpoint attributes.',
+                'items'       => array(
+                    '$ref' => 'MessageAttribute',
+                ),
+            ),
+        ),
+    ),
+    'EndpointRequest'                => array(
+        'id'         => 'EndpointRequest',
+        'properties' => array(
+            'Application'    => array(
+                'type'        => 'string',
+                'description' => 'The application\'s simplified name or Amazon Resource Name.',
+                "required"    => true,
+            ),
+            'Token'          => array(
+                'type'        => 'string',
+                'description' => 'Unique identifier created by the notification service for an app on a device.',
+                'required'    => true,
+            ),
+            'CustomUserData' => array(
+                'type'        => 'string',
+                'description' => 'Arbitrary user data to associate with the endpoint.',
+            ),
+            'Attributes'     => array(
                 'type'        => 'Array',
                 'description' => 'An array of key-value pairs containing endpoint attributes.',
                 'items'       => array(
@@ -1313,7 +1284,7 @@ $_models = array(
     'EndpointIdentifier'             => array(
         'id'         => 'EndpointIdentifier',
         'properties' => array(
-            'Name'        => array(
+            'Endpoint'    => array(
                 'type'        => 'string',
                 'description' => 'The endpoint\'s simplified name.',
             ),
@@ -1326,7 +1297,7 @@ $_models = array(
     'EndpointAttributesResponse'     => array(
         'id'         => 'EndpointAttributesResponse',
         'properties' => array(
-            'Name'           => array(
+            'Endpoint'       => array(
                 'type'        => 'string',
                 'description' => 'The endpoint\'s simplified name.',
             ),
@@ -1348,28 +1319,17 @@ $_models = array(
             ),
         ),
     ),
+    'EndpointAttributes'             => array(
+        'id'         => 'EndpointAttributes',
+        'properties' => $_commonEndpointAttributes,
+    ),
     'EndpointAttributesRequest'      => array(
         'id'         => 'EndpointAttributesRequest',
         'properties' => array(
-            'Name'           => array(
-                'type'        => 'string',
-                'description' => 'The endpoint\'s simplified name.',
-            ),
-            'EndpointArn'    => array(
-                'type'        => 'string',
-                'description' => 'The endpoint\'s Amazon Resource Name.',
-            ),
-            'CustomUserData' => array(
-                'type'        => 'string',
-                'description' => 'Arbitrary user data to associate with the endpoint.',
-            ),
-            'Enabled'        => array(
-                'type'        => 'boolean',
-                'description' => 'The flag that enables/disables delivery to the endpoint.',
-            ),
-            'Token'          => array(
-                'type'        => 'string',
-                'description' => 'The device token, also referred to as a registration id, for an app and mobile device.',
+            'Attributes' => array(
+                'type'        => 'EndpointAttributes',
+                'description' => 'Mutable attributes on the endpoint.',
+                'required'    => true,
             ),
         ),
     ),
@@ -1378,28 +1338,28 @@ $_models = array(
         'properties' => array(
             'default' => array(
                 'type'        => 'string',
-                'description' => 'Amazon SNS supports the following logical data types: String, Number, and Binary.',
+                'description' => 'This is sent when the message type is not specified below.',
                 'required'    => true,
             ),
             'email'   => array(
                 'type'        => 'string',
-                'description' => 'Strings are Unicode with UTF8 binary encoding.',
+                'description' => 'Message sent to all email or email-json subscriptions.',
             ),
             'sqs'     => array(
                 'type'        => 'string',
-                'description' => 'Binary type attributes can store any binary data, for example, compressed data, encrypted data, or images.',
+                'description' => 'Message sent to all AWS SQS subscriptions.',
             ),
             'http'    => array(
                 'type'        => 'string',
-                'description' => 'Binary type attributes can store any binary data, for example, compressed data, encrypted data, or images.',
+                'description' => 'Message sent to all HTTP subscriptions.',
             ),
             'https'   => array(
                 'type'        => 'string',
-                'description' => 'Binary type attributes can store any binary data, for example, compressed data, encrypted data, or images.',
+                'description' => 'Message sent to all HTTPS subscriptions.',
             ),
             'sms'     => array(
                 'type'        => 'string',
-                'description' => 'Binary type attributes can store any binary data, for example, compressed data, encrypted data, or images.',
+                'description' => 'Message sent to all SMS subscriptions.',
             ),
             'APNS'    => array(
                 'type'        => 'string',
@@ -1427,8 +1387,8 @@ $_models = array(
             ),
         ),
     ),
-    'MessageAttribute'               => array(
-        'id'         => 'MessageAttribute',
+    'MessageAttributeData'               => array(
+        'id'         => 'MessageAttributeData',
         'properties' => array(
             'DataType'    => array(
                 'type'        => 'string',
@@ -1445,48 +1405,50 @@ $_models = array(
             ),
         ),
     ),
+    'MessageAttribute'               => array(
+        'id'         => 'MessageAttribute',
+        'properties' => array(
+            '_user_defined_name_'    => array(
+                'type'        => 'MessageAttributeData',
+                'description' => 'The name of the message attribute as defined by the user or specified platform.',
+            ),
+        ),
+    ),
     'SimplePublishRequest'           => array(
         'id'         => 'SimplePublishRequest',
         'properties' => array(
-            'TopicArn'          => array(
+            'Topic'             => array(
                 'type'        => 'string',
-                'description' => 'The topic you want to publish to.',
+                'description' => 'The simple name or ARN of the topic you want to publish to. Required if endpoint not given.',
             ),
-            'TargetArn'         => array(
+            'Endpoint'          => array(
                 'type'        => 'string',
-                'description' => 'Either TopicArn or EndpointArn, but not both.',
+                'description' => 'The simple name or ARN of the endpoint you want to publish to. Required if topic not given.',
             ),
             'Message'           => array(
                 'type'        => 'string',
-                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. ',
             ),
             'Subject'           => array(
                 'type'        => 'string',
                 'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
             ),
-            'MessageStructure'  => array(
-                'type'        => 'string',
-                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
-            ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),
     'PublishRequest'                 => array(
         'id'         => 'PublishRequest',
         'properties' => array(
-            'TopicArn'          => array(
+            'Topic'             => array(
                 'type'        => 'string',
-                'description' => 'The topic you want to publish to.',
+                'description' => 'The simple name or ARN of the topic you want to publish to. Required if endpoint not given.',
             ),
-            'TargetArn'         => array(
+            'Endpoint'          => array(
                 'type'        => 'string',
-                'description' => 'Either TopicArn or EndpointArn, but not both.',
+                'description' => 'The simple name or ARN of the endpoint you want to publish to. Required if topic not given.',
             ),
             'Message'           => array(
                 'type'        => 'TopicMessage',
@@ -1503,11 +1465,8 @@ $_models = array(
                 'default'     => 'json',
             ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),
@@ -1516,22 +1475,15 @@ $_models = array(
         'properties' => array(
             'Message'           => array(
                 'type'        => 'string',
-                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols.',
             ),
             'Subject'           => array(
                 'type'        => 'string',
                 'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
             ),
-            'MessageStructure'  => array(
-                'type'        => 'string',
-                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
-            ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),
@@ -1553,11 +1505,8 @@ $_models = array(
                 'default'     => 'json',
             ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),
@@ -1566,22 +1515,15 @@ $_models = array(
         'properties' => array(
             'Message'           => array(
                 'type'        => 'string',
-                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols. If you want to send different messages for each transport protocol, set the value of the MessageStructure parameter to json and use a JSON object for the Message parameter.',
+                'description' => 'The message you want to send to the topic, sends the same message to all transport protocols.',
             ),
             'Subject'           => array(
                 'type'        => 'string',
                 'description' => 'Optional parameter to be used as the "Subject" line when the message is delivered to email endpoints.',
             ),
-            'MessageStructure'  => array(
-                'type'        => 'string',
-                'description' => 'Set MessageStructure to "json" if you want to send a different message for each protocol.',
-            ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),
@@ -1603,11 +1545,8 @@ $_models = array(
                 'default'     => 'json',
             ),
             'MessageAttributes' => array(
-                'type'        => 'Array',
-                'description' => 'An array of key-value pairs containing user-specified message attributes.',
-                'items'       => array(
-                    '$ref' => 'MessageAttribute',
-                ),
+                'type'        => 'MessageAttribute',
+                'description' => 'An associative array of string-data pairs containing user-specified message attributes.',
             ),
         ),
     ),

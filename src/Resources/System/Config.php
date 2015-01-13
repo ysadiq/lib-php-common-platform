@@ -133,7 +133,7 @@ class Config extends BaseSystemRestResource
     protected function _handlePut()
     {
         //	Check for CORS changes...
-        if ( null !== ( $_hostList = Ifset::get( $this->_requestPayload, 'allowed_hosts' ) ) )
+        if ( null !== ( $_hostList = IfSet::get( $this->_requestPayload, 'allowed_hosts' ) ) )
         {
             SystemManager::setAllowedHosts( $_hostList );
             unset( $this->_requestPayload['allowed_hosts'] );

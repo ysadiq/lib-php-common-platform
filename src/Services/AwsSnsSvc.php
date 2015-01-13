@@ -187,15 +187,29 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         $_pos = 2;
         $_more = Option::get( $this->_resourceArray, $_pos );
 
-        if ( !empty( $_more ) && ( static::APPLICATION_RESOURCE == $this->_resource ) && ( static::ENDPOINT_RESOURCE !== $_more ) )
+        if ( !empty( $_more ) )
         {
-            do
+            if ( ( static::APPLICATION_RESOURCE == $this->_resource ) && ( static::ENDPOINT_RESOURCE !== $_more ) )
             {
-                $this->_resourceId .= '/' . $_more;
-                $_pos++;
-                $_more = Option::get( $this->_resourceArray, $_pos );
+                do
+                {
+                    $this->_resourceId .= '/' . $_more;
+                    $_pos++;
+                    $_more = Option::get( $this->_resourceArray, $_pos );
+                }
+                while ( !empty( $_more ) && ( static::ENDPOINT_RESOURCE !== $_more ) );
             }
-            while ( !empty( $_more ) && ( static::ENDPOINT_RESOURCE !== $_more ) );
+            elseif ( static::ENDPOINT_RESOURCE == $this->_resource )
+            {
+                //  This will be the full resource path
+                do
+                {
+                    $this->_resourceId .= '/' . $_more;
+                    $_pos++;
+                    $_more = Option::get( $this->_resourceArray, $_pos );
+                }
+                while ( !empty( $_more ) );
+            }
         }
 
         $this->_relatedResource = Option::get( $this->_resourceArray, $_pos++ );
@@ -235,49 +249,49 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             switch ( $this->_resource )
             {
                 case static::TOPIC_RESOURCE:
-                    $fullResourcePath = rtrim( $this->_resource, '/' ) . '/';
+                    $fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->correctTopicName( $this->_resourceId );
+                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                         if ( static::SUBSCRIPTION_RESOURCE == $this->_relatedResource )
                         {
-                            $relatedResourcePath = rtrim( $this->_relatedResource, '/' ) . '/';
+                            $relatedResourcePath = $this->_relatedResource . '/';
                             if ( !empty( $this->_relatedResourceId ) )
                             {
-                                $relatedResourcePath .= $this->correctSubscriptionName( $this->_relatedResourceId );
+                                $relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
                             }
                             $this->checkPermission( $this->_action, $relatedResourcePath );
                         }
                     }
                     break;
                 case static::SUBSCRIPTION_RESOURCE:
-                    $fullResourcePath = rtrim( $this->_resource, '/' ) . '/';
+                    $fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->correctSubscriptionName( $this->_resourceId );
+                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                     }
                     break;
                 case static::APPLICATION_RESOURCE:
-                    $fullResourcePath = rtrim( $this->_resource, '/' ) . '/';
+                    $fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->correctApplicationName( $this->_resourceId );
+                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                         if ( static::ENDPOINT_RESOURCE == $this->_relatedResource )
                         {
-                            $relatedResourcePath = rtrim( $this->_relatedResource, '/' ) . '/';
+                            $relatedResourcePath = $this->_relatedResource . '/';
                             if ( !empty( $this->_relatedResourceId ) )
                             {
-                                $relatedResourcePath .= $this->correctEndpointName( $this->_relatedResourceId );
+                                $relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
                             }
                             $this->checkPermission( $this->_action, $relatedResourcePath );
                         }
                     }
                     break;
                 case static::ENDPOINT_RESOURCE:
-                    $fullResourcePath = rtrim( $this->_resource, '/' ) . '/';
+                    $fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->correctEndpointName( $this->_resourceId );
+                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                     }
                     break;
                 default:
@@ -523,61 +537,9 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         $this->_triggerActionEvent( $this->_response );
 
-        $_result = $this->pushMessage( $this->_resource, $this->_requestPayload );
+        $_result = $this->pushMessage( $this->_requestPayload );
 
         return $_result;
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function correctTopicName( &$name )
-    {
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Topic name can not be empty.' );
-        }
-
-        return $name;
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function correctSubscriptionName( &$name )
-    {
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Subscription name can not be empty.' );
-        }
-
-        return $name;
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function correctApplicationName( &$name )
-    {
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Application name can not be empty.' );
-        }
-
-        return $name;
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function correctEndpointName( &$name )
-    {
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Endpoint name can not be empty.' );
-        }
-
-        return $name;
     }
 
     /**
@@ -644,7 +606,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                     break;
                 case static::FORMAT_FULL:
                 default:
-                    $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_topic, 'TopicArn' ) );
+                    $_topic['Topic'] = $this->stripArnPrefix( IfSet::get( $_topic, 'TopicArn' ) );
                     $_resources[] = $_topic;
                     break;
             }
@@ -669,7 +631,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             if ( null !== $_result = $this->_conn->getTopicAttributes( $_request ) )
             {
                 $_out = Option::get( $_result->toArray(), 'Attributes' );
-                $_out['Name'] = $this->stripArnPrefix( $resource );
+                $_out['Topic'] = $this->stripArnPrefix( $resource );
 
                 return $_out;
             }
@@ -688,63 +650,75 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     }
 
     /**
-     * @param string       $resource
-     * @param string|array $request
+     * @param string      $request
+     * @param string|null $resource_type
+     * @param string|null $resource_id
      *
      * @return array
-     * @throws BadRequestException
      * @throws InternalServerErrorException
-     * @throws NotFoundException
-     * @throws null
      */
-    public function pushMessage( $resource, $request )
+    public function pushMessage( $request, $resource_type = null, $resource_id = null )
     {
-        /** @noinspection PhpUnusedLocalVariableInspection */
-        $_msgFormat = <<<JSON
-{
-    "default": "ENTER YOUR MESSAGE",
-    "email": "ENTER YOUR MESSAGE",
-    "sqs": "ENTER YOUR MESSAGE",
-    "http": "ENTER YOUR MESSAGE",
-    "https": "ENTER YOUR MESSAGE",
-    "sms": "ENTER YOUR MESSAGE",
-    "APNS": "{\"aps\":{\"alert\": \"ENTER YOUR MESSAGE\",\"sound\":\"default\"} }",
-    "GCM": "{ \"data\": { \"message\": \"ENTER YOUR MESSAGE\" } }",
-    "ADM": "{ \"data\": { \"message\": \"ENTER YOUR MESSAGE\" } }",
-    "BAIDU": "{\"title\":\"ENTER YOUR TITLE\",\"description\":\"ENTER YOUR DESCRIPTION\"}",
-    "MPNS" : "<?xml version=\"1.0\" encoding=\"utf-8\"?><wp:Notification xmlns:wp=\"WPNotification\"><wp:Tile><wp:Count>ENTER COUNT</wp:Count><wp:Title>ENTER YOUR MESSAGE</wp:Title></wp:Tile></wp:Notification>",
-    "WNS" : "<badge version=\"1\" value=\"23\"/>"
-}
-JSON;
-
-        $_data = array('TopicArn' => $this->addArnPrefix( $resource ));
+        /** http://docs.aws.amazon.com/aws-sdk-php/latest/class-Aws.Sns.SnsClient.html#_publish */
+        $_data = array();
         if ( is_array( $request ) )
         {
-            if ( null !== $_message = Ifset::get( $request, 'Message' ) )
+            if ( null !== $_message = IfSet::get( $request, 'Message' ) )
             {
                 $_data = array_merge( $_data, $request );
-                if ( is_array( $_message ) && !Ifset::has( $request, 'MessageStructure' ) )
+                if ( is_array( $_message ) && !IfSet::has( $request, 'MessageStructure' ) )
                 {
                     $_data['MessageStructure'] = 'json';
                 }
             }
             else
             {
-                //  This is the message
+                //  This array is the message
                 $_data['Message'] = $request;
                 $_data['MessageStructure'] = 'json';
             }
         }
         else
         {
+            //  This string is the message
             $_data['Message'] = $request;
+        }
+
+        switch ( $resource_type )
+        {
+            case static::TOPIC_RESOURCE:
+                $_data['TopicArn'] = $this->addArnPrefix( $resource_id );
+                break;
+            case static::ENDPOINT_RESOURCE:
+                $_data['TargetArn'] = $this->addArnPrefix( $resource_id );
+                break;
+            default:
+                //  Must contain resource, either Topic or Endpoint ARN
+                $_topic = IfSet::get( $_data, 'Topic', IfSet::get( $_data, 'TopicArn'));
+                $_endpoint = IfSet::get( $_data, 'Endpoint', IfSet::get( $_data, 'EndpointArn', IfSet::get( $_data, 'TargetArn' ) ) );
+                if ( !empty( $_topic ) )
+                {
+                    $_data['TopicArn'] = $this->addArnPrefix( $_topic );
+                }
+                elseif ( !empty( $_endpoint ) )
+                {
+                    $_data['TargetArn'] = $this->addArnPrefix( $_endpoint );
+                }
+                else
+                {
+                    throw new BadRequestException( "Publish request does not contain resource, either 'Topic' or 'Endpoint'." );
+                }
+
+                break;
         }
 
         try
         {
             if ( null !== $_result = $this->_conn->publish( $_data ) )
             {
-                return $_result->toArray();
+                $_id = IfSet::get( $_result->toArray(), 'MessageId', '' );
+
+                return array('MessageId' => $_id);
             }
         }
         catch ( \Exception $_ex )
@@ -754,7 +728,7 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to push message to '$resource'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to push message.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
         return array();
@@ -796,7 +770,7 @@ JSON;
                 }
                 else
                 {
-                    $_result = $this->pushMessage( $this->_resourceId, $this->_requestPayload );
+                    $_result = $this->pushMessage( $this->_requestPayload, static::TOPIC_RESOURCE, $this->_resourceId );
                 }
                 break;
 
@@ -810,7 +784,7 @@ JSON;
 
                 if ( !empty( $this->_resourceId ) )
                 {
-                    $this->_requestPayload['Name'] = $this->_resourceId;
+                    $this->_requestPayload['Topic'] = $this->_resourceId;
                 }
                 $_result = $this->updateTopic( $this->_requestPayload );
                 break;
@@ -841,7 +815,7 @@ JSON;
         $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name' );
+            $_name = IfSet::get( $request, 'Name' );
             if ( empty( $_name ) )
             {
                 throw new BadRequestException( "Create Topic request contains no 'Name' field." );
@@ -860,7 +834,7 @@ JSON;
             {
                 $_arn = IfSet::get( $_result->toArray(), 'TopicArn', '' );
 
-                return array('Name' => $this->stripArnPrefix( $_arn ), 'TopicArn' => $_arn);
+                return array('Topic' => $this->stripArnPrefix( $_arn ), 'TopicArn' => $_arn);
             }
         }
         catch ( \Exception $_ex )
@@ -880,10 +854,10 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'TopicArn' ) );
+            $_name = IfSet::get( $request, 'Topic', IfSet::get( $request, 'TopicArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Update topic request contains no 'Name' field." );
+                throw new BadRequestException( "Update topic request contains no 'Topic' field." );
             }
 
             $request['TopicArn'] = $this->addArnPrefix( $_name );
@@ -918,10 +892,10 @@ JSON;
         $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'TopicArn' ) );
+            $_name = IfSet::get( $request, 'Topic', IfSet::get( $request, 'TopicArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Delete Topic request contains no 'Name' field." );
+                throw new BadRequestException( "Delete Topic request contains no 'Topic' field." );
             }
 
             $_data['TopicArn'] = $this->addArnPrefix( $_name );
@@ -958,16 +932,19 @@ JSON;
     protected function _handleSubscriptions()
     {
         $_result = false;
-        $_related = ($this->_relatedResource === static::SUBSCRIPTION_RESOURCE);
-        $_theId = ($_related) ? $this->_relatedResourceId : $this->_resourceId;
-        $_parent = ($_related) ? $this->_resourceId : null;
+        $_related = ( $this->_relatedResource === static::SUBSCRIPTION_RESOURCE );
+        $_theId = ( $_related ) ? $this->_relatedResourceId : $this->_resourceId;
+        $_parent = ( $_related ) ? $this->_resourceId : null;
 
         switch ( $this->_action )
         {
             case static::GET:
                 if ( empty( $_theId ) )
                 {
-                    $_result = array('resource' => $this->retrieveSubscriptions($_parent));
+                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
+                    $_result = array('resource' => $this->retrieveSubscriptions( $_parent, $_format ));
                 }
                 else
                 {
@@ -983,7 +960,10 @@ JSON;
 
                 if ( empty( $_theId ) )
                 {
-                    $this->_requestPayload['TopicName'] = $_parent;
+                    if ( $_parent )
+                    {
+                        $this->_requestPayload['Topic'] = $_parent;
+                    }
                     $_result = $this->createSubscription( $this->_requestPayload );
                 }
                 else
@@ -1002,7 +982,7 @@ JSON;
 
                 if ( !empty( $_theId ) )
                 {
-                    $this->_requestPayload['Name'] = $_theId;
+                    $this->_requestPayload['Subscription'] = $_theId;
                 }
                 $_result = $this->updateSubscription( $this->_requestPayload );
                 break;
@@ -1038,7 +1018,7 @@ JSON;
     {
         $_out = array();
         $_token = null;
-        if (!empty($topic))
+        if ( !empty( $topic ) )
         {
             $topic = $this->addArnPrefix( $topic );
         }
@@ -1046,7 +1026,7 @@ JSON;
         {
             do
             {
-                if (empty( $topic))
+                if ( empty( $topic ) )
                 {
                     $_result = $this->_conn->listSubscriptions(
                         array(
@@ -1058,7 +1038,7 @@ JSON;
                 {
                     $_result = $this->_conn->listSubscriptionsByTopic(
                         array(
-                            'TopicArn' => $topic,
+                            'TopicArn'  => $topic,
                             'NextToken' => $_token
                         )
                     );
@@ -1094,7 +1074,7 @@ JSON;
     protected function retrieveSubscriptions( $topic = null, $format = null )
     {
         $_resources = array();
-        $_result = $this->_getSubscriptionsAsArray($topic);
+        $_result = $this->_getSubscriptionsAsArray( $topic );
         foreach ( $_result as $_sub )
         {
             switch ( $format )
@@ -1107,7 +1087,7 @@ JSON;
                     break;
                 case static::FORMAT_FULL:
                 default:
-                    $_sub['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'SubscriptionArn' ) );
+                    $_sub['Subscription'] = $this->stripArnPrefix( IfSet::get( $_sub, 'SubscriptionArn' ) );
                     $_resources[] = $_sub;
                     break;
             }
@@ -1132,7 +1112,7 @@ JSON;
             if ( null !== $_result = $this->_conn->getSubscriptionAttributes( $_request ) )
             {
                 $_out = array_merge( $_request, Option::get( $_result->toArray(), 'Attributes', array() ) );
-                $_out['Name'] = $this->stripArnPrefix( $resource );
+                $_out['Subscription'] = $this->stripArnPrefix( $resource );
 
                 return $_out;
             }
@@ -1154,17 +1134,13 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'TopicArn' );
+            $_name = IfSet::get( $request, 'Topic', IfSet::get( $request, 'TopicArn' ) );
             if ( empty( $_name ) )
             {
-                $_name = Ifset::get( $request, 'TopicName' );
-                if ( empty( $_name ) )
-                {
-                    throw new BadRequestException( "Create Subscription request contains no 'TopicName' or 'TopicArn' field." );
-                }
-
-                $request['TopicArn'] = $this->addArnPrefix($_name);
+                throw new BadRequestException( "Create Subscription request contains no 'Topic' field." );
             }
+
+            $request['TopicArn'] = $this->addArnPrefix( $_name );
         }
         else
         {
@@ -1176,7 +1152,8 @@ JSON;
             if ( null !== $_result = $this->_conn->subscribe( $request ) )
             {
                 $_arn = IfSet::get( $_result->toArray(), 'SubscriptionArn', '' );
-                return array('Name' => $this->stripArnPrefix( $_arn), 'SubscriptionArn' => $_arn );
+
+                return array('Subscription' => $this->stripArnPrefix( $_arn ), 'SubscriptionArn' => $_arn);
             }
         }
         catch ( \Exception $_ex )
@@ -1196,10 +1173,10 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'SubscriptionArn' ) );
+            $_name = IfSet::get( $request, 'Subscription', IfSet::get( $request, 'SubscriptionArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Update subscription request contains no 'Name' field." );
+                throw new BadRequestException( "Update subscription request contains no 'Subscription' field." );
             }
 
             $request['SubscriptionArn'] = $this->addArnPrefix( $_name );
@@ -1211,7 +1188,7 @@ JSON;
 
         try
         {
-            if ( null !== $_result = $this->_conn->setTopicAttributes( $request ) )
+            if ( null !== $_result = $this->_conn->setSubscriptionAttributes( $request ) )
             {
                 return array('success' => true);
             }
@@ -1223,7 +1200,7 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to delete subscription '{$request['SubscriptionArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update subscription '{$request['SubscriptionArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
         return array();
@@ -1234,10 +1211,10 @@ JSON;
         $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'SubscriptionArn' ) );
+            $_name = IfSet::get( $request, 'Subscription', IfSet::get( $request, 'SubscriptionArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Delete subscription request contains no 'Name' field." );
+                throw new BadRequestException( "Delete subscription request contains no 'Subscription' field." );
             }
 
             $_data['SubscriptionArn'] = $this->addArnPrefix( $_name );
@@ -1280,7 +1257,10 @@ JSON;
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_result = array('resource' => $this->retrieveApplications());
+                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
+                    $_result = array('resource' => $this->retrieveApplications( $_format ));
                 }
                 else
                 {
@@ -1314,7 +1294,7 @@ JSON;
 
                 if ( !empty( $this->_resourceId ) )
                 {
-                    $this->_requestPayload['Name'] = $this->_resourceId;
+                    $this->_requestPayload['Application'] = $this->_resourceId;
                 }
                 $_result = $this->updateApplication( $this->_requestPayload );
                 break;
@@ -1392,20 +1372,20 @@ JSON;
     {
         $_resources = array();
         $_result = $this->_getApplicationsAsArray();
-        foreach ( $_result as $_sub )
+        foreach ( $_result as $_app )
         {
             switch ( $format )
             {
                 case static::FORMAT_SIMPLE:
-                    $_resources[] = $this->stripArnPrefix( IfSet::get( $_sub, 'PlatformApplicationArn' ) );
+                    $_resources[] = $this->stripArnPrefix( IfSet::get( $_app, 'PlatformApplicationArn' ) );
                     break;
                 case static::FORMAT_ARN:
-                    $_resources[] = IfSet::get( $_sub, 'PlatformApplicationArn' );
+                    $_resources[] = IfSet::get( $_app, 'PlatformApplicationArn' );
                     break;
                 case static::FORMAT_FULL:
                 default:
-                    $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_sub, 'PlatformApplicationArn' ) );
-                    $_resources[] = $_topic;
+                    $_app['Application'] = $this->stripArnPrefix( IfSet::get( $_app, 'PlatformApplicationArn' ) );
+                    $_resources[] = $_app;
                     break;
             }
         }
@@ -1431,7 +1411,7 @@ JSON;
                 $_attributes = Option::get( $_result->toArray(), 'Attributes' );
 
                 return array(
-                    'Name'                   => $this->stripArnPrefix( $resource ),
+                    'Application'            => $this->stripArnPrefix( $resource ),
                     'PlatformApplicationArn' => $this->addArnPrefix( $resource ),
                     'Attributes'             => $_attributes
                 );
@@ -1452,27 +1432,26 @@ JSON;
 
     public function createApplication( $request )
     {
-        $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name' );
+            $_name = IfSet::get( $request, 'Name' );
             if ( empty( $_name ) )
             {
                 throw new BadRequestException( "Create application request contains no 'Name' field." );
             }
-
-            $_data['Name'] = $_name;
         }
         else
         {
-            $_data['Name'] = $request;
+            throw new BadRequestException( "Create application request contains no fields." );
         }
 
         try
         {
-            if ( null !== $_result = $this->_conn->createPlatformApplication( $_data ) )
+            if ( null !== $_result = $this->_conn->createPlatformApplication( $request ) )
             {
-                return $_result->toArray();
+                $_arn = IfSet::get( $_result->toArray(), 'PlatformApplicationArn', '' );
+
+                return array('Application' => $this->stripArnPrefix( $_arn ), 'PlatformApplicationArn' => $_arn);
             }
         }
         catch ( \Exception $_ex )
@@ -1482,7 +1461,7 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to create application '{$_data['Name']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to create application '{$request['Name']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
         return array();
@@ -1492,24 +1471,24 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'PlatformApplicationArn' ) );
+            $_name = IfSet::get( $request, 'Application', IfSet::get( $request, 'PlatformApplicationArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Update application request contains no 'Name' field." );
+                throw new BadRequestException( "Update application request contains no 'Application' field." );
             }
 
             $request['PlatformApplicationArn'] = $this->addArnPrefix( $_name );
         }
         else
         {
-            throw new BadRequestException( "Update topic request contains no fields." );
+            throw new BadRequestException( "Update application request contains no fields." );
         }
 
         try
         {
             if ( null !== $_result = $this->_conn->setPlatformApplicationAttributes( $request ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -1520,7 +1499,7 @@ JSON;
             }
 
             throw new InternalServerErrorException(
-                "Failed to delete application '{$request['PlatformApplicationArn']}'.\n{$_ex->getMessage()}", $_ex->getCode()
+                "Failed to update application '{$request['PlatformApplicationArn']}'.\n{$_ex->getMessage()}", $_ex->getCode()
             );
         }
 
@@ -1532,10 +1511,10 @@ JSON;
         $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'PlatformApplicationArn' ) );
+            $_name = IfSet::get( $request, 'Application', IfSet::get( $request, 'PlatformApplicationArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Delete application request contains no 'Name' field." );
+                throw new BadRequestException( "Delete application request contains no 'Application' field." );
             }
 
             $_data['PlatformApplicationArn'] = $this->addArnPrefix( $_name );
@@ -1549,7 +1528,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->deletePlatformApplication( $_data ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -1574,17 +1553,23 @@ JSON;
     protected function _handleEndpoints()
     {
         $_result = false;
+        $_related = ( $this->_relatedResource === static::APPLICATION_RESOURCE );
+        $_theId = ( $_related ) ? $this->_relatedResourceId : $this->_resourceId;
+        $_parent = ( $_related ) ? $this->_resourceId : null;
 
         switch ( $this->_action )
         {
             case static::GET:
-                if ( empty( $this->_relatedResourceId ) )
+                if ( empty( $_theId ) )
                 {
-                    $_result = array('resource' => $this->retrieveEndpoints( $this->_resourceId ));
+                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
+                    $_result = array('resource' => $this->retrieveEndpoints( $_parent, $_format ));
                 }
                 else
                 {
-                    $_result = $this->retrieveEndpoint( $this->_relatedResourceId );
+                    $_result = $this->retrieveEndpoint( $_theId );
                 }
                 break;
 
@@ -1594,14 +1579,17 @@ JSON;
                     throw new BadRequestException( 'No data in endpoint post request.' );
                 }
 
-                if ( empty( $this->_relatedResourceId ) )
+                if ( empty( $_theId ) )
                 {
-                    $this->_requestPayload['PlatformApplicationArn'] = $this->addArnPrefix( $this->_resourceId );
+                    if ( !empty( $_parent ) )
+                    {
+                        $this->_requestPayload['PlatformApplicationArn'] = $this->addArnPrefix( $_parent );
+                    }
                     $_result = $this->createEndpoint( $this->_requestPayload );
                 }
                 else
                 {
-                    $_result = false;  //  Not allowed
+                    $_result = $this->pushMessage( $this->_requestPayload, static::ENDPOINT_RESOURCE, $_theId );
                 }
                 break;
 
@@ -1613,15 +1601,15 @@ JSON;
                     throw new BadRequestException( 'No data in endpoint update request.' );
                 }
 
-                if ( !empty( $this->_relatedResourceId ) )
+                if ( !empty( $_theId ) )
                 {
-                    $this->_requestPayload['Name'] = $this->_relatedResourceId;
+                    $this->_requestPayload['Endpoint'] = $_theId;
                 }
                 $_result = $this->updateEndpoint( $this->_requestPayload );
                 break;
 
             case static::DELETE:
-                if ( empty( $this->_relatedResourceId ) )
+                if ( empty( $_theId ) )
                 {
                     if ( empty( $this->_requestPayload ) )
                     {
@@ -1632,7 +1620,7 @@ JSON;
                 }
                 else
                 {
-                    $this->deleteEndpoint( $this->_relatedResourceId );
+                    $this->deleteEndpoint( $_theId );
                 }
                 $_result = array('success' => true);
                 break;
@@ -1655,6 +1643,7 @@ JSON;
             throw new BadRequestException( 'Platform application name required for retrieving endpoints.' );
         }
 
+        $application = $this->addArnPrefix( $application );
         $_out = array();
         $_token = null;
         try
@@ -1719,8 +1708,8 @@ JSON;
                         break;
                     case static::FORMAT_FULL:
                     default:
-                        $_topic['Name'] = $this->stripArnPrefix( IfSet::get( $_end, 'EndpointArn' ) );
-                        $_resources[] = $_topic;
+                        $_end['Endpoint'] = $this->stripArnPrefix( IfSet::get( $_end, 'EndpointArn' ) );
+                        $_resources[] = $_end;
                         break;
                 }
             }
@@ -1746,7 +1735,7 @@ JSON;
             {
                 $_attributes = Option::get( $_result->toArray(), 'Attributes' );
 
-                return array('Name' => $this->stripArnPrefix( $resource ), 'EndpointArn' => $this->addArnPrefix( $resource ), 'Attributes' => $_attributes);
+                return array('Endpoint' => $this->stripArnPrefix( $resource ), 'EndpointArn' => $this->addArnPrefix( $resource ), 'Attributes' => $_attributes);
             }
         }
         catch ( \Exception $_ex )
@@ -1766,12 +1755,13 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'PlatformApplicationArn' );
+            $_name = IfSet::get( $request, 'Application', IfSet::get( $request, 'PlatformApplicationArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Create endpoint request contains no 'PlatformApplicationArn' field." );
+                throw new BadRequestException( "Create endpoint request contains no 'Application' field." );
             }
-            $_name = Ifset::get( $request, 'Token' );
+            $request['PlatformApplicationArn'] = $this->addArnPrefix( $_name );
+            $_name = IfSet::get( $request, 'Token' );
             if ( empty( $_name ) )
             {
                 throw new BadRequestException( "Create endpoint request contains no 'Token' field." );
@@ -1786,7 +1776,9 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->createPlatformEndpoint( $request ) )
             {
-                return $_result->toArray();
+                $_arn = IfSet::get( $_result->toArray(), 'EndpointArn', '' );
+
+                return array('Endpoint' => $this->stripArnPrefix( $_arn ), 'EndpointArn' => $_arn);
             }
         }
         catch ( \Exception $_ex )
@@ -1796,7 +1788,9 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to create endpoint '{$request['Name']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException(
+                "Failed to create endpoint for '{$request['PlatformApplicationArn']}'.\n{$_ex->getMessage()}", $_ex->getCode()
+            );
         }
 
         return array();
@@ -1806,10 +1800,10 @@ JSON;
     {
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'EndpointArn' ) );
+            $_name = IfSet::get( $request, 'Endpoint', IfSet::get( $request, 'EndpointArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Update endpoint request contains no 'Name' field." );
+                throw new BadRequestException( "Update endpoint request contains no 'Endpoint' field." );
             }
 
             $request['EndpointArn'] = $this->addArnPrefix( $_name );
@@ -1823,7 +1817,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->setEndpointAttributes( $request ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
@@ -1833,7 +1827,7 @@ JSON;
                 throw $_newEx;
             }
 
-            throw new InternalServerErrorException( "Failed to delete endpoint '{$request['EndpointArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update endpoint '{$request['EndpointArn']}'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
 
         return array();
@@ -1844,10 +1838,10 @@ JSON;
         $_data = array();
         if ( is_array( $request ) )
         {
-            $_name = Ifset::get( $request, 'Name', Ifset::get( $request, 'EndpointArn' ) );
+            $_name = IfSet::get( $request, 'Endpoint', IfSet::get( $request, 'EndpointArn' ) );
             if ( empty( $_name ) )
             {
-                throw new BadRequestException( "Delete endpoint request contains no 'Name' field." );
+                throw new BadRequestException( "Delete endpoint request contains no 'Endpoint' field." );
             }
 
             $_data['EndpointArn'] = $this->addArnPrefix( $_name );
@@ -1861,7 +1855,7 @@ JSON;
         {
             if ( null !== $_result = $this->_conn->deleteEndpoint( $_data ) )
             {
-                return $_result->toArray();
+                return array('success' => true);
             }
         }
         catch ( \Exception $_ex )
