@@ -221,7 +221,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         if ( 'config' !== $this->_resource )
         {
             // Add server side filtering properties
-            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->getRequestedAction(), $this->_apiName, $this->_resource ) )
             {
                 $this->_requestPayload['ss_filters'] = $_ssFilters;
             }
@@ -278,7 +278,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         parent::_preProcess();
 
         //	Do validation here
-        $this->checkPermission( $this->_action, $this->_resource );
+        $this->checkPermission( $this->getRequestedAction(), $this->_resource );
 
         ResourceStore::reset(
             array(

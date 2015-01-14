@@ -73,6 +73,7 @@ class User extends BaseSystemRestResource
             case static::POST:
             case static::PUT:
             case static::PATCH:
+            case static::MERGE:
                 if ( Option::getBool( $_REQUEST, 'send_invite' ) )
                 {
                     if ( is_array( $this->_response ) )

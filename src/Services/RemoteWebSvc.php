@@ -266,7 +266,7 @@ class RemoteWebSvc extends BasePlatformRestService
     {
         parent::_preProcess();
 
-        $this->checkPermission( $this->_action, $this->_apiName );
+        $this->checkPermission( $this->getRequestedAction(), $this->_apiName );
 
         //  set outbound parameters
         $this->buildParameterString( $this->_parameters, $this->_excludedParameters, $this->_action, $this->_query, $this->_cacheQuery );

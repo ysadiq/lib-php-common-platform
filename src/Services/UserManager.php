@@ -95,7 +95,7 @@ class UserManager extends BaseSystemRestService
             if ( static::GET == $this->_action )
             {
                 // lock down access to API
-                $this->checkPermission( $this->_action );
+                $this->checkPermission( static::GET );
 
                 return $this->_listResources();
             }
@@ -109,7 +109,7 @@ class UserManager extends BaseSystemRestService
         {
             case 'session':
                 //	Handle remote login
-                if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+                if ( static::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
                 {
                     $_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 

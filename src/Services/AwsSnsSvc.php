@@ -243,55 +243,56 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     protected function validateResourceAccess()
     {
-        $fullResourcePath = null;
+        $_reqAction = $this->getRequestedAction();
+        $_fullResourcePath = null;
         if ( !empty( $this->_resource ) )
         {
             switch ( $this->_resource )
             {
                 case static::TOPIC_RESOURCE:
-                    $fullResourcePath = $this->_resource . '/';
+                    $_fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
+                        $_fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                         if ( static::SUBSCRIPTION_RESOURCE == $this->_relatedResource )
                         {
-                            $relatedResourcePath = $this->_relatedResource . '/';
+                            $_relatedResourcePath = $this->_relatedResource . '/';
                             if ( !empty( $this->_relatedResourceId ) )
                             {
-                                $relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
+                                $_relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
                             }
-                            $this->checkPermission( $this->_action, $relatedResourcePath );
+                            $this->checkPermission( $_reqAction, $_relatedResourcePath );
                         }
                     }
                     break;
                 case static::SUBSCRIPTION_RESOURCE:
-                    $fullResourcePath = $this->_resource . '/';
+                    $_fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
+                        $_fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                     }
                     break;
                 case static::APPLICATION_RESOURCE:
-                    $fullResourcePath = $this->_resource . '/';
+                    $_fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
+                        $_fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                         if ( static::ENDPOINT_RESOURCE == $this->_relatedResource )
                         {
-                            $relatedResourcePath = $this->_relatedResource . '/';
+                            $_relatedResourcePath = $this->_relatedResource . '/';
                             if ( !empty( $this->_relatedResourceId ) )
                             {
-                                $relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
+                                $_relatedResourcePath .= $this->stripArnPrefix( $this->_relatedResourceId );
                             }
-                            $this->checkPermission( $this->_action, $relatedResourcePath );
+                            $this->checkPermission( $_reqAction, $_relatedResourcePath );
                         }
                     }
                     break;
                 case static::ENDPOINT_RESOURCE:
-                    $fullResourcePath = $this->_resource . '/';
+                    $_fullResourcePath = $this->_resource . '/';
                     if ( !empty( $this->_resourceId ) )
                     {
-                        $fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
+                        $_fullResourcePath .= $this->stripArnPrefix( $this->_resourceId );
                     }
                     break;
                 default:
@@ -299,7 +300,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             }
         }
 
-        $this->checkPermission( $this->_action, $fullResourcePath );
+        $this->checkPermission( $_reqAction, $_fullResourcePath );
     }
 
     /**

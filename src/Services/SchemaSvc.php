@@ -190,11 +190,11 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             $this->_fields = Option::get( $this->_requestPayload, 'field' );
 
-            $this->checkPermission( $this->_action, $this->_tableName );
+            $this->checkPermission( $this->getRequestedAction(), $this->_tableName );
         }
         else
         {
-            $this->checkPermission( $this->_action );
+            $this->checkPermission( $this->getRequestedAction() );
         }
     }
 
