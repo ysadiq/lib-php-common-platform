@@ -538,7 +538,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         $this->_triggerActionEvent( $this->_response );
 
-        $_result = $this->pushMessage( $this->_requestPayload );
+        $_result = $this->publish( $this->_requestPayload );
 
         return $_result;
     }
@@ -658,7 +658,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * @return array
      * @throws InternalServerErrorException
      */
-    public function pushMessage( $request, $resource_type = null, $resource_id = null )
+    public function publish( $request, $resource_type = null, $resource_id = null )
     {
         /** http://docs.aws.amazon.com/aws-sdk-php/latest/class-Aws.Sns.SnsClient.html#_publish */
         $_data = array();
@@ -667,15 +667,20 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             if ( null !== $_message = IfSet::get( $request, 'Message' ) )
             {
                 $_data = array_merge( $_data, $request );
-                if ( is_array( $_message ) && !IfSet::has( $request, 'MessageStructure' ) )
+                if ( is_array( $_message ) )
                 {
-                    $_data['MessageStructure'] = 'json';
+                    $_data['Message'] = json_encode($_message);
+
+                    if ( !IfSet::has( $request, 'MessageStructure' ) )
+                    {
+                        $_data['MessageStructure'] = 'json';
+                    }
                 }
             }
             else
             {
                 //  This array is the message
-                $_data['Message'] = $request;
+                $_data['Message'] = json_encode($request);
                 $_data['MessageStructure'] = 'json';
             }
         }
@@ -695,7 +700,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 break;
             default:
                 //  Must contain resource, either Topic or Endpoint ARN
-                $_topic = IfSet::get( $_data, 'Topic', IfSet::get( $_data, 'TopicArn'));
+                $_topic = IfSet::get( $_data, 'Topic', IfSet::get( $_data, 'TopicArn' ) );
                 $_endpoint = IfSet::get( $_data, 'Endpoint', IfSet::get( $_data, 'EndpointArn', IfSet::get( $_data, 'TargetArn' ) ) );
                 if ( !empty( $_topic ) )
                 {
@@ -771,7 +776,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 }
                 else
                 {
-                    $_result = $this->pushMessage( $this->_requestPayload, static::TOPIC_RESOURCE, $this->_resourceId );
+                    $_result = $this->publish( $this->_requestPayload, static::TOPIC_RESOURCE, $this->_resourceId );
                 }
                 break;
 
@@ -1590,7 +1595,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 }
                 else
                 {
-                    $_result = $this->pushMessage( $this->_requestPayload, static::ENDPOINT_RESOURCE, $_theId );
+                    $_result = $this->publish( $this->_requestPayload, static::ENDPOINT_RESOURCE, $_theId );
                 }
                 break;
 
