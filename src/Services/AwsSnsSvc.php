@@ -1553,7 +1553,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     protected function _handleEndpoints()
     {
         $_result = false;
-        $_related = ( $this->_relatedResource === static::APPLICATION_RESOURCE );
+        $_related = ( $this->_relatedResource === static::ENDPOINT_RESOURCE );
         $_theId = ( $_related ) ? $this->_relatedResourceId : $this->_resourceId;
         $_parent = ( $_related ) ? $this->_resourceId : null;
 
