@@ -2020,7 +2020,8 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                     // build filter string if necessary, add server-side filters if necessary
-                    $_criteria = $this->_convertFilterToNative( "$joinLeftField = '$fieldVal'", array(), array(), $_fieldsInfo );
+                    $_junctionFilter = "( $joinRightField IS NOT NULL ) AND ( $joinLeftField = '$fieldVal' )";
+                    $_criteria = $this->_convertFilterToNative( $_junctionFilter, array(), array(), $_fieldsInfo );
                     $_where = Option::get( $_criteria, 'where' );
                     $_params = Option::get( $_criteria, 'params', array() );
 
@@ -2033,7 +2034,10 @@ class SqlDbSvc extends BaseDbSvc
                     $relatedIds = array();
                     foreach ( $joinData as $record )
                     {
-                        $relatedIds[] = Option::get( $record, $joinRightField );
+                        if ( null !== $rightValue = Option::get( $record, $joinRightField ) )
+                        {
+                            $relatedIds[] = $rightValue;
+                        }
                     }
                     if ( !empty( $relatedIds ) )
                     {
