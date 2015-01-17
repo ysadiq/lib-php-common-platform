@@ -292,7 +292,6 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 *
 	 * @throws \Exception
 	 * @throws BadRequestException
-	 * @internal param int $id
 	 * @return void
 	 */
 	protected function assignManyToOneByMap( $sourceId, $mapTable, $entity, $sourceColumn, $mapColumn, $targetRows = array() )

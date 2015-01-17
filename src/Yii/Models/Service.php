@@ -337,7 +337,10 @@ MYSQL;
 
     /**
      * @param array $values
-     * @param       $id
+     * @param int   $id
+     *
+     * @throws BadRequestException
+     * @throws \Exception
      */
     public function setRelated( $values, $id )
     {
