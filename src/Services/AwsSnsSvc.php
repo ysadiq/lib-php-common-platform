@@ -25,7 +25,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\AwsSvcUtilities;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Utility\RestData;
@@ -112,21 +111,22 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function __construct( $config )
     {
-        if ( null === Option::get( $settings, 'verb_aliases' ) )
+        if ( null === IfSet::get( $config, 'verb_aliases' ) )
         {
             //	Default verb aliases
-            $settings['verb_aliases'] = array(
+            $config['verb_aliases'] = array(
                 static::MERGE => static::PATCH,
             );
         }
 
         parent::__construct( $config );
 
-        $_credentials = Option::clean( Option::get( $config, 'credentials' ) );
+        $_credentials = IfSet::get( $config, 'credentials', array() );
+        $_credentials = ( empty( $_credentials ) ? array() : ( !is_array( $_credentials ) ? array($_credentials) : $_credentials ) );
         AwsSvcUtilities::updateCredentials( $_credentials, true );
 
         $this->_conn = AwsSvcUtilities::createClient( $_credentials, static::CLIENT_NAME );
-        $this->_region = Option::get( $_credentials, 'region' );
+        $this->_region = IfSet::get( $_credentials, 'region' );
     }
 
     /**
@@ -182,10 +182,10 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     {
         parent::_detectResourceMembers( $resourcePath );
 
-        $this->_resourceId = Option::get( $this->_resourceArray, 1 );
+        $this->_resourceId = IfSet::get( $this->_resourceArray, 1 );
 
         $_pos = 2;
-        $_more = Option::get( $this->_resourceArray, $_pos );
+        $_more = IfSet::get( $this->_resourceArray, $_pos );
 
         if ( !empty( $_more ) )
         {
@@ -195,7 +195,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 {
                     $this->_resourceId .= '/' . $_more;
                     $_pos++;
-                    $_more = Option::get( $this->_resourceArray, $_pos );
+                    $_more = IfSet::get( $this->_resourceArray, $_pos );
                 }
                 while ( !empty( $_more ) && ( static::ENDPOINT_RESOURCE !== $_more ) );
             }
@@ -206,15 +206,15 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 {
                     $this->_resourceId .= '/' . $_more;
                     $_pos++;
-                    $_more = Option::get( $this->_resourceArray, $_pos );
+                    $_more = IfSet::get( $this->_resourceArray, $_pos );
                 }
                 while ( !empty( $_more ) );
             }
         }
 
-        $this->_relatedResource = Option::get( $this->_resourceArray, $_pos++ );
-        $this->_relatedResourceId = Option::get( $this->_resourceArray, $_pos++ );
-        $_more = Option::get( $this->_resourceArray, $_pos );
+        $this->_relatedResource = IfSet::get( $this->_resourceArray, $_pos++ );
+        $this->_relatedResourceId = IfSet::get( $this->_resourceArray, $_pos++ );
+        $_more = IfSet::get( $this->_resourceArray, $_pos );
 
         if ( !empty( $_more ) && ( static::ENDPOINT_RESOURCE == $this->_relatedResource ) )
         {
@@ -222,7 +222,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             {
                 $this->_relatedResourceId .= '/' . $_more;
                 $_pos++;
-                $_more = Option::get( $this->_resourceArray, $_pos );
+                $_more = IfSet::get( $this->_resourceArray, $_pos );
             }
             while ( !empty( $_more ) );
         }
@@ -234,7 +234,9 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     protected function _detectRequestMembers()
     {
         // override - don't call parent class here
-        $this->_requestPayload = Option::clean( RestData::getPostedData( true, true ) );
+        $this->_requestPayload = RestData::getPostedData( true, true );
+        $this->_requestPayload =
+            ( empty( $this->_requestPayload ) ? array() : ( !is_array( $this->_requestPayload ) ? array($this->_requestPayload) : $this->_requestPayload ) );
         // MERGE URL parameters with posted data, posted data takes precedence
 //        $this->_requestPayload = array_merge( $_REQUEST, $this->_requestPayload );
     }
@@ -379,8 +381,8 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function retrieveResources( $options = null )
     {
-        $_namesOnly = Option::getBool( $options, 'names_only' );
-        $_asComponents = Option::getBool( $options, 'as_access_components' );
+        $_namesOnly = IfSet::getBool( $options, 'names_only' );
+        $_asComponents = IfSet::getBool( $options, 'as_access_components' );
         $_resources = array();
 
         if ( $_asComponents )
@@ -575,7 +577,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -631,7 +633,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( null !== $_result = $this->_conn->getTopicAttributes( $_request ) )
             {
-                $_out = Option::get( $_result->toArray(), 'Attributes' );
+                $_out = IfSet::get( $_result->toArray(), 'Attributes' );
                 $_out['Topic'] = $this->stripArnPrefix( $resource );
 
                 return $_out;
@@ -639,7 +641,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -669,7 +671,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 $_data = array_merge( $_data, $request );
                 if ( is_array( $_message ) )
                 {
-                    $_data['Message'] = json_encode($_message);
+                    $_data['Message'] = json_encode( $_message );
 
                     if ( !IfSet::has( $request, 'MessageStructure' ) )
                     {
@@ -680,7 +682,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             else
             {
                 //  This array is the message
-                $_data['Message'] = json_encode($request);
+                $_data['Message'] = json_encode( $request );
                 $_data['MessageStructure'] = 'json';
             }
         }
@@ -753,8 +755,8 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
-                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_namesOnly = IfSet::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = IfSet::getBool( $_REQUEST, 'as_access_components' );
                     $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
                     $_result = array('resource' => $this->retrieveTopics( $_format ));
                 }
@@ -947,8 +949,8 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             case static::GET:
                 if ( empty( $_theId ) )
                 {
-                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
-                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_namesOnly = IfSet::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = IfSet::getBool( $_REQUEST, 'as_access_components' );
                     $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
                     $_result = array('resource' => $this->retrieveSubscriptions( $_parent, $_format ));
                 }
@@ -1061,7 +1063,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -1117,7 +1119,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( null !== $_result = $this->_conn->getSubscriptionAttributes( $_request ) )
             {
-                $_out = array_merge( $_request, Option::get( $_result->toArray(), 'Attributes', array() ) );
+                $_out = array_merge( $_request, IfSet::get( $_result->toArray(), 'Attributes', array() ) );
                 $_out['Subscription'] = $this->stripArnPrefix( $resource );
 
                 return $_out;
@@ -1125,7 +1127,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -1263,8 +1265,8 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
-                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_namesOnly = IfSet::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = IfSet::getBool( $_REQUEST, 'as_access_components' );
                     $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
                     $_result = array('resource' => $this->retrieveApplications( $_format ));
                 }
@@ -1358,7 +1360,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -1414,7 +1416,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( null !== $_result = $this->_conn->getPlatformApplicationAttributes( $_request ) )
             {
-                $_attributes = Option::get( $_result->toArray(), 'Attributes' );
+                $_attributes = IfSet::get( $_result->toArray(), 'Attributes' );
 
                 return array(
                     'Application'            => $this->stripArnPrefix( $resource ),
@@ -1425,7 +1427,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -1568,8 +1570,8 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             case static::GET:
                 if ( empty( $_theId ) )
                 {
-                    $_namesOnly = Option::getBool( $_REQUEST, 'names_only' );
-                    $_asComponents = Option::getBool( $_REQUEST, 'as_access_components' );
+                    $_namesOnly = IfSet::getBool( $_REQUEST, 'names_only' );
+                    $_asComponents = IfSet::getBool( $_REQUEST, 'as_access_components' );
                     $_format = ( $_namesOnly || $_asComponents ) ? static::FORMAT_SIMPLE : static::FORMAT_FULL;
                     $_result = array('resource' => $this->retrieveEndpoints( $_parent, $_format ));
                 }
@@ -1674,7 +1676,7 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
@@ -1693,10 +1695,13 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     public function retrieveEndpoints( $applications, $format = null )
     {
         $_resources = array();
-        $applications = Option::clean( $applications );
         if ( empty( $applications ) )
         {
             $applications = $this->retrieveApplications( static::FORMAT_ARN );
+        }
+        else
+        {
+            $applications = ( !is_array( $applications ) ) ? array($applications) : $applications;
         }
 
         foreach ( $applications as $application )
@@ -1739,14 +1744,14 @@ class AwsSnsSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( null !== $_result = $this->_conn->getEndpointAttributes( $_request ) )
             {
-                $_attributes = Option::get( $_result->toArray(), 'Attributes' );
+                $_attributes = IfSet::get( $_result->toArray(), 'Attributes' );
 
                 return array('Endpoint' => $this->stripArnPrefix( $resource ), 'EndpointArn' => $this->addArnPrefix( $resource ), 'Attributes' => $_attributes);
             }
         }
         catch ( \Exception $_ex )
         {
-            if ( null === $_newEx = static::translateException( $_ex ) )
+            if ( null !== $_newEx = static::translateException( $_ex ) )
             {
                 throw $_newEx;
             }
