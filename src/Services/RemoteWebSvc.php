@@ -175,9 +175,13 @@ class RemoteWebSvc extends BasePlatformRestService
     }
 
     /**
-     * @param $action
+     * @param array  $parameters
+     * @param array  $exclusions
+     * @param string $action
+     * @param string $query
+     * @param string $cache_key
      *
-     * @return string
+     * @return void
      */
     protected static function buildParameterString( $parameters, $exclusions, $action, &$query, &$cache_key )
     {
@@ -221,10 +225,11 @@ class RemoteWebSvc extends BasePlatformRestService
     }
 
     /**
+     * @param array  $headers
      * @param string $action
      * @param array  $options
      *
-     * @return array
+     * @return void
      */
     protected static function addHeaders( $headers, $action, &$options )
     {
@@ -323,6 +328,17 @@ class RemoteWebSvc extends BasePlatformRestService
         {
             $_error = Curl::getError();
             throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
+        }
+
+        $_status = Curl::getLastHttpCode();
+        if ( $_status >= 300 )
+        {
+            if ( !is_string( $_result ) )
+            {
+                $_result = json_encode( $_result );
+            }
+
+            throw new RestException( $_status, $_result, $_status );
         }
 
         if ( $this->_cacheEnabled )
