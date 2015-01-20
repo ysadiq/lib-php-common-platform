@@ -48,7 +48,7 @@ class PlatformServiceTypes extends SeedEnum
      */
     const LOCAL_SQL_DB = 0x0004;
     /**
-     * @var int
+     * @var int - Deprecated! - use NATIVE_SQL_DB
      */
     const LOCAL_SQL_DB_SCHEMA = 0x0008;
     /**
@@ -72,7 +72,7 @@ class PlatformServiceTypes extends SeedEnum
      */
     const REMOTE_SQL_DB = 0x1004;
     /**
-     * @var int
+     * @var int - Deprecated! - use SQL_DB
      */
     const REMOTE_SQL_DB_SCHEMA = 0x1008;
     /**
@@ -83,6 +83,10 @@ class PlatformServiceTypes extends SeedEnum
      * @var int
      */
     const SCRIPT_SERVICE = 0x1040;
+    /**
+     * @var int
+     */
+    const PUSH_SERVICE = 0x1080;
     /**
      * @var string The system manager endpoint
      */
@@ -110,13 +114,15 @@ class PlatformServiceTypes extends SeedEnum
         self::REMOTE_FILE_STORAGE    => 'RemoteFileSvc',
         self::LOCAL_SQL_DB           => 'SqlDbSvc',
         self::REMOTE_SQL_DB          => 'SqlDbSvc',
-        self::LOCAL_SQL_DB_SCHEMA    => 'SchemaSvc',
-        self::REMOTE_SQL_DB_SCHEMA   => 'SchemaSvc',
         self::EMAIL_SERVICE          => 'EmailSvc',
         self::NOSQL_DB               => 'NoSqlDbSvc',
         self::SALESFORCE             => 'SalesforceDbSvc',
         self::REMOTE_WEB_SERVICE     => 'RemoteWebSvc',
         self::SCRIPT_SERVICE         => 'Script',
+        self::PUSH_SERVICE           => 'BasePushSvc',
+        // Deprecated
+        self::LOCAL_SQL_DB_SCHEMA    => 'SchemaSvc',
+        self::REMOTE_SQL_DB_SCHEMA   => 'SchemaSvc',
     );
 
     //*************************************************************************
@@ -132,7 +138,7 @@ class PlatformServiceTypes extends SeedEnum
      */
     public static function getFileName( $type, $storage_type, $service_name )
     {
-        $_serviceName = $service_name ? : null;
+        $_serviceName = $service_name ?: null;
 
         if ( !empty( $storage_type ) )
         {

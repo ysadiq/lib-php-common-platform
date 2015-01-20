@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
@@ -86,7 +87,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     public function __construct( $consumer, $settings = array() )
     {
         $this->_consumer = $consumer;
-        $this->_serviceName = $this->_serviceName ? : Option::get( $settings, 'service_name', null, true );
+        $this->_serviceName = $this->_serviceName ?: Option::get( $settings, 'service_name', null, true );
         $this->_service = Option::get( $settings, 'service', $consumer );
 
         if ( empty( $this->_serviceName ) )
@@ -98,17 +99,20 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     }
 
     /**
-     * @param string     $resource
-     * @param string     $action
-     * @param string|int $output_format
+     * @param string                $resource
+     * @param string                $action
+     * @param string|int            $output_format
+     * @param ServiceRequestorTypes $requestor Where the request originated from API, Scripting, etc
      *
      * @throws \InvalidArgumentException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @throws \DreamFactory\Platform\Exceptions\MisconfigurationException
      * @return mixed
      */
-    public function processRequest( $resource = null, $action = self::GET, $output_format = null )
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null, $requestor = ServiceRequestorTypes::API )
     {
+        $this->_requestorType = $requestor;
+
         $this->_setAction( $action );
 
         //	Require app name for security check
@@ -165,7 +169,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     public static function __callStatic( $name, $arguments )
     {
         //	Passthru to store
-        return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
+        return call_user_func_array( array(static::$_passthruClass, $name), $arguments );
     }
 
     /**

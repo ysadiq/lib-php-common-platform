@@ -2,7 +2,7 @@
 	"name":        "User Invite",
 	"description": "Email sent to invite new users to your DSP.",
 	"subject":     "Invitation",
-	"body_html":   "Hi {first_name},<br\/>\nYou have been invited to become a {dsp.name} user. Go to the following url, enter the code below, and set your password to confirm your account.<br\/>\n<br\/>\n{dsp.confirm_invite_url}<br\/>\n<br\/>\nConfirmation Code: {confirm_code}<br\/>\n<br\/>\nThanks,<br\/>\n{from_name}",
+	"body_html":   "Hi {first_name},<br\/>\nYou have been invited to {dsp.name}. Go to the following url, enter the code below, and set your password to confirm your account.<br\/>\n<br\/>\n{dsp.confirm_invite_url}<br\/>\n<br\/>\nConfirmation Code: {confirm_code}<br\/>\n<br\/>\nThanks,<br\/>\n{from_name}",
 	"from_name":   "DreamFactory",
 	"from_email":  "no-reply@dreamfactory.com"
 }

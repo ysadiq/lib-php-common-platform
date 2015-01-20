@@ -23,6 +23,7 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Events\Enums\PlatformServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Events\PlatformServiceEvent;
@@ -151,6 +152,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      * @var int
      */
     protected $_serviceId = null;
+    /**
+     * @var ServiceRequestorTypes Type of the requestor
+     */
+    protected $_requestorType = ServiceRequestorTypes::API;
 
     //*************************************************************************
     //* Methods
@@ -169,15 +174,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * @param string $resource      Optional resource for the REST call
-     * @param string $action        HTTP action for this request
-     * @param string $output_format Optional override for detecting output format
+     * @param string                $resource      Optional resource for the REST call
+     * @param string                $action        HTTP action for this request
+     * @param string                $output_format Optional override for detecting output format
+     * @param ServiceRequestorTypes $requestor     Where the call originated from API, Scripting, etc
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws BadRequestException
      * @return mixed
      */
-    public function processRequest( $resource = null, $action = self::GET, $output_format = null )
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null, $requestor = ServiceRequestorTypes::API )
     {
+        $this->_requestorType = $requestor;
+
         $this->_setAction( $action );
 
         //  Get and validate all the request parameters
@@ -248,7 +256,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
-                $_handler = $this->_extraActions[ $_action ];
+                $_handler = $this->_extraActions[$_action];
 
                 if ( !is_callable( $_handler ) )
                 {
@@ -611,7 +619,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function checkPermission( $operation, $resource = null )
     {
-        return ResourceStore::checkPermission( $operation, $this->_apiName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_apiName, $resource, $this->_requestorType );
     }
 
     /**
@@ -621,7 +629,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function getPermissions( $resource = null )
     {
-        return ResourceStore::getPermissions( $this->_apiName, $resource );
+        return ResourceStore::getPermissions( $this->_apiName, $resource, $this->_requestorType );
     }
 
     /**
@@ -729,7 +737,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );
 
             //  Already triggered?
-            if ( isset( $_triggeredEvents[ $_eventName ] ) )
+            if ( isset( $_triggeredEvents[$_eventName] ) )
             {
                 continue;
             }
@@ -772,7 +780,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //  Cache and bail
-            $_triggeredEvents[ $_eventName ] = true;
+            $_triggeredEvents[$_eventName] = true;
             $_result[] = $_event;
         }
 
@@ -999,7 +1007,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
         else
         {
-            unset( $this->_verbAliases[ $verb ] );
+            unset( $this->_verbAliases[$verb] );
         }
 
         return $this;
@@ -1068,7 +1076,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $this->_extraActions = array();
         }
 
-        $this->_extraActions[ $action ] = $handler;
+        $this->_extraActions[$action] = $handler;
 
         return $this;
     }

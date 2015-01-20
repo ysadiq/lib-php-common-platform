@@ -19,11 +19,13 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
@@ -113,22 +115,16 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+            $_credentials = Option::clean( Option::get( $config, 'credentials' ) );
+            Session::replaceLookups( $_credentials, true );
 
-            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true ) ) )
+            if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
             {
-                throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
+                throw new \InvalidArgumentException( 'Database connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ), true ) ) )
-            {
-                throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
-            }
-
-            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true ) ) )
-            {
-                throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
-            }
+            $user = Option::get( $_credentials, 'user' );
+            $password = Option::get( $_credentials, 'pwd' );
 
             /** @var \CDbConnection $_db */
             $_db = Pii::createComponent(
@@ -333,7 +329,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_resource = rtrim( $main, '/' ) . '/';
                     if ( !empty( $sub ) )
                     {
-                        $_resource .= rtrim( (false !== strpos($sub, '(')) ?  strstr( $sub, '(', true )  : $sub );
+                        $_resource .= rtrim( ( false !== strpos( $sub, '(' ) ) ? strstr( $sub, '(', true ) : $sub );
                     }
 
                     $this->checkPermission( $action, $_resource );
@@ -611,17 +607,17 @@ class SqlDbSvc extends BaseDbSvc
                 {
                     $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
                     $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
-                    $_result = $this->listProcedures($_namesOnly, $_refresh);
+                    $_result = $this->listProcedures( $_namesOnly, $_refresh );
 
                     return array('resource' => $_result);
                 }
 
             case static::POST:
-                if ( false !== strpos($this->_resourceId, '('))
+                if ( false !== strpos( $this->_resourceId, '(' ) )
                 {
                     $_inlineParams = strstr( $this->_resourceId, '(' );
                     $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
-                    $_params = Option::get( $this->_requestPayload, 'params', trim( $_inlineParams, '()') );
+                    $_params = Option::get( $this->_requestPayload, 'params', trim( $_inlineParams, '()' ) );
                 }
                 else
                 {
@@ -650,7 +646,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listProcedures($names_only = false, $refresh = false)
+    public function listProcedures( $names_only = false, $refresh = false )
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -721,15 +717,15 @@ class SqlDbSvc extends BaseDbSvc
                 {
                     $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
                     $_refresh = Option::getBool( $this->_requestPayload, 'refresh' );
-                    $_result = $this->listFunctions($_namesOnly, $_refresh);
+                    $_result = $this->listFunctions( $_namesOnly, $_refresh );
 
                     return array('resource' => $_result);
                 }
 
             case static::POST:
-                if ( false !== strpos($this->_resourceId, '('))
+                if ( false !== strpos( $this->_resourceId, '(' ) )
                 {
-                    $_inlineParams = trim( strstr( $this->_resourceId, '(' ), '()');
+                    $_inlineParams = trim( strstr( $this->_resourceId, '(' ), '()' );
                     $_name = rtrim( strstr( $this->_resourceId, '(', true ) );
                     $_params = Option::get( $this->_requestPayload, 'params', $_inlineParams );
                 }
@@ -760,7 +756,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    public function listFunctions($names_only = false, $refresh = false)
+    public function listFunctions( $names_only = false, $refresh = false )
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -1217,7 +1213,7 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( !is_array( $filter ) )
         {
-            Session::replaceLookupsInStrings( $filter );
+            Session::replaceLookups( $filter );
             $_filterString = $this->parseFilterString( $filter, $_fields );
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
@@ -1432,9 +1428,11 @@ class SqlDbSvc extends BaseDbSvc
                         // overwrite some undercover fields
                         if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
                         {
+                            // should I error this?
+                            // drop for now
                             unset( $_keys[$_pos] );
                             unset( $_values[$_pos] );
-                            continue; // should I error this?
+                            continue;
                         }
                         if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
                         {
@@ -1460,13 +1458,15 @@ class SqlDbSvc extends BaseDbSvc
                         )
                         )
                         {
+                            // if invalid and exception not thrown, drop it
                             unset( $_keys[$_pos] );
                             unset( $_values[$_pos] );
                             continue;
                         }
 
-                        if ( !is_null( $_fieldVal ) )
+                        if ( !is_null( $_fieldVal ) && !( $_fieldVal instanceof \CDbExpression ) )
                         {
+                            // handle special cases
                             switch ( $this->_driverType )
                             {
                                 case SqlDbUtilities::DRV_DBLIB:
@@ -1490,7 +1490,7 @@ class SqlDbSvc extends BaseDbSvc
                                     switch ( $_dbType )
                                     {
                                         case 'SMALLINT':
-                                            if (is_bool($_fieldVal))
+                                            if ( is_bool( $_fieldVal ) )
                                             {
                                                 $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                             }
@@ -1498,7 +1498,8 @@ class SqlDbSvc extends BaseDbSvc
                                     }
                                     break;
                             }
-                            switch ( SqlDbUtilities::determinePhpConversionType( $_type ) )
+
+                            switch ( $_cnvType = SqlDbUtilities::determinePhpConversionType( $_type ) )
                             {
                                 case 'int':
                                     if ( !is_int( $_fieldVal ) )
@@ -1517,7 +1518,44 @@ class SqlDbSvc extends BaseDbSvc
                                         }
                                     }
                                     break;
+
+                                case 'time':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_time_format' );
+                                    $_outFormat = 'H:i:s.u';
+//                                    switch ( $this->_driverType )
+//                                    {
+//                                        case SqlDbUtilities::DRV_MYSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_PGSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_DBLIB:
+//                                        case SqlDbUtilities::DRV_SQLSRV:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_OCSQL:
+//                                            break;
+//                                        case SqlDbUtilities::DRV_IBMDB2:
+//                                            break;
+//                                    }
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'date':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_date_format' );
+                                    $_outFormat = 'Y-m-d';
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'datetime':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_datetime_format' );
+                                    $_outFormat = 'Y-m-d H:i:s';
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+                                case 'timestamp':
+                                    $_cfgFormat = Pii::getParam( 'dsp.db_timestamp_format' );
+                                    $_outFormat = 'Y-m-d H:i:s';
+                                    $_fieldVal = SqlDbUtilities::formatDateTime( $_outFormat, $_fieldVal, $_cfgFormat );
+                                    break;
+
                                 default:
+                                    break;
                             }
                         }
                         $_parsed[$_name] = $_fieldVal;
@@ -1543,6 +1581,44 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         return $_parsed;
+    }
+
+    /**
+     * @param array $record
+     *
+     * @return array
+     */
+    public static function interpretRecordValues( $record )
+    {
+        if ( !is_array( $record ) || empty( $record ) )
+        {
+            return $record;
+        }
+
+        foreach ( $record as $_field => $_value )
+        {
+            Session::replaceLookups( $_value );
+            static::valueToExpression( $_value );
+            $record[$_field] = $_value;
+        }
+
+        return $record;
+    }
+
+    public static function valueToExpression( &$value )
+    {
+        if ( is_array( $value ) && isset( $value['expression'] ) )
+        {
+            $_expression = $value['expression'];
+            $_params = array();
+            if ( is_array( $_expression ) && isset( $_expression['value'] ) )
+            {
+                $_params = isset( $_expression['params'] ) ? $_expression['params'] : array();
+                $_expression = $_expression['value'];
+            }
+
+            $value = new \CDbExpression( $_expression, $_params );
+        }
     }
 
     /**
@@ -1944,7 +2020,8 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                     // build filter string if necessary, add server-side filters if necessary
-                    $_criteria = $this->_convertFilterToNative( "$joinLeftField = '$fieldVal'", array(), array(), $_fieldsInfo );
+                    $_junctionFilter = "( $joinRightField IS NOT NULL ) AND ( $joinLeftField = '$fieldVal' )";
+                    $_criteria = $this->_convertFilterToNative( $_junctionFilter, array(), array(), $_fieldsInfo );
                     $_where = Option::get( $_criteria, 'where' );
                     $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1957,7 +2034,10 @@ class SqlDbSvc extends BaseDbSvc
                     $relatedIds = array();
                     foreach ( $joinData as $record )
                     {
-                        $relatedIds[] = Option::get( $record, $joinRightField );
+                        if ( null !== $rightValue = Option::get( $record, $joinRightField ) )
+                        {
+                            $relatedIds[] = $rightValue;
+                        }
                     }
                     if ( !empty( $relatedIds ) )
                     {
@@ -2010,72 +2090,142 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             $_manyFields = $this->getFieldsInfo( $many_table );
-            $_pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_manyFields );
+            $_pksInfo = SqlDbUtilities::getPrimaryKeys( $_manyFields );
             $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $_manyFields );
             $_deleteRelated = ( !Option::getBool( $_fieldInfo, 'allow_null' ) && $allow_delete );
             $_relateMany = array();
             $_disownMany = array();
-            $_createMany = array();
+            $_insertMany = array();
             $_updateMany = array();
+            $_upsertMany = array();
             $_deleteMany = array();
 
             foreach ( $many_records as $_item )
             {
-                $_id = Option::get( $_item, $_pkField );
-                if ( empty( $_id ) )
+                if ( 1 === count( $_pksInfo ) )
                 {
-                    // create new child record
-                    $_item[$many_field] = $one_id; // assign relationship
-                    $_createMany[] = $_item;
-                }
-                else
-                {
-                    if ( array_key_exists( $many_field, $_item ) )
+                    $_pkAutoSet = Option::getBool( $_pksInfo[0], 'auto_increment' );
+                    $_pkField = Option::get( $_pksInfo[0], 'name' );
+                    $_id = Option::get( $_item, $_pkField );
+                    if ( empty( $_id ) )
                     {
-                        if ( null == Option::get( $_item, $many_field, null, true ) )
+                        if ( !$_pkAutoSet )
                         {
-                            // disown this child or delete them
-                            if ( $_deleteRelated )
+                            throw new BadRequestException( "Related record has no primary key value for '$_pkField'." );
+                        }
+
+                        // create new child record
+                        $_item[$many_field] = $one_id; // assign relationship
+                        $_insertMany[] = $_item;
+                    }
+                    else
+                    {
+                        if ( array_key_exists( $many_field, $_item ) )
+                        {
+                            if ( null == Option::get( $_item, $many_field, null, true ) )
                             {
-                                $_deleteMany[] = $_id;
+                                // disown this child or delete them
+                                if ( $_deleteRelated )
+                                {
+                                    $_deleteMany[] = $_id;
+                                }
+                                elseif ( count( $_item ) > 1 )
+                                {
+                                    $_item[$many_field] = null; // assign relationship
+                                    $_updateMany[] = $_item;
+                                }
+                                else
+                                {
+                                    $_disownMany[] = $_id;
+                                }
+
+                                continue;
                             }
-                            elseif ( count( $_item ) > 1 )
+                        }
+
+                        // update or upsert this child
+                        if ( count( $_item ) > 1 )
+                        {
+                            $_item[$many_field] = $one_id; // assign relationship
+                            if ( $_pkAutoSet )
                             {
-                                $_item[$many_field] = null; // assign relationship
                                 $_updateMany[] = $_item;
                             }
                             else
                             {
-                                $_disownMany[] = $_id;
+                                $_upsertMany[$_id] = $_item;
                             }
-
-                            continue;
+                        }
+                        else
+                        {
+                            $_relateMany[] = $_id;
                         }
                     }
-
-                    // update this child
-                    if ( count( $_item ) > 1 )
-                    {
-                        $_item[$many_field] = $one_id; // assign relationship
-                        $_updateMany[] = $_item;
-                    }
-                    else
-                    {
-                        $_relateMany[] = $_id;
-                    }
+                }
+                else
+                {
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
                 }
             }
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
 
-            if ( !empty( $_createMany ) )
+            // resolve any upsert situations
+            if ( !empty( $_upsertMany ) )
+            {
+                $_checkIds = array_keys( $_upsertMany );
+                // disown/un-relate/unlink linked children
+                $_where = array();
+                $_params = array();
+                if ( 1 === count( $_pksInfo ) )
+                {
+                    $_pkField = Option::get( $_pksInfo[0], 'name' );
+                    $_where[] = array('in', $_pkField, $_checkIds);
+                }
+                else
+                {
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                }
+
+                if ( count( $_where ) > 1 )
+                {
+                    array_unshift( $_where, 'AND' );
+                }
+                else
+                {
+                    $_where = $_where[0];
+                }
+
+                $_result = $this->parseFieldsForSqlSelect( $_pkField, $_manyFields );
+                $_bindings = Option::get( $_result, 'bindings' );
+                $_fields = Option::get( $_result, 'fields' );
+                $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+                $_matchIds = $this->_recordQuery( $many_table, $_fields, $_where, $_params, $_bindings, null );
+                unset( $_matchIds['meta'] );
+
+                foreach ( $_upsertMany as $_uId => $_record )
+                {
+                    if ( $_found = DbUtilities::findRecordByNameValue( $_matchIds, $_pkField, $_uId ) )
+                    {
+                        $_updateMany[] = $_record;
+                    }
+                    else
+                    {
+                        $_insertMany[] = $_record;
+                    }
+                }
+            }
+
+            if ( !empty( $_insertMany ) )
             {
                 // create new children
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
                 $_ssFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
-                foreach ( $_createMany as $_record )
+                foreach ( $_insertMany as $_record )
                 {
                     $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters );
                     if ( empty( $_parsed ) )
@@ -2099,7 +2249,16 @@ class SqlDbSvc extends BaseDbSvc
                 $_ssFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $many_table );
                 $_where = array();
                 $_params = array();
-                $_where[] = array('in', $_pkField, $_deleteMany);
+                if ( 1 === count( $_pksInfo ) )
+                {
+                    $_pkField = Option::get( $_pksInfo[0], 'name' );
+                    $_where[] = array('in', $_pkField, $_deleteMany);
+                }
+                else
+                {
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                }
                 $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {
@@ -2134,8 +2293,16 @@ class SqlDbSvc extends BaseDbSvc
                     // update existing and adopt new children
                     $_where = array();
                     $_params = array();
-                    $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) . " = :f_$_pkField";
-
+                    if ( 1 === count( $_pksInfo ) )
+                    {
+                        $_pkField = Option::get( $_pksInfo[0], 'name' );
+                        $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) . " = :f_$_pkField";
+                    }
+                    else
+                    {
+                        // todo How to handle multiple primary keys?
+                        throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                    }
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -2154,7 +2321,16 @@ class SqlDbSvc extends BaseDbSvc
 
                     foreach ( $_updateMany as $_record )
                     {
-                        $_params[":f_$_pkField"] = Option::get( $_record, $_pkField );
+                        if ( 1 === count( $_pksInfo ) )
+                        {
+                            $_pkField = Option::get( $_pksInfo[0], 'name' );
+                            $_params[":f_$_pkField"] = Option::get( $_record, $_pkField );
+                        }
+                        else
+                        {
+                            // todo How to handle multiple primary keys?
+                            throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                        }
                         $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters, true );
                         if ( empty( $_parsed ) )
                         {
@@ -2174,7 +2350,16 @@ class SqlDbSvc extends BaseDbSvc
                     // adopt/relate/link unlinked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array('in', $_pkField, $_relateMany);
+                    if ( 1 === count( $_pksInfo ) )
+                    {
+                        $_pkField = Option::get( $_pksInfo[0], 'name' );
+                        $_where[] = array('in', $_pkField, $_relateMany);
+                    }
+                    else
+                    {
+                        // todo How to handle multiple primary keys?
+                        throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                    }
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -2208,7 +2393,16 @@ class SqlDbSvc extends BaseDbSvc
                     // disown/un-relate/unlink linked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array('in', $_pkField, $_disownMany);
+                    if ( 1 === count( $_pksInfo ) )
+                    {
+                        $_pkField = Option::get( $_pksInfo[0], 'name' );
+                        $_where[] = array('in', $_pkField, $_disownMany);
+                    }
+                    else
+                    {
+                        // todo How to handle multiple primary keys?
+                        throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                    }
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -2266,14 +2460,14 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $oneFields = $this->getFieldsInfo( $one_table );
-            $pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
-            $manyFields = $this->getFieldsInfo( $many_table );
-            $pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-            $mapFields = $this->getFieldsInfo( $map_table );
+            $_oneFields = $this->getFieldsInfo( $one_table );
+            $_pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_oneFields );
+            $_manyFields = $this->getFieldsInfo( $many_table );
+            $_pksManyInfo = SqlDbUtilities::getPrimaryKeys( $_manyFields );
+            $_mapFields = $this->getFieldsInfo( $map_table );
 //			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
 
-            $_result = $this->parseFieldsForSqlSelect( $many_field, $mapFields );
+            $_result = $this->parseFieldsForSqlSelect( $many_field, $_mapFields );
             $_bindings = Option::get( $_result, 'bindings' );
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
@@ -2282,63 +2476,133 @@ class SqlDbSvc extends BaseDbSvc
             $maps = $this->_recordQuery( $map_table, $_fields, $_where, $_params, $_bindings, null );
             unset( $maps['meta'] );
 
-            $createMap = array(); // map records to create
-            $deleteMap = array(); // ids of 'many' records to delete from maps
-            $createMany = array();
-            $updateMany = array();
-            foreach ( $many_records as $item )
+            $_createMap = array(); // map records to create
+            $_deleteMap = array(); // ids of 'many' records to delete from maps
+            $_insertMany = array();
+            $_updateMany = array();
+            $_upsertMany = array();
+            foreach ( $many_records as $_item )
             {
-                $id = Option::get( $item, $pkManyField );
-                if ( empty( $id ) )
+                if ( 1 === count( $_pksManyInfo ) )
                 {
-                    // create new many record, relationship created later
-                    $createMany[] = $item;
+                    $_pkAutoSet = Option::getBool( $_pksManyInfo[0], 'auto_increment' );
+                    $_pkManyField = Option::get( $_pksManyInfo[0], 'name' );
+                    $_id = Option::get( $_item, $_pkManyField );
+                    if ( empty( $_id ) )
+                    {
+                        if ( !$_pkAutoSet )
+                        {
+                            throw new BadRequestException( "Related record has no primary key value for '$_pkManyField'." );
+                        }
+
+                        // create new child record
+                        $_insertMany[] = $_item;
+                    }
+                    else
+                    {
+                        // pk fields exists, must be dealing with existing 'many' record
+                        $_oneLookup = "$one_table.$_pkOneField";
+                        if ( array_key_exists( $_oneLookup, $_item ) )
+                        {
+                            if ( null == Option::get( $_item, $_oneLookup, null, true ) )
+                            {
+                                // delete this relationship
+                                $_deleteMap[] = $_id;
+                                continue;
+                            }
+                        }
+
+                        // update the 'many' record if more than the above fields
+                        if ( count( $_item ) > 1 )
+                        {
+                            if ( $_pkAutoSet )
+                            {
+                                $_updateMany[] = $_item;
+                            }
+                            else
+                            {
+                                $_upsertMany[$_id] = $_item;
+                            }
+                        }
+
+                        // if relationship doesn't exist, create it
+                        foreach ( $maps as $_map )
+                        {
+                            if ( Option::get( $_map, $many_field ) == $_id )
+                            {
+                                continue 2; // got what we need from this one
+                            }
+                        }
+
+                        $_createMap[] = array($many_field => $_id, $one_field => $one_id);
+                    }
                 }
                 else
                 {
-                    // pk fields exists, must be dealing with existing 'many' record
-                    $oneLookup = "$one_table.$pkOneField";
-                    if ( array_key_exists( $oneLookup, $item ) )
-                    {
-                        if ( null == Option::get( $item, $oneLookup, null, true ) )
-                        {
-                            // delete this relationship
-                            $deleteMap[] = $id;
-                            continue;
-                        }
-                    }
-
-                    // update the 'many' record if more than the above fields
-                    if ( count( $item ) > 1 )
-                    {
-                        $updateMany[] = $item;
-                    }
-
-                    // if relationship doesn't exist, create it
-                    foreach ( $maps as $map )
-                    {
-                        if ( Option::get( $map, $many_field ) == $id )
-                        {
-                            continue 2; // got what we need from this one
-                        }
-                    }
-
-                    $createMap[] = array($many_field => $id, $one_field => $one_id);
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
                 }
             }
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
 
-            if ( !empty( $createMany ) )
+            // resolve any upsert situations
+            if ( !empty( $_upsertMany ) )
+            {
+                $_checkIds = array_keys( $_upsertMany );
+                // disown/un-relate/unlink linked children
+                $_where = array();
+                $_params = array();
+                if ( 1 === count( $_pksManyInfo ) )
+                {
+                    $_pkField = Option::get( $_pksManyInfo[0], 'name' );
+                    $_where[] = array('in', $_pkField, $_checkIds);
+                }
+                else
+                {
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                }
+
+                if ( count( $_where ) > 1 )
+                {
+                    array_unshift( $_where, 'AND' );
+                }
+                else
+                {
+                    $_where = $_where[0];
+                }
+
+                $_result = $this->parseFieldsForSqlSelect( $_pkField, $_manyFields );
+                $_bindings = Option::get( $_result, 'bindings' );
+                $_fields = Option::get( $_result, 'fields' );
+                $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+                $_matchIds = $this->_recordQuery( $many_table, $_fields, $_where, $_params, $_bindings, null );
+                unset( $_matchIds['meta'] );
+
+                foreach ( $_upsertMany as $_uId => $_record )
+                {
+                    if ( $_found = DbUtilities::findRecordByNameValue( $_matchIds, $_pkField, $_uId ) )
+                    {
+                        $_updateMany[] = $_record;
+                    }
+                    else
+                    {
+                        $_insertMany[] = $_record;
+                    }
+                }
+            }
+
+            if ( !empty( $_insertMany ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
                 $_ssManyFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
                 // create new many records
-                foreach ( $createMany as $_record )
+                foreach ( $_insertMany as $_record )
                 {
-                    $_parsed = $this->parseRecord( $_record, $manyFields, $_ssManyFilters );
+                    $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssManyFilters );
                     if ( empty( $_parsed ) )
                     {
                         throw new BadRequestException( 'No valid fields were found in record.' );
@@ -2353,13 +2617,13 @@ class SqlDbSvc extends BaseDbSvc
                     $_manyId = (int)$this->_dbConn->lastInsertID;
                     if ( !empty( $_manyId ) )
                     {
-                        $createMap[] = array($many_field => $_manyId, $one_field => $one_id);
+                        $_createMap[] = array($many_field => $_manyId, $one_field => $one_id);
                     }
 
                 }
             }
 
-            if ( !empty( $updateMany ) )
+            if ( !empty( $_updateMany ) )
             {
                 // update existing many records
                 // do we have permission to do so?
@@ -2368,7 +2632,16 @@ class SqlDbSvc extends BaseDbSvc
 
                 $_where = array();
                 $_params = array();
-                $_where[] = $this->_dbConn->quoteColumnName( $pkManyField ) . " = :f_$pkManyField";
+                if ( 1 === count( $_pksManyInfo ) )
+                {
+                    $_pkField = Option::get( $_pksManyInfo[0], 'name' );
+                    $_where[] = $this->_dbConn->quoteColumnName( $_pkField ) . " = :f_$_pkField";
+                }
+                else
+                {
+                    // todo How to handle multiple primary keys?
+                    throw new NotImplementedException( "Relating records with multiple field primary keys is not currently supported." );
+                }
 
                 $_serverFilter = $this->buildQueryStringFromData( $_ssManyFilters, true );
                 if ( !empty( $_serverFilter ) )
@@ -2386,10 +2659,10 @@ class SqlDbSvc extends BaseDbSvc
                     $_where = $_where[0];
                 }
 
-                foreach ( $updateMany as $_record )
+                foreach ( $_updateMany as $_record )
                 {
-                    $_params[":f_$pkManyField"] = Option::get( $_record, $pkManyField );
-                    $_parsed = $this->parseRecord( $_record, $manyFields, $_ssManyFilters, true );
+                    $_params[":f_$_pkField"] = Option::get( $_record, $_pkField );
+                    $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssManyFilters, true );
                     if ( empty( $_parsed ) )
                     {
                         throw new BadRequestException( 'No valid fields were found in record.' );
@@ -2403,14 +2676,14 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            if ( !empty( $createMap ) )
+            if ( !empty( $_createMap ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::POST );
                 $_ssMapFilters = Session::getServiceFilters( static::POST, $this->_apiName, $map_table );
-                foreach ( $createMap as $_record )
+                foreach ( $_createMap as $_record )
                 {
-                    $_parsed = $this->parseRecord( $_record, $mapFields, $_ssMapFilters );
+                    $_parsed = $this->parseRecord( $_record, $_mapFields, $_ssMapFilters );
                     if ( empty( $_parsed ) )
                     {
                         throw new BadRequestException( "No valid fields were found in related $map_table record." );
@@ -2424,7 +2697,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            if ( !empty( $deleteMap ) )
+            if ( !empty( $_deleteMap ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::DELETE );
@@ -2432,7 +2705,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = array();
                 $_params = array();
                 $_where[] = $this->_dbConn->quoteColumnName( $one_field ) . " = '$one_id'";
-                $_where[] = array('in', $many_field, $deleteMap);
+                $_where[] = array('in', $many_field, $_deleteMap);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssMapFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {

@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Enums\RestVerbs;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Utilities;
@@ -35,7 +36,9 @@ use Kisma\Core\Utility\Option;
  * @property integer    $service_id
  * @property string     $component
  * @property string     $access Deprecated, replaced by verbs
- * @property array      $verbs
+ * @property array      $verbs  Deprecated, replaced by verb_mask
+ * @property integer    $verb_mask
+ * @property integer    $requestor_mask
  * @property array      $filters
  * @property string     $filter_op
  *
@@ -85,8 +88,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
     {
         return array(
             array('role_id', 'required'),
-            array('role_id, service_id', 'numerical', 'integerOnly' => true),
-            array('verbs, filter_op', 'length', 'max' => 64),
+            array('role_id, service_id, verb_mask, requestor_mask', 'numerical', 'integerOnly' => true),
+            array('filter_op', 'length', 'max' => 64),
             array('component', 'length', 'max' => 128),
             array('filters', 'safe'),
         );
@@ -112,12 +115,13 @@ class RoleServiceAccess extends BasePlatformSystemModel
     {
         $_labels = array_merge(
             array(
-                'role_id'    => 'Role',
-                'service_id' => 'Service',
-                'component'  => 'Component',
-                'verbs'      => 'Verbs',
-                'filters'    => 'Filters',
-                'filter_op'  => 'Filter Operator',
+                'role_id'        => 'Role',
+                'service_id'     => 'Service',
+                'component'      => 'Component',
+                'verb_mask'      => 'Verbs',
+                'requestor_mask' => 'Requestors',
+                'filters'        => 'Filters',
+                'filter_op'      => 'Filter Operator',
             ),
             $additionalLabels
         );
@@ -125,43 +129,27 @@ class RoleServiceAccess extends BasePlatformSystemModel
         return parent::attributeLabels( $_labels );
     }
 
-    /** {@InheritDoc} */
-    protected function beforeValidate()
-    {
-        if ( !empty( $this->verbs ) )
-        {
-            if ( is_array( $this->verbs ) )
-            {
-                $this->verbs = implode( ',', $this->verbs );
-            }
-        }
-        else
-        {
-            $this->verbs = '';
-        }
-
-        return parent::beforeValidate();
-    }
-
     /**
      * {@InheritDoc}
      */
     public function afterFind()
     {
-        if ( is_string( $this->verbs ) )
+        if ( is_null( $this->verb_mask ) )
         {
-            if ( !empty( $this->verbs ) )
+            if ( is_string( $this->verbs ) )
             {
-                $this->verbs = explode( ',', $this->verbs );
+                $_temp = array();
+                if ( !empty( $this->verbs ) )
+                {
+                    $_temp = explode( ',', $this->verbs );
+                }
+
+                $this->verb_mask = RestVerbs::arrayToMask( $_temp );
             }
-            else
+            elseif ( empty( $this->verbs ) )
             {
-                $this->verbs = array();
+                $this->verb_mask = Session::convertAccessToVerbMask( $this->access );
             }
-        }
-        if ( empty( $this->verbs ) )
-        {
-            $this->verbs = Session::convertAccessToVerbs( $this->access );
         }
 
         parent::afterFind();
@@ -183,7 +171,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
                     'role_id',
                     'service_id',
                     'component',
-                    'verbs',
+                    'verb_mask',
+                    'requestor_mask',
                     'filters',
                     'filter_op',
                 ),
@@ -224,7 +213,7 @@ class RoleServiceAccess extends BasePlatformSystemModel
                     $accesses[$_key1]['service_id'] = null;
                 }
                 $_component = Option::get( $_access, 'component', '' );
-                $_verbs = Option::clean( Option::get( $_access, 'verbs' ) );
+                $_verbs = Option::get( $_access, 'verb_mask' );
 
                 for ( $_key2 = $_key1 + 1; $_key2 < $_count; $_key2++ )
                 {
@@ -236,20 +225,25 @@ class RoleServiceAccess extends BasePlatformSystemModel
                         $accesses[$_key2]['service_id'] = null;
                     }
                     $_component2 = Option::get( $_access2, 'component', '' );
-                    $_verbs2 = Option::clean( Option::get( $_access2, 'verbs' ) );
+                    $_verbs2 = Option::get( $_access2, 'verb_mask' );
                     if ( ( $_serviceId == $_serviceId2 ) && ( $_component == $_component2 ) )
                     {
                         // No access conflicts with any access
                         if ( ( empty( $_verbs ) && !empty( $_verbs2 ) ) || ( empty( $_verbs2 ) && !empty( $_verbs ) ) )
                         {
-                            throw new BadRequestException( "Conflicting access for service, component, and access combination '$_serviceId $_component' in role service access." );
+                            throw new BadRequestException(
+                                "Conflicting access for service, component, and access combination '$_serviceId $_component' in role service access."
+                            );
                         }
 
                         // any of the verbs match?
-                        $_temp = implode( ',', array_intersect( $_verbs, $_verbs2 ) );
-                        if ( !empty( $_temp ) || ( empty( $_verbs ) && empty( $_verbs2 ) ) )
+                        $_matching = $_verbs & $_verbs2;
+                        if ( $_matching )
                         {
-                            throw new BadRequestException( "Duplicated service, component, and access combination '$_serviceId $_component $_temp' in role service access." );
+                            $_temp = implode( ',', RestVerbs::maskToArray( $_matching ) );
+                            throw new BadRequestException(
+                                "Duplicated service, component, and access combination '$_serviceId $_component $_temp' in role service access."
+                            );
                         }
                     }
                 }
@@ -265,14 +259,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
                 {
                     $_newId = Option::get( $_item, 'service_id' );
                     $_newComponent = Option::get( $_item, 'component', '' );
-                    $_newVerbs = Option::clean( Option::get( $_item, 'verbs' ) );
-                    $_oldVerbs = $_map->verbs;
-                    $_verbTest =
-                        array_merge( array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ) );
-                    if ( ( $_newId == $_map->service_id ) &&
-                         ( $_newComponent == $_map->component ) &&
-                         empty( $_verbTest )
-                    )
+                    $_newVerbs = Option::get( $_item, 'verb_mask' );
+                    if ( ( $_newId == $_map->service_id ) && ( $_newComponent == $_map->component ) && ( $_newVerbs == $_map->verb_mask ) )
                     {
                         $_needUpdate = false;
                         $_newFilters = Option::get( $_item, 'filters' );
@@ -287,6 +275,12 @@ class RoleServiceAccess extends BasePlatformSystemModel
                         if ( ( $_map->filter_op != $_newOp ) )
                         {
                             $_map->filter_op = $_newOp;
+                            $_needUpdate = true;
+                        }
+                        $_newRequestors = Option::get( $_item, 'requestor_mask' );
+                        if ( $_map->requestor_mask !== $_newRequestors )
+                        {
+                            $_map->requestor_mask = $_newRequestors;
                             $_needUpdate = true;
                         }
                         if ( $_needUpdate )

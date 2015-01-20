@@ -194,7 +194,8 @@ abstract class RemoteFileSvc extends BaseFileSvc
 			{
 				if ( !$this->blobExists( $container, $path ) )
 				{
-					throw new NotFoundException( "Folder '$path' does not exist in storage." );
+					// blob may not exist for "fake" folders, i.e. S3 prefixes
+//					throw new NotFoundException( "Folder '$path' does not exist in storage." );
 				}
 			}
 			$_results = $this->listBlobs( $container, $path, $_delimiter );

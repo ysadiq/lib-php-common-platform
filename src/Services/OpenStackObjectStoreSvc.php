@@ -74,6 +74,7 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
 
         $_storageType = strtolower( Option::get( $config, 'storage_type' ) );
         $_credentials = Option::get( $config, 'credentials' );
+        Session::replaceLookups( $_credentials, true );
 
         switch ( $_storageType )
         {
@@ -87,10 +88,10 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
                 break;
         }
 
-        $_username = Session::replaceLookup( Option::get( $_credentials, 'username' ), true );
-        $_password = Session::replaceLookup( Option::get( $_credentials, 'password' ), true );
-        $_apiKey = Session::replaceLookup( Option::get( $_credentials, 'api_key' ), true );
-        $_tenantName = Session::replaceLookup( Option::get( $_credentials, 'tenant_name' ), true );
+        $_username = Option::get( $_credentials, 'username' );
+        $_password = Option::get( $_credentials, 'password' );
+        $_apiKey = Option::get( $_credentials, 'api_key' );
+        $_tenantName = Option::get( $_credentials, 'tenant_name' );
         if ( empty( $_authUrl ) )
         {
             throw new \InvalidArgumentException( 'Object Store authentication URL can not be empty.' );

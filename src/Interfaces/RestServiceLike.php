@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Interfaces;
 
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use Kisma\Core\Interfaces\HttpMethod;
 
 /**
@@ -28,12 +29,13 @@ use Kisma\Core\Interfaces\HttpMethod;
  */
 interface RestServiceLike extends HttpMethod
 {
-	/**
-	 * @param mixed  $resource
-	 * @param string $action        Http method for request
-	 * @param string $output_format Output format for request, null = native array
-	 *
-	 * @return mixed
-	 */
-	public function processRequest( $resource = null, $action = self::Get, $output_format = null );
+    /**
+     * @param mixed                 $resource
+     * @param string                $action        Http method for request
+     * @param string                $output_format Output format for request, null = native array
+     * @param ServiceRequestorTypes $requestor     The requestor type making the request
+     *
+     * @return mixed
+     */
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null, $requestor = ServiceRequestorTypes::API );
 }

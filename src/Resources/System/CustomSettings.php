@@ -91,7 +91,7 @@ class CustomSettings extends BasePlatformRestResource
 			return true;
 		}
 
-		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource, $this->_requestorType );
 	}
 
 	/**
@@ -102,7 +102,7 @@ class CustomSettings extends BasePlatformRestResource
 		parent::_preProcess();
 
 		//	Do validation here
-		$this->checkPermission( $this->_action, 'config' );
+		$this->checkPermission( $this->getRequestedAction(), 'config' );
 	}
 
 	/**

@@ -91,4 +91,11 @@ return array(
 	PlatformServiceTypes::SALESFORCE           => array(
 		'class' => 'DreamFactory\\Platform\\Services\\SalesforceDbSvc',
 	),
+    PlatformServiceTypes::PUSH_SERVICE             => array(
+        'class' => array(
+            PlatformStorageTypes::AWS_SNS => array(
+                'class' => 'DreamFactory\\Platform\\Services\\AwsSnsSvc',
+            ),
+        ),
+    ),
 );

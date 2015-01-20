@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Platform\Components\StateStack;
 use DreamFactory\Platform\Enums\DataFormats;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -578,6 +579,26 @@ JS;
         }
 
         $_result = null;
+        $_params = array();
+        if ( false !== $_pos = strpos( $path, '?' ) )
+        {
+            $_paramString = substr( $path, $_pos+1 );
+            if ( !empty( $_paramString ) )
+            {
+                $_pArray = explode( '&', $_paramString );
+                foreach ( $_pArray as $_k => $_p )
+                {
+                    if ( !empty( $_p ) )
+                    {
+                        $_tmp = explode( '=', $_p );
+                        $_name = Option::get( $_tmp, 0, $_k );
+                        $_params[$_name] = Option::get( $_tmp, 1 );
+                    }
+                }
+            }
+            $path = substr( $path, 0, $_pos );
+        }
+
         $_requestUri = '/rest/' . ltrim( $path, '/' );
         $_contentType = 'application/json';
 
@@ -595,7 +616,7 @@ JS;
             if ( !empty( $_resource ) )
             {
                 if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
-                    ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+                     ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
                     $_resource .= '/';
@@ -618,7 +639,7 @@ JS;
 
         try
         {
-            $_request = new Request( array(), array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
+            $_request = new Request( $_params, array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
             $_request->query->set( 'app_name', SystemManager::getCurrentAppName() );
             $_request->query->set( 'path', $path );
             $_request->server->set( 'REQUEST_METHOD', $method );
@@ -635,7 +656,7 @@ JS;
             Pii::app()->setRequestObject( $_request );
 
             $_service = ServiceHandler::getService( $_serviceId );
-            $_result = $_service->processRequest( $_resource, $method, false );
+            $_result = $_service->processRequest( $_resource, $method, false, ServiceRequestorTypes::SCRIPT );
         }
         catch ( \Exception $_ex )
         {

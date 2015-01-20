@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -47,6 +48,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @var string
      */
     const DEFAULT_SERVICE_NAME = 'system';
+    /**
+     * Default maximum records returned on filter request
+     */
+    const MAX_RECORDS_RETURNED = 1000;
     /**
      * Default record wrapping tag for single or array of records
      */
@@ -188,13 +193,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
                 case static::PATCH:
                 case static::MERGE:
                     // fix wrapper on posted single record
-                    if ( !isset( $_posted[ static::RECORD_WRAPPER ] ) )
+                    if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
                     {
                         $this->_singleRecordAmnesty = true;
                         if ( !empty( $_posted ) )
                         {
                             // stuff it back in for event
-                            $_posted[ static::RECORD_WRAPPER ] = array($_posted);
+                            $_posted[static::RECORD_WRAPPER] = array($_posted);
                         }
                     }
                     break;
@@ -216,7 +221,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         if ( 'config' !== $this->_resource )
         {
             // Add server side filtering properties
-            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->getRequestedAction(), $this->_apiName, $this->_resource ) )
             {
                 $this->_requestPayload['ss_filters'] = $_ssFilters;
             }
@@ -273,7 +278,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         parent::_preProcess();
 
         //	Do validation here
-        $this->checkPermission( $this->_action, $this->_resource );
+        $this->checkPermission( $this->getRequestedAction(), $this->_resource );
 
         ResourceStore::reset(
             array(
@@ -297,7 +302,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     public function checkPermission( $operation, $resource = null )
     {
-        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource, $this->_requestorType );
     }
 
     /**
@@ -370,14 +375,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             }
         }
 
-        if ( null !== ( $_value = Option::get( $this->_requestPayload, 'limit' ) ) )
+        $_value = intval( Option::get( $this->_requestPayload, 'limit' ) );
+        $_maxAllowed = intval( Pii::getParam( 'dsp.db_max_records_returned', static::MAX_RECORDS_RETURNED ) );
+        if ( ( $_value < 1 ) || ( $_value > $_maxAllowed ) )
         {
-            $_criteria['limit'] = $_value;
+            // impose a limit to protect server
+            $_value = $_maxAllowed;
+        }
+        $_criteria['limit'] = $_value;
 
-            if ( null !== ( $_value = Option::get( $this->_requestPayload, 'offset' ) ) )
-            {
-                $_criteria['offset'] = $_value;
-            }
+        if ( null !== ( $_value = Option::get( $this->_requestPayload, 'offset' ) ) )
+        {
+            $_criteria['offset'] = $_value;
         }
 
         if ( null !== ( $_value = Option::get( $this->_requestPayload, 'order' ) ) )
@@ -537,6 +546,78 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         parent::_formatResponse();
 
         $_data = $this->_response;
+
+        try
+        {
+            $_schema = ResourceStore::getSchemaForPayload( ResourceStore::model() );
+            $_schemaFields = Option::get( $_schema, 'field', array() );
+            if ( !empty( $_schemaFields ) && !empty( $_data ) )
+            {
+                //  Additional formatting needed?
+                foreach ( $_data as $_key => &$_row )
+                {
+                    if ( is_array( $_row ) )
+                    {
+                        if ( isset( $_row[0] ) )
+                        {
+                            //  Multi-row set, dig a little deeper
+                            foreach ( $_row as &$_sub )
+                            {
+                                if ( is_array( $_sub ) )
+                                {
+                                    foreach ( $_sub as $_name => $_value )
+                                    {
+                                        if ( !is_null( $_value ) && !is_array( $_value ) )
+                                        {
+                                            if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
+                                            {
+                                                if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                                {
+                                                    $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                                    $_sub[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach ( $_row as $_name => $_value )
+                            {
+                                if ( !is_null( $_value ) && !is_array( $_value ) )
+                                {
+                                    if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_name, $_schemaFields ) )
+                                    {
+                                        if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                                        {
+                                            $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                            $_row[$_name] = SqlDbUtilities::formatValue( $_value, $_type );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    elseif ( !is_null( $_row ) && !is_array( $_row ) )
+                    {
+                        if ( false !== $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $_key, $_schemaFields ) )
+                        {
+                            if ( null !== $_type = Option::get( $_fieldInfo, 'type' ) )
+                            {
+                                $_type = SqlDbUtilities::determinePhpConversionType( $_type );
+                                $_row = SqlDbUtilities::formatValue( $_row, $_type );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            // do nothing, not a model with schema
+        }
 
         switch ( $this->_responseFormat )
         {

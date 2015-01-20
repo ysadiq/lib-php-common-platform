@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Aws\Common\Enum\Region;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Enum\ComparisonOperator;
 use Aws\DynamoDb\Enum\KeyType;
@@ -30,6 +29,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\AwsSvcUtilities;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -44,9 +44,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     //	Constants
     //*************************************************************************
 
-    const TABLE_INDICATOR = 'TableName';
+    const CLIENT_NAME = 'DynamoDb';
 
-    const DEFAULT_REGION = Region::US_WEST_1;
+    const TABLE_INDICATOR = 'TableName';
 
     //*************************************************************************
     //	Members
@@ -94,46 +94,18 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
-        $_parameters = Option::get( $config, 'parameters' );
-
-        // old way
-        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ), true );
-        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ), true );
-        if ( !empty( $_accessKey ) )
-        {
-            // old way, replace with 'key'
-            $_credentials['key'] = $_accessKey;
-        }
-
-        if ( !empty( $_secretKey ) )
-        {
-            // old way, replace with 'key'
-            $_credentials['secret'] = $_secretKey;
-        }
-
-        $_region = Option::get( $_credentials, 'region' );
-        if ( empty( $_region ) )
-        {
-            // use a default region if not present
-            $_credentials['region'] = static::DEFAULT_REGION;
-        }
+        $_credentials = Option::clean( Option::get( $config, 'credentials' ) );
+        AwsSvcUtilities::updateCredentials( $_credentials, true );
 
         // set up a default table schema
-        if ( null !== ( $_table = Session::replaceLookup( Option::get( $_parameters, 'default_create_table' ), true ) )
-        )
+        $_parameters = Option::get( $config, 'parameters' );
+        Session::replaceLookups( $_parameters );
+        if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
         {
             $this->_defaultCreateTable = $_table;
         }
 
-        try
-        {
-            $this->_dbConn = DynamoDbClient::factory( $_credentials );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Amazon DynamoDb Service Exception:\n{$_ex->getMessage()}" );
-        }
+        $this->_dbConn = AwsSvcUtilities::createClient( $_credentials, static::CLIENT_NAME );
     }
 
     /**
@@ -651,7 +623,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         // build filter array if necessary, add server-side filters if necessary
         if ( !is_array( $filter ) )
         {
-            Session::replaceLookupsInStrings( $filter );
+            Session::replaceLookups( $filter );
             $_criteria = static::buildFilterArray( $filter, $params );
         }
         else
@@ -707,13 +679,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         switch ( strtoupper( $_combiner ) )
         {
             case 'AND':
-                return $_criteria;
+                break;
             case 'OR':
-                return array('split' => $_criteria);
+                $_criteria = array('split' => $_criteria);
+                break;
             default:
                 // log and bail
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
         }
+
+        return $_criteria;
     }
 
     /**

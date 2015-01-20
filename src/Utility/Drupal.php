@@ -24,7 +24,6 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Curl;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -33,172 +32,139 @@ use Kisma\Core\Utility\Option;
  */
 class Drupal
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @var string The registration marker
-	 */
-	const REGISTRATION_MARKER = '/.registration_complete';
-	/**
-	 * @var string Our registration endpoint
-	 */
-	const ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/drupal';
+    /**
+     * @var string Our registration endpoint
+     */
+    const ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/drupal';
 
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * @param string $url
-	 * @param array  $payload
-	 * @param array  $options
-	 * @param string $method
-	 *
-	 * @return \stdClass|string
-	 */
-	protected static function _drupal( $url, array $payload = array(), array $options = array(), $method = Curl::Post )
-	{
-		$_url = '/' . ltrim( $url, '/' );
+    /**
+     * @param string $url
+     * @param array  $payload
+     * @param array  $options
+     * @param string $method
+     *
+     * @return \stdClass|string
+     */
+    protected static function _drupal( $url, array $payload = array(), array $options = array(), $method = Curl::POST )
+    {
+        $_url = '/' . ltrim( $url, '/' );
 
-		if ( empty( $options ) )
-		{
-			$options = array();
-		}
+        if ( empty( $options ) )
+        {
+            $options = array();
+        }
 
-		if ( !isset( $options[CURLOPT_HTTPHEADER] ) )
-		{
-			$options[CURLOPT_HTTPHEADER] = array( 'Content-Type: application/json' );
-		}
-		else
-		{
-			$options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
-		}
+        if ( !isset( $options[CURLOPT_HTTPHEADER] ) )
+        {
+            $options[CURLOPT_HTTPHEADER] = array('Content-Type: application/json');
+        }
+        else
+        {
+            $options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
+        }
 
-		//	Add in a source block
-		$payload['source'] = array(
-			'host'    => gethostname(),
-			'address' => gethostbynamel( gethostname() ),
-		);
+        //	Add in a source block
+        $payload['source'] = array(
+            'host'    => gethostname(),
+            'address' => gethostbynamel( gethostname() ),
+        );
 
-		$payload['dsp-auth-key'] = md5( microtime( true ) );
+        $payload['dsp-auth-key'] = md5( microtime( true ) );
 
 //		$payload = json_encode( $payload );
 
-		return Curl::request( $method, static::ENDPOINT . $_url, json_encode( $payload ), $options );
-	}
+        return Curl::request( $method, static::ENDPOINT . $_url, json_encode( $payload ), $options );
+    }
 
-	/**
-	 * @param string $userName
-	 * @param string $password
-	 *
-	 * @return bool
-	 */
-	public static function authenticateUser( $userName, $password )
-	{
-		$_payload = array(
-			'email'    => $userName,
-			'password' => $password,
-		);
+    /**
+     * @param string $userName
+     * @param string $password
+     *
+     * @return bool
+     */
+    public static function authenticateUser( $userName, $password )
+    {
+        $_payload = array(
+            'email'    => $userName,
+            'password' => $password,
+        );
 
-		if ( false !== ( $_response = static::_drupal( 'drupalValidate', $_payload ) ) )
-		{
-			if ( $_response->success )
-			{
-				return $_response->details;
-			}
-		}
+        if ( false !== ( $_response = static::_drupal( 'drupalValidate', $_payload ) ) )
+        {
+            if ( $_response->success )
+            {
+                return $_response->details;
+            }
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	/**
-	 * @param User  $user
-	 * @param array $paths
-	 * @param array $payload
-	 *
-	 * @throws InternalServerErrorException
-	 * @throws RestException
-	 * @return bool
-	 */
-	public static function registerPlatform( $user, $paths, $payload = array() )
-	{
-		try
-		{
-			$_payload = array_merge(
-				array(
-					//	Requirements
-					'user_id'      => $user->id,
-					'access_token' => $user->password,
-					'email'        => $user->email,
-					'name'         => $user->display_name,
-					'pass'         => $user->password,
-				),
-				Option::clean( $payload )
-			);
+    /**
+     * @param User  $user
+     * @param array $payload
+     *
+     * @throws InternalServerErrorException
+     * @throws RestException
+     * @return bool
+     */
+    public static function registerPlatform( $user, $payload = array() )
+    {
+        $_payload = array_merge(
+            array(
+                //	Requirements
+                'user_id'      => $user->id,
+                'access_token' => $user->password,
+                'email'        => $user->email,
+                'name'         => $user->display_name,
+                'pass'         => $user->password,
+            ),
+            Option::clean( $payload )
+        );
 
-			//	Re-key the attributes and settings and jam them in the payload
-			foreach ( $user->getAttributes() as $_key => $_value )
-			{
-				$_payload['admin.' . $_key] = $_value;
-			}
+        //	Re-key the attributes and settings and jam them in the payload
+        foreach ( $user->getAttributes() as $_key => $_value )
+        {
+            $_payload['admin.' . $_key] = $_value;
+        }
 
-			foreach ( Pii::params() as $_key => $_value )
-			{
-				$_payload['dsp.' . $_key] = $_value;
-			}
+        foreach ( Pii::params() as $_key => $_value )
+        {
+            $_payload['dsp.' . $_key] = $_value;
+        }
 
-			if ( false !== ( $_response = static::_drupal( 'register', $_payload ) ) )
-			{
-				if ( $_response && $_response->success )
-				{
-					$_privatePath = $_marker = null;
+        if ( false !== ( $_response = static::_drupal( 'register', $_payload ) ) )
+        {
+            if ( $_response && $_response->success )
+            {
+                return true;
+            }
+        }
 
-					extract( $paths );
+        return false;
+    }
 
-					//	Make directory if not there
-					if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
-					{
-						throw new InternalServerErrorException( 'Unable to create private path directory.' );
-					}
+    /**
+     * @param int $userId
+     *
+     * @return \stdClass|string
+     */
+    public static function getUser( $userId )
+    {
+        $_payload = array(
+            'id' => $userId,
+        );
 
-					//	Get touchy
-					if ( false === @file_put_contents( $_marker, null ) )
-					{
-						//	Kill any file there...
-						@unlink( $_marker );
+        $_response = static::_drupal( 'drupalUser', $_payload );
 
-						throw new InternalServerErrorException( 'Error creating DSP registration marker "' . $_marker . '"' );
-					}
-
-					return true;
-				}
-			}
-
-			throw new InternalServerErrorException( 'Unexpected response from registration server' );
-		}
-		catch ( \Exception $_ex )
-		{
-			Log::error( 'Exception while posting DSP registration: ' . $_ex->getMessage() );
-		}
-
-		return false;
-	}
-
-	/**
-	 * @param int $userId
-	 *
-	 * @return stdClass|string
-	 */
-	public static function getUser( $userId )
-	{
-		$_payload = array(
-			'id' => $userId,
-		);
-
-		$_response = static::_drupal( 'drupalUser', $_payload );
-
-		return $_response->details;
-	}
+        return $_response->details;
+    }
 }

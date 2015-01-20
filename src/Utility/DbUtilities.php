@@ -504,6 +504,21 @@ class DbUtilities
             case 'string':
             case 'text':
                 return 'string';
+
+            // special checks
+            case 'date':
+                return 'date';
+
+            case 'time':
+                return 'time';
+
+            case 'datetime':
+                return 'datetime';
+
+            case 'timestamp':
+            case 'timestamp_on_create':
+            case 'timestamp_on_update':
+                return 'timestamp';
         }
 
         return null;
@@ -550,7 +565,8 @@ class DbUtilities
 
     public static function formatValue( $value, $type )
     {
-        switch ( strtolower(strval($type)) )
+        $type = strtolower( strval( $type ) );
+        switch ( $type )
         {
             case 'int':
             case 'integer':
@@ -567,8 +583,75 @@ class DbUtilities
 
             case 'string':
                 return strval( $value );
+
+            case 'time':
+            case 'date':
+            case 'datetime':
+            case 'timestamp':
+                $_cfgFormat = static::getDateTimeFormat( $type );
+
+                return static::formatDateTime( $_cfgFormat, $value );
         }
 
         return $value;
+    }
+
+    public static function getDateTimeFormat( $type )
+    {
+        switch ( strtolower( strval( $type ) ) )
+        {
+            case 'time':
+                return Pii::getParam( 'dsp.db_time_format' );
+
+            case 'date':
+                return Pii::getParam( 'dsp.db_date_format' );
+
+            case 'datetime':
+                return Pii::getParam( 'dsp.db_datetime_format' );
+
+            case 'timestamp':
+                return Pii::getParam( 'dsp.db_timestamp_format' );
+        }
+
+        return null;
+    }
+
+    public static function formatDateTime( $out_format, $in_value = null, $in_format = null )
+    {
+        //  If value is null, current date and time are returned
+        if ( !empty( $out_format ) )
+        {
+            $in_value = ( is_string( $in_value ) || is_null( $in_value ) ) ? $in_value : strval( $in_value );
+            if ( !empty( $in_format ) )
+            {
+                if ( false === $_date = \DateTime::createfromFormat( $in_format, $in_value ) )
+                {
+                    Log::error( "Failed to format datetime from '$in_value'' to '$in_format'" );
+
+                    return $in_value;
+                }
+            }
+            else
+            {
+                $_date = new \DateTime( $in_value );
+            }
+
+            return $_date->format( $out_format );
+        }
+
+        return $in_value;
+    }
+
+    public static function findRecordByNameValue( $data, $field, $value )
+    {
+        foreach ($data as $_record)
+        {
+            if (Option::get($_record, $field) === $value)
+            {
+                return $_record;
+            }
+        }
+
+        return null;
     }
 }

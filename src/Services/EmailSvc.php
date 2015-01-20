@@ -233,9 +233,9 @@ class EmailSvc extends BasePlatformRestService
         }
 
         // do lookup replacement, currently {xxx}
-        Session::replaceLookupsInStrings( $_subject );
-        Session::replaceLookupsInStrings( $_text );
-        Session::replaceLookupsInStrings( $_html );
+        Session::replaceLookups( $_subject );
+        Session::replaceLookups( $_text );
+        Session::replaceLookups( $_html );
 
         if ( empty( $_html ) )
         {

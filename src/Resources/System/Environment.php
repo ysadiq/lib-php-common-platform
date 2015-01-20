@@ -91,7 +91,7 @@ class Environment extends BaseSystemRestResource
             return true;
         }
 
-        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource, $this->_requestorType );
     }
 
     /**

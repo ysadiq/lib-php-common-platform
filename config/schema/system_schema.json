@@ -1,5 +1,5 @@
 {
-    "version": "1.7.0",
+    "version": "1.9.0",
     "scripts": {
         "install": null,
         "update": "1.5.0-update.sql"
@@ -109,7 +109,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -280,7 +280,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -355,7 +355,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -485,7 +485,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -619,7 +619,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -677,7 +677,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -824,6 +824,7 @@
                 },
                 {
                     "name": "access",
+					"description": "DEPRECATED as of 1.6",
                     "type": "string",
                     "length": 64,
                     "value": [
@@ -857,6 +858,24 @@
                         "multi_picklist": { }
                     }
                 },
+				{
+					"name": "verb_mask",
+					"type": "integer",
+					"allow_null": true,
+					"validation": {
+						"bitmask": { }
+					}
+				},
+				{
+					"name": "requestor_mask",
+					"description": "Bitmask of allowed service requestor types, defaults to API",
+					"type": "integer",
+					"default": 1,
+					"allow_null": false,
+					"validation": {
+						"bitmask": { }
+					}
+				},
                 {
                     "name": "filters",
                     "type": "mediumtext",
@@ -934,6 +953,24 @@
                         "multi_picklist": { }
                     }
                 },
+				{
+					"name": "verb_mask",
+					"type": "integer",
+					"allow_null": true,
+					"validation": {
+						"bitmask": { }
+					}
+				},
+				{
+					"name": "requestor_mask",
+					"description": "Bitmask of allowed service requestor types, defaults to API",
+					"type": "integer",
+					"default": 1,
+					"allow_null": false,
+					"validation": {
+						"bitmask": { }
+					}
+				},
                 {
                     "name": "filters",
                     "type": "mediumtext",
@@ -1173,7 +1210,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1251,7 +1288,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1329,7 +1366,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1416,7 +1453,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1480,7 +1517,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"
@@ -1520,7 +1557,7 @@
                 },
                 {
                     "name": "created_date",
-                    "type": "datetime",
+                    "type": "timestamp_on_create",
                     "validation": {
                         "api_read_only": {
                             "on_fail": "ignore_field"

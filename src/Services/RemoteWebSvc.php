@@ -57,10 +57,6 @@ class RemoteWebSvc extends BasePlatformRestService
     /**
      * @var array
      */
-    protected $_excludedHeaders;
-    /**
-     * @var array
-     */
     protected $_excludedParameters;
     /**
      * @var bool
@@ -114,9 +110,7 @@ class RemoteWebSvc extends BasePlatformRestService
             throw new \InvalidArgumentException( 'Remote Web Service base url can not be empty.' );
         }
 
-        $_clientExclusions = Option::get( $this->_credentials, 'client_exclusions' );
-        $this->_excludedHeaders = Option::get( $_clientExclusions, 'headers', array() );
-        $this->_excludedParameters = Option::get( $_clientExclusions, 'parameters', array() );
+        $this->_excludedParameters = Option::getDeep( $this->_credentials, 'client_exclusions', 'parameters', array() );
 
         $_cacheConfig = Option::get( $this->_credentials, 'cache_config' );
         $this->_cacheEnabled = Option::getBool( $_cacheConfig, 'enabled' );
@@ -138,7 +132,7 @@ class RemoteWebSvc extends BasePlatformRestService
         }
         else
         {
-            $value = Session::replaceLookup( $value, true );
+            Session::replaceLookups( $value, true );
             $_part = urlencode( $name );
             if ( !empty( $value ) )
             {
@@ -181,9 +175,13 @@ class RemoteWebSvc extends BasePlatformRestService
     }
 
     /**
-     * @param $action
+     * @param array  $parameters
+     * @param array  $exclusions
+     * @param string $action
+     * @param string $query
+     * @param string $cache_key
      *
-     * @return string
+     * @return void
      */
     protected static function buildParameterString( $parameters, $exclusions, $action, &$query, &$cache_key )
     {
@@ -227,33 +225,38 @@ class RemoteWebSvc extends BasePlatformRestService
     }
 
     /**
+     * @param array  $headers
      * @param string $action
      * @param array  $options
      *
-     * @return array
+     * @return void
      */
-    protected function addHeaders( $action, $options = array() )
+    protected static function addHeaders( $headers, $action, &$options )
     {
-        if ( !empty( $this->_headers ) )
+        if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
         {
-            foreach ( $this->_headers as $_header )
+            $options[CURLOPT_HTTPHEADER] = array();
+        }
+
+        // DSP outbound headers, additional and pass through
+        if ( !empty( $headers ) )
+        {
+            foreach ( $headers as $_header )
             {
                 if ( static::doesActionApply( $_header, $action ) )
                 {
                     $_name = Option::get( $_header, 'name' );
-                    $_value = Session::replaceLookup( Option::get( $_header, 'value' ), true );
-
-                    if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
+                    $_value = Option::get( $_header, 'value' );
+                    if ( Option::getBool( $_header, 'pass_from_client' ) )
                     {
-                        $options[CURLOPT_HTTPHEADER] = array();
+                        $_phpHeaderName = 'HTTP_' . strtoupper( str_replace( array('-', ' '), array('_', '_'), $_name ) );
+                        $_value = ( isset( $_SERVER[$_phpHeaderName] ) ) ? $_SERVER[$_phpHeaderName] : $_value;
                     }
-
+                    Session::replaceLookups( $_value, true );
                     $options[CURLOPT_HTTPHEADER][] = $_name . ': ' . $_value;
                 }
             }
         }
-
-        return $options;
     }
 
     /**
@@ -265,13 +268,13 @@ class RemoteWebSvc extends BasePlatformRestService
     {
         parent::_preProcess();
 
-        $this->checkPermission( $this->_action, $this->_apiName );
+        $this->checkPermission( $this->getRequestedAction(), $this->_apiName );
 
         //  set outbound parameters
         $this->buildParameterString( $this->_parameters, $this->_excludedParameters, $this->_action, $this->_query, $this->_cacheQuery );
 
-        //	set additional headers
-        $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
+        //	set outbound headers
+        $this->addHeaders( $this->_headers, $this->_action, $this->_curlOptions );
     }
 
     /**
@@ -325,6 +328,17 @@ class RemoteWebSvc extends BasePlatformRestService
         {
             $_error = Curl::getError();
             throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
+        }
+
+        $_status = Curl::getLastHttpCode();
+        if ( $_status >= 300 )
+        {
+            if ( !is_string( $_result ) )
+            {
+                $_result = json_encode( $_result );
+            }
+
+            throw new RestException( $_status, $_result, $_status );
         }
 
         if ( $this->_cacheEnabled )

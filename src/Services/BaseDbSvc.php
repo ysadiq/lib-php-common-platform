@@ -216,7 +216,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             }
 
             // Add server side filtering properties
-            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->getRequestedAction(), $this->_apiName, $this->_resource ) )
             {
                 $this->_requestPayload['ss_filters'] = $_ssFilters;
             }
@@ -339,7 +339,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     protected function _preProcess()
     {
         //	Do validation here
-        $this->validateResourceAccess( $this->_resource, $this->_resourceId, $this->_action );
+        $this->validateResourceAccess( $this->_resource, $this->_resourceId, $this->getRequestedAction() );
 
         parent::_preProcess();
     }
@@ -2989,7 +2989,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
 
         // the rest should be lookup keys, or plain strings
-        return Session::replaceLookup( $value );
+        Session::replaceLookups( $value );
+        return $value;
     }
 
     /**
@@ -3006,7 +3007,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         foreach ( $record as $_field => $_value )
         {
-            $record[$_field] = Session::replaceLookup( $_value );
+            Session::replaceLookups( $_value );
+            $record[$_field] = $_value;
         }
 
         return $record;
@@ -3161,7 +3163,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 }
                 elseif ( empty( $this->_requestPayload ) )
                 {
-                    throw new BadRequestException( 'No data in schema create request.' );
+                    throw new BadRequestException( 'No data in schema update request.' );
                 }
                 else
                 {
@@ -3181,7 +3183,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     if ( empty( $_tables ) )
                     {
-                        throw new BadRequestException( 'No data in schema create request.' );
+                        throw new BadRequestException( 'No data in schema delete request.' );
                     }
 
                     $_result = $this->deleteTables( $_tables );
@@ -3302,7 +3304,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateSchemaAccess( $_name );
+            $this->validateSchemaAccess( $_name, static::GET );
 
             $_out[] = $this->describeTable( $_table, $refresh );
         }
@@ -3470,7 +3472,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateSchemaAccess( $_name );
+            $this->validateSchemaAccess( $_name, static::DELETE );
             $_out[] = $this->deleteTable( $_table, $check_empty );
         }
 

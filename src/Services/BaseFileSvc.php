@@ -147,7 +147,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     {
         parent::_preProcess();
 
-        $this->checkPermission( $this->_action, $this->_container );
+        $this->checkPermission( $this->getRequestedAction(), $this->_container );
     }
 
     /**

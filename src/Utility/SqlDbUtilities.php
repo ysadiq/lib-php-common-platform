@@ -1019,8 +1019,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             'default'            => $column->defaultValue,
             'required'           => static::determineRequired( $column, $validation ),
             'allow_null'         => $column->allowNull,
-            'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
-            'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
+            'fixed_length'       => $column->fixedLength,
+            'supports_multibyte' => $column->supportsMultibyte,
             'auto_increment'     => $column->autoIncrement,
             'is_primary_key'     => $column->isPrimaryKey,
             'is_foreign_key'     => $column->isForeignKey,
@@ -1074,42 +1074,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         return $_simpleType;
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineMultiByteSupport( $type )
-    {
-        switch ( $type )
-        {
-            case ( false !== strpos( $type, 'national' ) ):
-            case ( false !== strpos( $type, 'nchar' ) ):
-            case ( false !== strpos( $type, 'nvarchar' ) ):
-                return true;
-            // todo mysql shows these are varchar with a utf8 character set, not in column data
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * @param $type
-     *
-     * @return bool
-     */
-    protected static function determineIfFixedLength( $type )
-    {
-        switch ( $type )
-        {
-            case ( ( false !== strpos( $type, 'char' ) ) && ( false === strpos( $type, 'var' ) ) ):
-            case 'binary':
-                return true;
-            default:
-                return false;
-        }
     }
 
     /**
@@ -1586,33 +1550,6 @@ SQL;
                                 break;
                         }
                     }
-                    elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
-                    {
-                        // special case for references because the table referenced may not be created yet
-                        $refTable = Option::get( $_field, 'ref_table' );
-                        if ( empty( $refTable ) )
-                        {
-                            throw new BadRequestException( "Invalid schema detected - no table element for reference type of $_name." );
-                        }
-                        $refColumns = Option::get( $_field, 'ref_fields', 'id' );
-                        $refOnDelete = Option::get( $_field, 'ref_on_delete' );
-                        $refOnUpdate = Option::get( $_field, 'ref_on_update' );
-
-                        // will get to it later, $refTable may not be there
-                        $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
-                        if ( !$_isAlter || !$_oldForeignKey )
-                        {
-                            $_references[] = array(
-                                'name'       => $_keyName,
-                                'table'      => $table_name,
-                                'column'     => $_name,
-                                'ref_table'  => $refTable,
-                                'ref_fields' => $refColumns,
-                                'delete'     => $refOnDelete,
-                                'update'     => $refOnUpdate
-                            );
-                        }
-                    }
                     elseif ( ( 'user_id_on_create' == $_type ) || ( 'user_id_on_update' == $_type ) )
                     { // && static::is_local_db()
                         // special case for references because the table referenced may not be created yet
@@ -1656,6 +1593,33 @@ SQL;
                     elseif ( 'timestamp_on_update' == $_type )
                     {
                         $_temp['timestamp_on_update'] = true;
+                    }
+                    elseif ( ( 'reference' == $_type ) || Option::getBool( $_field, 'is_foreign_key' ) )
+                    {
+                        // special case for references because the table referenced may not be created yet
+                        $refTable = Option::get( $_field, 'ref_table' );
+                        if ( empty( $refTable ) )
+                        {
+                            throw new BadRequestException( "Invalid schema detected - no table element for reference type of $_name." );
+                        }
+                        $refColumns = Option::get( $_field, 'ref_fields', 'id' );
+                        $refOnDelete = Option::get( $_field, 'ref_on_delete' );
+                        $refOnUpdate = Option::get( $_field, 'ref_on_update' );
+
+                        // will get to it later, $refTable may not be there
+                        $_keyName = static::makeConstraintName( 'fk', $table_name, $_name, $_driverType );
+                        if ( !$_isAlter || !$_oldForeignKey )
+                        {
+                            $_references[] = array(
+                                'name'       => $_keyName,
+                                'table'      => $table_name,
+                                'column'     => $_name,
+                                'ref_table'  => $refTable,
+                                'ref_fields' => $refColumns,
+                                'delete'     => $refOnDelete,
+                                'update'     => $refOnUpdate
+                            );
+                        }
                     }
                 }
             }

@@ -96,19 +96,20 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         else
         {
-            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+            $_credentials = Option::get( $config, 'credentials' );
+            Session::replaceLookups( $_credentials, true );
 
-            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true ) ) )
+            if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
             {
                 throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ), true ) ) )
+            if ( null === ( $user = Option::get( $_credentials, 'user' ) ) )
             {
                 throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
             }
 
-            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true ) ) )
+            if ( null === ( $password = Option::get( $_credentials, 'pwd' ) ) )
             {
                 throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
             }
@@ -189,11 +190,11 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             $this->_fields = Option::get( $this->_requestPayload, 'field' );
 
-            $this->checkPermission( $this->_action, $this->_tableName );
+            $this->checkPermission( $this->getRequestedAction(), $this->_tableName );
         }
         else
         {
-            $this->checkPermission( $this->_action );
+            $this->checkPermission( $this->getRequestedAction() );
         }
     }
 

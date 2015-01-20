@@ -19,12 +19,12 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Aws\Common\Enum\Region;
 use Aws\SimpleDb\SimpleDbClient;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\AwsSvcUtilities;
 use DreamFactory\Platform\Utility\Utilities;
 use Kisma\Core\Utility\Option;
 
@@ -40,9 +40,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     //	Constants
     //*************************************************************************
 
+    const CLIENT_NAME = 'SimpleDb';
+
     const TABLE_INDICATOR = 'DomainName';
 
-    const DEFAULT_REGION = Region::US_WEST_1;
     /**
      * Default record identifier field
      */
@@ -73,38 +74,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_credentials = Option::clean( Option::get( $config, 'credentials' ) );
+        AwsSvcUtilities::updateCredentials( $_credentials, true );
 
-        // old way
-        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ), true );
-        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ), true );
-        if ( !empty( $_accessKey ) )
-        {
-            // old way, replace with 'key'
-            $_credentials['key'] = $_accessKey;
-        }
-
-        if ( !empty( $_secretKey ) )
-        {
-            // old way, replace with 'key'
-            $_credentials['secret'] = $_secretKey;
-        }
-
-        $_region = Option::get( $_credentials, 'region' );
-        if ( empty( $_region ) )
-        {
-            // use a default region if not present
-            $_credentials['region'] = static::DEFAULT_REGION;
-        }
-
-        try
-        {
-            $this->_dbConn = SimpleDbClient::factory( $_credentials );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Amazon SimpleDb Service Exception:\n{$_ex->getMessage()}" );
-        }
+        $this->_dbConn = AwsSvcUtilities::createClient( $_credentials, static::CLIENT_NAME );
     }
 
     /**
@@ -727,7 +700,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
             throw new BadRequestException( 'Filtering in array format is not currently supported on SimpleDb.' );
         }
 
-        Session::replaceLookupsInStrings( $filter );
+        Session::replaceLookups( $filter );
 
         // handle logical operators first
         $_search = array(' || ', ' && ');

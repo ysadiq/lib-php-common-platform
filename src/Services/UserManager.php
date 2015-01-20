@@ -95,7 +95,7 @@ class UserManager extends BaseSystemRestService
             if ( static::GET == $this->_action )
             {
                 // lock down access to API
-                $this->checkPermission( $this->_action );
+                $this->checkPermission( static::GET );
 
                 return $this->_listResources();
             }
@@ -103,11 +103,13 @@ class UserManager extends BaseSystemRestService
             return false;
         }
 
+        $obj = null;
+        $result = null;
         switch ( $this->_resource )
         {
             case 'session':
                 //	Handle remote login
-                if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+                if ( static::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
                 {
                     $_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 
@@ -118,34 +120,28 @@ class UserManager extends BaseSystemRestService
                 }
 
                 $obj = new Session( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'custom':
                 $obj = new CustomSettings( $this, $this->_resourceArray );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'device':
                 $obj = new Device( $this, $this->_resourceArray );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'profile':
                 $obj = new Profile( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'challenge': // backward compatibility
             case 'password':
                 $obj = new Password( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'confirm': // backward compatibility
             case 'register':
                 $obj = new Register( $this );
-                $result = $obj->processRequest( null, $this->_action );
                 break;
 
             case 'ticket':
@@ -164,7 +160,11 @@ class UserManager extends BaseSystemRestService
                 break;
         }
 
-        //  Send out an event
+        if ( $obj )
+        {
+            $result = $obj->processRequest( null, $this->_action, null, $this->_requestorType );
+        }
+
         return $result;
     }
 

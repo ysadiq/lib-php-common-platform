@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Enums\RestVerbs;
+use DreamFactory\Platform\Enums\ServiceRequestorTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
@@ -623,20 +625,21 @@ class Session extends BaseUserRestResource
     }
 
     /**
-     * @param string $action    - REST API action name
-     * @param string $service   - API name of the service
-     * @param string $component - API component/resource name
+     * @param string                $action    - REST API action name
+     * @param string                $service   - API name of the service
+     * @param string                $component - API component/resource name
+     * @param ServiceRequestorTypes $requestor - Entity type requesting the service
      *
      * @throws ForbiddenException
      * @throws BadRequestException
      */
-    public static function checkServicePermission( $action, $service, $component = null )
+    public static function checkServicePermission( $action, $service, $component = null, $requestor = ServiceRequestorTypes::API )
     {
-        $action = static::cleanAction( $action );
+        $_verb = RestVerbs::toNumeric( static::cleanAction( $action ) );
 
-        $_permissions = static::getServicePermissions( $service, $component );
+        $_mask = static::getServicePermissions( $service, $component, $requestor );
 
-        if ( false === array_search( $action, $_permissions ) )
+        if ( !( $_verb & $_mask ) )
         {
             $msg = ucfirst( $action ) . " access to ";
             if ( !empty( $component ) )
@@ -651,24 +654,32 @@ class Session extends BaseUserRestResource
     }
 
     /**
-     * @param string $service
-     * @param string $component
+     * @param string                $service   - API name of the service
+     * @param string                $component - API component/resource name
+     * @param ServiceRequestorTypes $requestor - Entity type requesting the service
      *
      * @returns array
      */
-    public static function getServicePermissions( $service, $component = null )
+    public static function getServicePermissions( $service, $component = null, $requestor = ServiceRequestorTypes::API )
     {
         static::_checkCache();
 
         if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
-            return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE, 'ADMIN');
+            return
+                RestVerbs::NONE_MASK |
+                RestVerbs::GET_MASK |
+                RestVerbs::POST_MASK |
+                RestVerbs::PUT_MASK |
+                RestVerbs::PATCH_MASK |
+                RestVerbs::MERGE_MASK |
+                RestVerbs::DELETE_MASK;
         }
 
         if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
         {
             // no role assigned
-            return array();
+            return RestVerbs::NONE_MASK;
         }
 
         $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
@@ -677,22 +688,37 @@ class Session extends BaseUserRestResource
 
         //  If exact match found take it, otherwise follow up the chain as necessary
         //  All - Service - Component - Sub-component
-        $_allAllowed = array();
+        $_allAllowed = RestVerbs::NONE_MASK;
         $_allFound = false;
-        $_serviceAllowed = array();
+        $_serviceAllowed = RestVerbs::NONE_MASK;
         $_serviceFound = false;
-        $_componentAllowed = array();
+        $_componentAllowed = RestVerbs::NONE_MASK;
         $_componentFound = false;
-        $_exactAllowed = array();
+        $_exactAllowed = RestVerbs::NONE_MASK;
         $_exactFound = false;
         foreach ( $_services as $_svcInfo )
         {
+            $_tempRequestors = Option::get( $_svcInfo, 'requestor_mask', ServiceRequestorTypes::API );
+            if ( !( $requestor & $_tempRequestors ) )
+            {
+                //  Requestor type not found in allowed requestors, skip access setting
+                continue;
+            }
+
             $_tempService = strval( Option::get( $_svcInfo, 'service' ) );
             $_tempComponent = strval( Option::get( $_svcInfo, 'component' ) );
-            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verbs' ) )
+            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verb_mask' ) )
             {
-                // see if upgrade from access string
-                $_tempVerbs = static::convertAccessToVerbs( Option::get( $_svcInfo, 'access' ) );
+                //  Check for old verbs array
+                if ( null === $_temp = Option::get( $_svcInfo, 'verbs' ) )
+                {
+                    //  Check for really old access string
+                    $_tempVerbs = static::convertAccessToVerbMask( Option::get( $_svcInfo, 'access' ) );
+                }
+                else
+                {
+                    $_tempVerbs = RestVerbs::arrayToMask( $_temp );
+                }
             }
 
             if ( 0 == strcasecmp( $service, $_tempService ) )
@@ -702,17 +728,17 @@ class Session extends BaseUserRestResource
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
                         // exact match
-                        $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
+                        $_exactAllowed |= $_tempVerbs;
                         $_exactFound = true;
                     }
                     elseif ( 0 == strcasecmp( substr( $component, 0, strpos( $component, '/' ) + 1 ) . '*', $_tempComponent ) )
                     {
-                        $_componentAllowed = array_merge( $_componentAllowed, array_flip( $_tempVerbs ) );
+                        $_componentAllowed |= $_tempVerbs;
                         $_componentFound = true;
                     }
                     elseif ( '*' == $_tempComponent )
                     {
-                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
+                        $_serviceAllowed |= $_tempVerbs;
                         $_serviceFound = true;
                     }
                 }
@@ -721,12 +747,12 @@ class Session extends BaseUserRestResource
                     if ( empty( $_tempComponent ) )
                     {
                         // exact match
-                        $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
+                        $_exactAllowed |= $_tempVerbs;
                         $_exactFound = true;
                     }
                     elseif ( '*' == $_tempComponent )
                     {
-                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
+                        $_serviceAllowed |= $_tempVerbs;
                         $_serviceFound = true;
                     }
                 }
@@ -736,7 +762,7 @@ class Session extends BaseUserRestResource
                 // system services don't fall under the "All" services category
                 if ( ( 'system' != $service ) && empty( $_tempService ) && ( '*' == $_tempComponent ) )
                 {
-                    $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
+                    $_allAllowed |= $_tempVerbs;
                     $_allFound = true;
                 }
             }
@@ -744,22 +770,22 @@ class Session extends BaseUserRestResource
 
         if ( $_exactFound )
         {
-            return array_keys( $_exactAllowed );
+            return $_exactAllowed;
         }
         elseif ( $_componentFound )
         {
-            return array_keys( $_componentAllowed );
+            return $_componentAllowed;
         }
         elseif ( $_serviceFound )
         {
-            return array_keys( $_serviceAllowed );
+            return $_serviceAllowed;
         }
         elseif ( $_allFound )
         {
-            return array_keys( $_allAllowed );
+            return $_allAllowed;
         }
 
-        return array();
+        return RestVerbs::NONE_MASK;
     }
 
     /**
@@ -789,27 +815,38 @@ class Session extends BaseUserRestResource
     /**
      * @param string|int $access - UI permission string or enumeration
      *
-     * @return array
+     * @return int
      */
-    public static function convertAccessToVerbs( $access )
+    public static function convertAccessToVerbMask( $access )
     {
+        $_mask = RestVerbs::NONE_MASK;
         switch ( $access )
         {
             case PermissionTypes::READ_ONLY:
             case 'Read Only':
-                return array(static::GET);
+                $_mask |= RestVerbs::GET_MASK;
+                break;
             case PermissionTypes::WRITE_ONLY:
             case 'Write Only':
-                return array(static::POST);
+                $_mask |= RestVerbs::POST_MASK;
+                break;
             case PermissionTypes::READ_WRITE:
             case 'Read and Write':
-                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE);
+                $_mask |= RestVerbs::GET_MASK | RestVerbs::POST_MASK | RestVerbs::PUT_MASK | RestVerbs::PATCH_MASK | RestVerbs::MERGE_MASK;
+                break;
             case PermissionTypes::FULL_ACCESS:
             case 'Full Access':
-                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
+                $_mask |=
+                    RestVerbs::GET_MASK |
+                    RestVerbs::POST_MASK |
+                    RestVerbs::PUT_MASK |
+                    RestVerbs::PATCH_MASK |
+                    RestVerbs::MERGE_MASK |
+                    RestVerbs::DELETE_MASK;
+                break;
         }
 
-        return array();
+        return $_mask;
     }
 
     /**
@@ -839,17 +876,24 @@ class Session extends BaseUserRestResource
         $_serviceAllowed = null;
         $_serviceFound = false;
         $_componentFound = false;
-        $action = static::cleanAction( $action );
+        $action = RestVerbs::toNumeric( static::cleanAction( $action ) );
 
         foreach ( $_services as $_svcInfo )
         {
             $_tempService = Option::get( $_svcInfo, 'service' );
-            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verbs' ) )
+            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verb_mask' ) )
             {
-                // see if upgrade from access string
-                $_tempVerbs = static::convertAccessToVerbs( Option::get( $_svcInfo, 'access' ) );
+                //  Check for old verbs array
+                if ( null === $_temp = Option::get( $_svcInfo, 'verbs' ) )
+                {
+                    //  Check for really old access string
+                    $_tempVerbs = static::convertAccessToVerbMask( Option::get( $_svcInfo, 'access' ) );
+                }
+                else
+                {
+                    $_tempVerbs = RestVerbs::arrayToMask( $_temp );
+                }
             }
-            $_tempVerbs = array_flip( $_tempVerbs ); // make search easier
 
             if ( 0 == strcasecmp( $service, $_tempService ) )
             {
@@ -860,7 +904,7 @@ class Session extends BaseUserRestResource
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
                         $_componentFound = true;
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( $_tempVerbs & $action )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -874,7 +918,7 @@ class Session extends BaseUserRestResource
                     }
                     elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( $_tempVerbs & $action )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -891,7 +935,7 @@ class Session extends BaseUserRestResource
                 {
                     if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( $_tempVerbs & $action )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -1045,48 +1089,40 @@ class Session extends BaseUserRestResource
         return false;
     }
 
-    public static function replaceLookup( $lookup, $use_private = false )
+    public static function replaceLookups( &$subject, $use_private = false )
     {
-        // filter string values should be wrapped in curly braces
-        if ( is_string( $lookup ) )
+        if ( is_string( $subject ) )
         {
-            $_end = strlen( $lookup ) - 1;
-            if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
+            // filter string values should be wrapped in curly braces
+            if ( false !== strpos( $subject, '{' ) )
             {
-                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value, $use_private ) )
+                $_search = array();
+                $_replace = array();
+                // brute force, yeah this could be better
+                foreach ( explode( '{', $subject ) as $_word )
                 {
-                    return $_value;
+                    $_lookup = strstr( $_word, '}', true );
+                    if ( !empty( $_lookup ) )
+                    {
+                        if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
+                        {
+                            $_search[] = '{' . $_lookup . '}';
+                            $_replace[] = $_value;
+                        }
+                    }
+                }
+
+                if ( !empty( $_search ) )
+                {
+                    $subject = str_replace( $_search, $_replace, $subject );
                 }
             }
         }
-
-        return $lookup;
-    }
-
-    public static function replaceLookupsInStrings( &$string, $use_private = false )
-    {
-        if ( false !== strpos( $string, '{' ) )
+        elseif ( is_array( $subject ) )
         {
-            $_search = array();
-            $_replace = array();
-            // brute force, yeah this could be better
-            $_exploded = explode( '{', $string );
-            foreach ( $_exploded as $_word )
+            foreach ( $subject as &$_value )
             {
-                $_lookup = strstr( $_word, '}', true );
-                if ( !empty( $_lookup ) )
-                {
-                    if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
-                    {
-                        $_search[] = '{' . $_lookup . '}';
-                        $_replace[] = $_value;
-                    }
-                }
-            }
-
-            if ( !empty( $_search ) )
-            {
-                $string = str_replace( $_search, $_replace, $string );
+                static::replaceLookups( $_value, $use_private );
             }
         }
     }
@@ -1166,6 +1202,15 @@ class Session extends BaseUserRestResource
             }
             catch ( \Exception $ex )
             {
+                //Check for Basic Auth
+                if( isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW']) )
+                {
+                    static::userLogin($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'], 2);
+
+                    return;
+                }
+
+
                 // special case for possible guest user
                 $_config = ResourceStore::model( 'config' )->with(
                     'guest_role.role_service_accesses',
