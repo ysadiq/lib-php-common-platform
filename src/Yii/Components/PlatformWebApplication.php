@@ -33,6 +33,7 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Scripting\ScriptEvent;
+use DreamFactory\Platform\Utility\Auditor;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -329,6 +330,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //  A pristine copy of the request
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
+        //  Send audit entry
+        Pii::getParam( 'dsp.fabric_hosted', false ) && Auditor::logRequest( $this->getRequestObject() );
+
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
         {
@@ -600,7 +604,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( $this->_extendedHeaders )
             {
                 $_headers['X-DreamFactory-Source'] = $_requestUri;
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] =
+                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -667,7 +672,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  If we don't have enabled array, or a string, skip
             if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
-                 ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
             )
             {
                 continue;
@@ -675,7 +680,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  Any "*" equals unfettered access, so check here and return quickly
             if ( ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
-                 ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
             )
             {
                 $isStar = true;
