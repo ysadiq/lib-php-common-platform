@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Enums\GelfLevels;
 use DreamFactory\Common\Services\Graylog\GelfLogger;
-use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Yii\Utility\Pii;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -71,7 +70,7 @@ class Auditor
             '_instance_id'       => Pii::getParam( 'dsp.name', $_host ),
             '_app_name'          => $request->get( 'app_name' ),
             '_host'              => $_host,
-            '_method'            => IfSet::get( $request, 'method', $request->getMethod() ),
+            '_method'            => $request->getMethod(),
             '_source_ip'         => $request->getClientIps(),
             '_content_type'      => $request->getContentType(),
             '_content_size'      => $_contentSize,
