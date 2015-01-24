@@ -331,7 +331,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //  Send audit entry
-        Pii::getParam( 'dsp.fabric_hosted', false ) && Auditor::logRequest( $this->getRequestObject() );
+        /*Pii::getParam( 'dsp.fabric_hosted', false ) && */Auditor::logRequest( $this->getRequestObject() );
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
