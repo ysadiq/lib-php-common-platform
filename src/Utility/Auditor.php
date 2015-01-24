@@ -34,6 +34,14 @@ class Auditor
     //********************************************************************************
 
     /**
+     * @param string $host
+     */
+    public static function setHost( $host = GelfLogger::DefaultHost )
+    {
+        GelfLogger::setHost( $host );
+    }
+
+    /**
      * Logs API requests to logging system
      *
      * @param Request $request
