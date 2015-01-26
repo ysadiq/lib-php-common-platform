@@ -52,24 +52,6 @@ class Auditor
     {
         $_host = $request->getHost();
 
-        $_contentType = $request->getContentType();
-        $_content = $request->getContent();
-        $_contentSize = sizeof( $_content );
-
-        if ( is_string( $_content ) )
-        {
-            $_content = trim( $_content );
-
-            if ( false !== stripos( $_contentType, 'application/json', 0 ) )
-            {
-                $_content = DataFormatter::jsonToArray( $_content );
-            }
-            else if ( false !== stripos( $_contentType, 'application/xml', 0 ) )
-            {
-                $_content = DataFormatter::xmlToArray( $_content );
-            }
-        }
-
         //	Get the additional data ready
         $_logInfo = array(
             'short_message'      => $request->getRequestUri(),
@@ -81,13 +63,12 @@ class Auditor
             '_method'            => $request->getMethod(),
             '_source_ip'         => $request->getClientIps(),
             '_content_type'      => $request->getContentType(),
-            '_content_size'      => $_contentSize,
-            '_content'           => $_content,
+            '_content_length'    => $request->headers->get( 'Content-Length' ),
             '_path_info'         => $request->getPathInfo(),
             '_query'             => $request->query->all(),
-            '_path_translated'   => $request->server->get( 'path-translated' ),
-            '_user_agent'        => $request->server->get( 'user-agent' ),
-            '_request_timestamp' => $request->server->get( 'request-time-float' ),
+            '_path_translated'   => $request->server->get( 'PATH_TRANSLATED' ),
+            '_request_timestamp' => $request->server->get( 'REQUEST_TIME_FLOAT' ),
+            '_user_agent'        => $request->headers->get( 'User-Agent' ),
         );
 
         GelfLogger::logMessage( $_logInfo );
