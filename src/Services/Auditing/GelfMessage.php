@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Services\Auditing;
 
+use DreamFactory\Platform\Enums\AuditLevels;
+
 /**
  * A GELF v1.1 message
  * v1.1 (11/2013)
@@ -63,7 +65,7 @@ class GelfMessage
     /**
      * @type int
      */
-    protected $_level = Levels::ALERT;
+    protected $_level = AuditLevels::INFO;
     /**
      * @type array Additional fields added to the message
      */
@@ -99,7 +101,7 @@ class GelfMessage
 
         $this->_host = gethostname();
         $this->_timestamp = microtime( true );
-        $this->_level = Levels::ALERT;
+        $this->_level = AuditLevels::INFO;
         $this->_shortMessage = $this->_fullMessage = null;
         $this->_additional = array();
 
@@ -279,7 +281,7 @@ class GelfMessage
      * @throws \InvalidArgumentException
      * @return $this
      */
-    public function setLevel( $level = Levels::ALERT )
+    public function setLevel( $level = AuditLevels::INFO )
     {
         if ( !Levels::contains( $level ) )
         {
