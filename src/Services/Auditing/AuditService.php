@@ -17,18 +17,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Utility;
+namespace DreamFactory\Platform\Services\Auditing;
 
-use DreamFactory\Common\Enums\GelfLevels;
-use DreamFactory\Common\Services\Graylog\GelfLogger;
+use DreamFactory\Library\Fabric\Common\Gelf\Enums\AuditLevels;
 use DreamFactory\Yii\Utility\Pii;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Contains auditing methods for DFE
  */
-class Auditor
+class AuditService implements LoggerAwareInterface
 {
+    //******************************************************************************
+    //* Constants
+    //******************************************************************************
+
+    /**
+     * @type string
+     */
+    const DEFAULT_FACILITY = 'fabric-instance';
+
+    //******************************************************************************
+    //* Members
+    //******************************************************************************
+
+    /**
+     * @type GelfLogger
+     */
+    protected static $_logger = null;
+
     //********************************************************************************
     //* Public Methods
     //********************************************************************************
@@ -36,9 +55,9 @@ class Auditor
     /**
      * @param string $host
      */
-    public static function setHost( $host = GelfLogger::DefaultHost )
+    public static function setHost( $host = GelfLogger::DEFAULT_HOST )
     {
-        GelfLogger::setHost( $host );
+        static::getLogger()->setHost( $host );
     }
 
     /**
@@ -46,17 +65,16 @@ class Auditor
      *
      * @param Request $request
      *
+     * @param int     $level
+     *
      * @return bool
      */
-    public static function logRequest( Request $request )
+    public static function logRequest( Request $request, $level = AuditLevels::INFO, $facility = self::DEFAULT_FACILITY )
     {
         $_host = $request->getHost();
 
-        //	Get the additional data ready
-        $_logInfo = array(
-            'short_message'      => $request->getRequestUri(),
-            'level'              => GelfLevels::Info,
-            'facility'           => 'fabric-instance',
+        $_data = array(
+            '_facility'          => $facility,
             '_instance_id'       => Pii::getParam( 'dsp.name', $_host ),
             '_app_name'          => $request->get( 'app_name' ),
             '_host'              => $_host,
@@ -65,12 +83,38 @@ class Auditor
             '_content_type'      => $request->getContentType(),
             '_content_length'    => $request->headers->get( 'Content-Length' ),
             '_path_info'         => $request->getPathInfo(),
-            '_query'             => $request->query->all(),
             '_path_translated'   => $request->server->get( 'PATH_TRANSLATED' ),
+            '_query'             => $request->query->all(),
             '_request_timestamp' => $request->server->get( 'REQUEST_TIME_FLOAT' ),
             '_user_agent'        => $request->headers->get( 'User-Agent' ),
         );
 
-        GelfLogger::logMessage( $_logInfo );
+        $_message = new GelfMessage( $_data );
+        $_message->setLevel( $level );
+        $_message->setShortMessage( $request->getRequestUri() );
+
+        static::getLogger()->send( $_message );
+    }
+
+    /**
+     * @return \DreamFactory\Platform\Services\Auditing\GelfLogger
+     */
+    public static function getLogger()
+    {
+        return static::$_logger ?: static::$_logger = new GelfLogger();
+    }
+
+    /**
+     * Sets a logger instance on the object
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return $this
+     */
+    public function setLogger( LoggerInterface $logger )
+    {
+        static::$_logger = $logger;
+
+        return $this;
     }
 }

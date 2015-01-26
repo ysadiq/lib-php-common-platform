@@ -33,7 +33,7 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Scripting\ScriptEvent;
-use DreamFactory\Platform\Utility\Auditor;
+use DreamFactory\Platform\Services\Auditing\AuditService;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -338,8 +338,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //  Send audit entry
-        /*Pii::getParam( 'dsp.fabric_hosted', false ) && */
-        Auditor::logRequest( $this->getRequestObject() );
+        Pii::getParam( 'dsp.fabric_hosted', false ) && AuditService::logRequest( $this->getRequestObject() );
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
