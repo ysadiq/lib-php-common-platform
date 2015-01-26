@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services\Auditing;
 
+use DreamFactory\Library\Utility\JsonFile;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -233,7 +234,7 @@ class GelfLogger implements LoggerInterface
      */
     protected function _prepareMessage( GelfMessage $message )
     {
-        $_json = Json::encode( $message->toArray() );
+        $_json = JsonFile::encode( $message->toArray() );
 
         if ( false === ( $_gzJson = gzcompress( $_json ) ) )
         {
