@@ -19,7 +19,7 @@
  */
 namespace DreamFactory\Platform\Services\Auditing;
 
-use DreamFactory\Library\Fabric\Common\Gelf\Enums\AuditLevels;
+use DreamFactory\Platform\Enums\AuditLevels;
 use DreamFactory\Yii\Utility\Pii;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
