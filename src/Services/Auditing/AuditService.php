@@ -76,7 +76,11 @@ class AuditService implements LoggerAwareInterface
         $_data = array(
             '_facility'          => $facility,
             '_instance_id'       => Pii::getParam( 'dsp.name', $_host ),
-            '_app_name'          => $request->get( 'app_name' ),
+            '_app_name'          => $request->get(
+                'app_name',
+                //	No app_name, look for headers...
+                $request->server->get( 'X_DREAMFACTORY_APPLICATION_NAME', $request->server->get( 'X_APPLICATION_NAME' ) )
+            ),
             '_host'              => $_host,
             '_method'            => $request->getMethod(),
             '_source_ip'         => $request->getClientIps(),
@@ -91,7 +95,7 @@ class AuditService implements LoggerAwareInterface
 
         $_message = new GelfMessage( $_data );
         $_message->setLevel( $level );
-        $_message->setShortMessage( $request->getRequestUri() );
+        $_message->setShortMessage( $request->getMethod() . ' ' . $request->getRequestUri() );
 
         static::getLogger()->send( $_message );
     }
