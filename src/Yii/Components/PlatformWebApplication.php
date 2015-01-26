@@ -212,7 +212,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _localInit()
     {
         //  Set proper audit log host
-        Auditor::setHost( static::DEFAULT_AUDIT_HOST );
+        AuditService::setHost( static::DEFAULT_AUDIT_HOST );
 
         //  Load the CORS config file
         if ( 'cli' != PHP_SAPI )
