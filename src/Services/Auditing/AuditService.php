@@ -64,8 +64,8 @@ class AuditService implements LoggerAwareInterface
      * Logs API requests to logging system
      *
      * @param Request $request
-     *
      * @param int     $level
+     * @param string  $facility
      *
      * @return bool
      */
