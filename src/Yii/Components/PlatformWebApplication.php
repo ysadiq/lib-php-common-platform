@@ -110,10 +110,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The default path (sub-path) of installed plug-ins
      */
     const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-    /**
-     * @var string The audit host
-     */
-    const DEFAULT_AUDIT_HOST = 'lps-east-1.fabric.dreamfactory.com';
 
     //*************************************************************************
     //	Members
@@ -211,9 +207,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _localInit()
     {
-        //  Set proper audit log host
-        AuditService::setHost( static::DEFAULT_AUDIT_HOST );
-
         //  Load the CORS config file
         if ( 'cli' != PHP_SAPI )
         {
@@ -338,7 +331,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //  Send audit entry
-        Pii::getParam( 'dsp.fabric_hosted', false ) && AuditService::logRequest( $this->getRequestObject() );
+        AuditService::logRequest( $this->getRequestObject() );
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
