@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Library\Fabric\Auditing\Services\AuditingService;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
@@ -33,7 +34,6 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Scripting\ScriptEvent;
-use DreamFactory\Platform\Services\Auditing\AuditService;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -42,7 +42,6 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\FileSystem;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
@@ -327,14 +326,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 
-        //  A pristine copy of the request
+        //  A pristine copy of the request and body
+        $_request = $this->getRequestObject();
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //  Send audit entry
-        AuditService::logRequest( $this->getRequestObject() );
+        AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $_request );
 
         //	Answer an options call...
-        switch ( FilterInput::server( 'REQUEST_METHOD' ) )
+        switch ( $_request->getMethod() )
         {
             case HttpMethod::OPTIONS:
                 header( 'HTTP/1.1 204' );

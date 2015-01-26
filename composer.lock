@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "e08befc37cfbc35fd0a232ea4179e81f",
+    "hash": "f5d5707bfb5464d07f053cc8ec030c9e",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -247,6 +247,59 @@
                 "sdk"
             ],
             "time": "2014-08-08 21:07:14"
+        },
+        {
+            "name": "dreamfactory/fabric-audit",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
+                "reference": "6886f19517a16b4e116037ba15405a6bd67903db"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/6886f19517a16b4e116037ba15405a6bd67903db",
+                "reference": "6886f19517a16b4e116037ba15405a6bd67903db",
+                "shasum": ""
+            },
+            "require": {
+                "dreamfactory/php-utils": "~1.0",
+                "psr/log": "~1.0"
+            },
+            "require-dev": {
+                "laravel/laravel": "4.2.*",
+                "phpunit/phpunit": "@stable"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "DreamFactory\\Library\\Fabric\\Auditing\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Jerry Ablan",
+                    "email": "jerryablan@dreamfactory.com"
+                }
+            ],
+            "description": "DreamFactory Enterprise(tm) Auditing Library",
+            "homepage": "https://www.dreamfactory.com/",
+            "keywords": [
+                "dreamfactory",
+                "fabric",
+                "queue",
+                "utility"
+            ],
+            "time": "2015-01-26 21:05:05"
         },
         {
             "name": "dreamfactory/javascript-sdk",
