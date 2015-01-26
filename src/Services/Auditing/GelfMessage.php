@@ -283,7 +283,7 @@ class GelfMessage
      */
     public function setLevel( $level = AuditLevels::INFO )
     {
-        if ( !Levels::contains( $level ) )
+        if ( !AuditLevels::contains( $level ) )
         {
             throw new \InvalidArgumentException( 'The level "' . $level . '" is not valid.' );
         }
