@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services\Auditing;
 
+use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Platform\Enums\AuditLevels;
 use DreamFactory\Yii\Utility\Pii;
 use Psr\Log\LoggerAwareInterface;
@@ -76,21 +77,24 @@ class AuditService implements LoggerAwareInterface
         $_data = array(
             '_facility'          => $facility,
             '_instance_id'       => Pii::getParam( 'dsp.name', $_host ),
-            '_app_name'          => $request->get(
+            '_app_name'          => IfSet::get(
+                $_GET,
                 'app_name',
-                //	No app_name, look for headers...
-                $request->server->get( 'X_DREAMFACTORY_APPLICATION_NAME', $request->server->get( 'X_APPLICATION_NAME' ) )
+                $request->headers->get(
+                    'x-dreamfactory-application-name',
+                    $request->headers->get( 'x-application-name' )
+                )
             ),
             '_host'              => $_host,
             '_method'            => $request->getMethod(),
             '_source_ip'         => $request->getClientIps(),
             '_content_type'      => $request->getContentType(),
-            '_content_length'    => $request->headers->get( 'Content-Length' ),
+            '_content_length'    => (int)$request->headers->get( 'Content-Length' ) ?: 0,
             '_path_info'         => $request->getPathInfo(),
             '_path_translated'   => $request->server->get( 'PATH_TRANSLATED' ),
             '_query'             => $request->query->all(),
-            '_request_timestamp' => $request->server->get( 'REQUEST_TIME_FLOAT' ),
-            '_user_agent'        => $request->headers->get( 'User-Agent' ),
+            '_request_timestamp' => (double)$request->server->get( 'REQUEST_TIME_FLOAT' ),
+            '_user_agent'        => $request->headers->get( 'user-agent' ),
         );
 
         $_message = new GelfMessage( $_data );
