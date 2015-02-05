@@ -66,7 +66,7 @@ class RestException extends PlatformServiceException implements HttpResponse
         }
         elseif ( !is_string( $message ) )
         {
-            $message = strval( $message );
+            $message = var_export( $message, true );
         }
 
         parent::__construct( $message, $code, $previous, $context );

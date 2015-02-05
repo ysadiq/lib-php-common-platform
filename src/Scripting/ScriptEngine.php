@@ -58,6 +58,10 @@ class ScriptEngine
      * @type string The template for all module loading
      */
     const MODULE_LOADER_TEMPLATE = 'require("{module}");';
+    /**
+     * @type int The cache TTL for the scripting store
+     */
+    const SESSION_STORE_TTL = 60;
 
     //*************************************************************************
     //	Members
@@ -259,7 +263,6 @@ class ScriptEngine
             /** @noinspection PhpUndefinedClassInspection */
         catch ( \V8JsException $_ex )
         {
-            $output = ob_end_clean();
             $_message = $_ex->getMessage();
 
             /**
@@ -287,9 +290,9 @@ class ScriptEngine
             }
         }
 
-        static::destroy( $_engine );
-
+        //  Clean up
         $output = ob_get_clean();
+        static::destroy( $_engine );
 
         if ( static::$_logScriptMemoryUsage )
         {
@@ -475,6 +478,7 @@ class ScriptEngine
     {
         $exposedEvent['__tag__'] = 'exposed_event';
         $exposedPlatform['api'] = static::_getExposedApi();
+        $exposedPlatform['session'] = new ScriptSession( Pii::getParam( 'app.run_id' ), Pii::getAppStore() );
 
         $engine->event = $exposedEvent;
         $engine->platform = $exposedPlatform;
@@ -582,7 +586,7 @@ JS;
         $_params = array();
         if ( false !== $_pos = strpos( $path, '?' ) )
         {
-            $_paramString = substr( $path, $_pos+1 );
+            $_paramString = substr( $path, $_pos + 1 );
             if ( !empty( $_paramString ) )
             {
                 $_pArray = explode( '&', $_paramString );
@@ -616,7 +620,7 @@ JS;
             if ( !empty( $_resource ) )
             {
                 if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
-                     ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+                    ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
                     $_resource .= '/';
@@ -735,6 +739,18 @@ JS;
         {
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
         };
+
+//        $_api->setValue = function ( $key, $value = null )
+//        {
+//            $_store = Platform::storeGet( 'dsp_scripting.session_store.' . md5( $key ), $value, 60 );
+//
+//            return Platform::storeSet( 'dsp_scripting.session_store.' . md5( $key ), $value, 60 );
+//        };
+//
+//        $_api->getValue = function ( $key, $defaultValue = null )
+//        {
+//            return Platform::storeGet( 'dsp_scripting.session_store.' . md5( $key ), $defaultValue );
+//        };
 
         $_api->includeUserScript = function ( $fileName )
         {
