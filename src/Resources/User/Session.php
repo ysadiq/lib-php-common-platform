@@ -107,7 +107,7 @@ class Session extends BaseUserRestResource
      */
     protected function _handleGet()
     {
-        return $this->_getSession( Option::get( $this->_requestPayload, 'ticket' ) );
+        return $this->_getSession( Option::get( $this->_requestPayload, 'ticket', Option::get( $_REQUEST, 'ticket' ) ) );
     }
 
     /**

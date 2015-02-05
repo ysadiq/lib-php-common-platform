@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Library\Fabric\Auditing\Services\AuditingService;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
@@ -41,7 +42,6 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\FileSystem;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
@@ -326,11 +326,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 
-        //  A pristine copy of the request
+        //  A pristine copy of the request and body
+        $_request = $this->getRequestObject();
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
+        //  Send audit entry
+        AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $_request );
+
         //	Answer an options call...
-        switch ( FilterInput::server( 'REQUEST_METHOD' ) )
+        switch ( $_request->getMethod() )
         {
             case HttpMethod::OPTIONS:
                 header( 'HTTP/1.1 204' );
@@ -600,7 +604,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( $this->_extendedHeaders )
             {
                 $_headers['X-DreamFactory-Source'] = $_requestUri;
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] =
+                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -667,7 +672,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  If we don't have enabled array, or a string, skip
             if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
-                 ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
             )
             {
                 continue;
@@ -675,7 +680,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  Any "*" equals unfettered access, so check here and return quickly
             if ( ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
-                 ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
             )
             {
                 $isStar = true;
