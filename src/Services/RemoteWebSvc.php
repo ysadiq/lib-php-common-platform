@@ -249,8 +249,17 @@ class RemoteWebSvc extends BasePlatformRestService
                     $_value = Option::get( $_header, 'value' );
                     if ( Option::getBool( $_header, 'pass_from_client' ) )
                     {
-                        $_phpHeaderName = 'HTTP_' . strtoupper( str_replace( array('-', ' '), array('_', '_'), $_name ) );
-                        $_value = ( isset( $_SERVER[$_phpHeaderName] ) ) ? $_SERVER[$_phpHeaderName] : $_value;
+                        // Check for Basic Auth pulled into server variable already
+                        if ( ( 0 === strcasecmp( $_name, 'Authorization' ) ) &&
+                             ( isset( $_SERVER['PHP_AUTH_USER'] ) && isset( $_SERVER['PHP_AUTH_PW'] ) ) )
+                        {
+                            $_value = 'Basic ' . base64_encode( $_SERVER['PHP_AUTH_USER'] . ':' . $_SERVER['PHP_AUTH_PW'] );
+                        }
+                        else
+                        {
+                            $_phpHeaderName = 'HTTP_' . strtoupper( str_replace( array( '-', ' ' ), array( '_', '_' ), $_name ) );
+                            $_value = ( isset( $_SERVER[$_phpHeaderName] ) ) ? $_SERVER[$_phpHeaderName] : $_value;
+                        }
                     }
                     Session::replaceLookups( $_value, true );
                     $options[CURLOPT_HTTPHEADER][] = $_name . ': ' . $_value;
