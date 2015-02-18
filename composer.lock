@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "2.7.17",
+            "version": "2.7.18",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "eddf89846ed0f15e8e2b8cbe6d08125eaa20ad80"
+                "reference": "470ca90e2d511f64f082c569864f22f2c18fdc38"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/eddf89846ed0f15e8e2b8cbe6d08125eaa20ad80",
-                "reference": "eddf89846ed0f15e8e2b8cbe6d08125eaa20ad80",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/470ca90e2d511f64f082c569864f22f2c18fdc38",
+                "reference": "470ca90e2d511f64f082c569864f22f2c18fdc38",
                 "shasum": ""
             },
             "require": {
@@ -71,7 +71,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2015-01-27 20:14:01"
+            "time": "2015-02-12 20:56:39"
         },
         {
             "name": "doctrine/cache",
@@ -250,16 +250,16 @@
         },
         {
             "name": "dreamfactory/fabric-audit",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
-                "reference": "6886f19517a16b4e116037ba15405a6bd67903db"
+                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/6886f19517a16b4e116037ba15405a6bd67903db",
-                "reference": "6886f19517a16b4e116037ba15405a6bd67903db",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
+                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
                 "shasum": ""
             },
             "require": {
@@ -299,7 +299,7 @@
                 "queue",
                 "utility"
             ],
-            "time": "2015-01-26 21:05:05"
+            "time": "2015-02-18 15:51:50"
         },
         {
             "name": "dreamfactory/javascript-sdk",
