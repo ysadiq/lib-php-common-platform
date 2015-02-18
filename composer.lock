@@ -254,12 +254,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
-                "reference": "cb33d6ff3f076f87b047adc4570cc3ea9bdee6a7"
+                "reference": "9188ecce5606ec42e8c244716e4b9fc30b2e56a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/cb33d6ff3f076f87b047adc4570cc3ea9bdee6a7",
-                "reference": "cb33d6ff3f076f87b047adc4570cc3ea9bdee6a7",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/9188ecce5606ec42e8c244716e4b9fc30b2e56a8",
+                "reference": "9188ecce5606ec42e8c244716e4b9fc30b2e56a8",
                 "shasum": ""
             },
             "require": {
@@ -299,7 +299,7 @@
                 "queue",
                 "utility"
             ],
-            "time": "2015-02-18 16:38:40"
+            "time": "2015-02-18 17:52:47"
         },
         {
             "name": "dreamfactory/javascript-sdk",

@@ -33,6 +33,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
@@ -330,9 +331,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_request = $this->getRequestObject();
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
-        //  Send audit entry
-        AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $_request );
-
         //	Answer an options call...
         switch ( $_request->getMethod() )
         {
@@ -373,6 +371,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onEndRequest( \CEvent $event )
     {
+        //  Send audit entry
+        AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), Session::getSessionData() );
+
         $this->stopProfiler( 'app.request' );
     }
 
