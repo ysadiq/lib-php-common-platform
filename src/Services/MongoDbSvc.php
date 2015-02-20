@@ -132,6 +132,11 @@ class MongoDbSvc extends NoSqlDbSvc
             $_driverOptions['context'] = stream_context_create( $_context );
         }
 
+        if ( !extension_loaded( 'mongo' ) )
+        {
+            throw new InternalServerErrorException( 'Mongo driver is not installed.' );
+        }
+
         try
         {
             $_client = @new \MongoClient( $_dsn, $_options, $_driverOptions );
