@@ -4,20 +4,20 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "c0c59c3b79125b750126e4e03d2ba288",
+    "hash": "f5d5707bfb5464d07f053cc8ec030c9e",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "2.7.19",
+            "version": "2.7.20",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "a3275993df4414bcaa61177df5a8d2ce502f927b"
+                "reference": "2c9d93fbe680f64a84f5877209904f414d5cf92f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/a3275993df4414bcaa61177df5a8d2ce502f927b",
-                "reference": "a3275993df4414bcaa61177df5a8d2ce502f927b",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/2c9d93fbe680f64a84f5877209904f414d5cf92f",
+                "reference": "2c9d93fbe680f64a84f5877209904f414d5cf92f",
                 "shasum": ""
             },
             "require": {
@@ -71,7 +71,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2015-02-20 18:30:16"
+            "time": "2015-02-24 00:04:06"
         },
         {
             "name": "doctrine/cache",
@@ -250,16 +250,16 @@
         },
         {
             "name": "dreamfactory/fabric-audit",
-            "version": "dev-develop",
+            "version": "1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
-                "reference": "88f46d591968cf53d8d8fc3912414fd90d670cd0"
+                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/88f46d591968cf53d8d8fc3912414fd90d670cd0",
-                "reference": "88f46d591968cf53d8d8fc3912414fd90d670cd0",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
+                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
                 "shasum": ""
             },
             "require": {
@@ -299,7 +299,7 @@
                 "queue",
                 "utility"
             ],
-            "time": "2015-02-22 20:39:39"
+            "time": "2015-02-18 15:51:50"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -2794,12 +2794,6 @@
             "alias": "dev-master",
             "alias_normalized": "9999999-dev",
             "version": "dev-develop",
-            "package": "dreamfactory/fabric-audit"
-        },
-        {
-            "alias": "dev-master",
-            "alias_normalized": "9999999-dev",
-            "version": "dev-develop",
             "package": "dreamfactory/lib-php-common-yii"
         },
         {
@@ -2812,7 +2806,6 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "rackspace/php-opencloud": 0,
-        "dreamfactory/fabric-audit": 20,
         "dreamfactory/lib-php-common-yii": 20,
         "dreamfactory/azure-sdk-for-php": 20,
         "phpunit/phpunit": 0,
