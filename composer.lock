@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f5d5707bfb5464d07f053cc8ec030c9e",
+    "hash": "4896ce488b339e97584aae101d3444bb",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -250,25 +250,25 @@
         },
         {
             "name": "dreamfactory/fabric-audit",
-            "version": "1.0.2",
+            "version": "1.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
-                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458"
+                "reference": "2d1afc8ba60184f4c8406c2e14697e4da503837a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
-                "reference": "41a7791f347147b0c9cbfe87fdf0a31b0cd1a458",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/2d1afc8ba60184f4c8406c2e14697e4da503837a",
+                "reference": "2d1afc8ba60184f4c8406c2e14697e4da503837a",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/php-utils": "~1.0",
-                "psr/log": "~1.0"
+                "dreamfactory/php-utils": "~1.0"
             },
             "require-dev": {
-                "laravel/laravel": "4.2.*",
-                "phpunit/phpunit": "@stable"
+                "laravel/framework": "5.0.*",
+                "phpunit/phpunit": "@stable",
+                "psr/log": "~1.0"
             },
             "type": "library",
             "extra": {
@@ -299,7 +299,7 @@
                 "queue",
                 "utility"
             ],
-            "time": "2015-02-18 15:51:50"
+            "time": "2015-02-25 15:26:37"
         },
         {
             "name": "dreamfactory/javascript-sdk",
