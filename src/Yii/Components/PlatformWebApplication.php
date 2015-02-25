@@ -372,16 +372,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _onEndRequest( \CEvent $event )
     {
         //  Get session data and send audit entry
-        try
+        if ( Pii::getParam( 'dsp.fabric_hosted' ) )
         {
-            $_sessionData = Session::getSessionData();
-        }
-        catch ( \Exception $_ex )
-        {
-            $_sessionData = array();
-        }
+            try
+            {
+                $_sessionData = Session::getSessionData();
+            }
+            catch ( \Exception $_ex )
+            {
+                $_sessionData = array();
+            }
 
-        AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), $_sessionData );
+            AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), $_sessionData );
+        }
 
         $this->stopProfiler( 'app.request' );
     }
