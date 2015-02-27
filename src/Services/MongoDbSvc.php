@@ -819,9 +819,10 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         // interpret any parameter values as lookups
         $params = static::interpretRecordValues( $params );
+        // or as Mongo objects
+        $params = static::_toMongoObjects( $params );
 
         // build filter array if necessary
-        $_criteria = $filter;
         if ( !is_array( $filter ) )
         {
             Session::replaceLookups( $filter );
@@ -829,13 +830,10 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( !is_null( $_test ) )
             {
                 // original filter was a json string, use it as array
-                $_criteria = $_test;
-            }
-            else
-            {
-                $_criteria = static::buildFilterArray( $filter, $params );
+                $filter = $_test;
             }
         }
+        $_criteria = static::buildFilterArray( $filter, $params );
 
         // add server-side filters if necessary
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
