@@ -577,6 +577,25 @@ JS;
             $payload = array();
         }
 
+        if ( !empty( $curlOptions ) )
+        {
+            $_options = array();
+
+            foreach ( $curlOptions as $_key => $_value )
+            {
+                if ( !is_numeric( $_key ) )
+                {
+                    if ( defined( $_key ) )
+                    {
+                        $_options[constant( $_key )] = $_value;
+                    }
+                }
+            }
+
+            $curlOptions = $_options;
+            unset( $_options );
+        }
+
         if ( 'https:/' == ( $_protocol = substr( $path, 0, 7 ) ) || 'http://' == $_protocol )
         {
             return static::_externalRequest( $method, $path, $payload ?: array(), $curlOptions );
@@ -739,18 +758,6 @@ JS;
         {
             return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
         };
-
-//        $_api->setValue = function ( $key, $value = null )
-//        {
-//            $_store = Platform::storeGet( 'dsp_scripting.session_store.' . md5( $key ), $value, 60 );
-//
-//            return Platform::storeSet( 'dsp_scripting.session_store.' . md5( $key ), $value, 60 );
-//        };
-//
-//        $_api->getValue = function ( $key, $defaultValue = null )
-//        {
-//            return Platform::storeGet( 'dsp_scripting.session_store.' . md5( $key ), $defaultValue );
-//        };
 
         $_api->includeUserScript = function ( $fileName )
         {
