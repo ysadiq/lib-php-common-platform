@@ -42,6 +42,7 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -128,15 +129,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array(
-        NamespaceTypes::MODELS    => array(),
-        NamespaceTypes::SERVICES  => array(),
-        NamespaceTypes::RESOURCES => array()
-    );
+    protected static $_namespaceMap = [
+        NamespaceTypes::MODELS    => [],
+        NamespaceTypes::SERVICES  => [],
+        NamespaceTypes::RESOURCES => []
+    ];
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
-    protected $_corsWhitelist = array();
+    protected $_corsWhitelist = [];
     /**
      * @var bool    If true, the CORS headers will be sent automatically before dispatching the action.
      *              NOTE: "OPTIONS" calls will always get headers, regardless of the setting. All other requests
@@ -150,11 +151,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array The namespaces that contain resources. Used by the routing engine
      */
-    protected $_resourceNamespaces = array();
+    protected $_resourceNamespaces = [];
     /**
      * @var array The namespaces that contain models. Used by the resource manager
      */
-    protected $_modelNamespaces = array();
+    protected $_modelNamespaces = [];
     /**
      * @var Request
      */
@@ -198,8 +199,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_localInit();
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array($this, '_onBeginRequest');
-        $this->onEndRequest = array($this, '_onEndRequest');
+        $this->onBeginRequest = [$this, '_onBeginRequest'];
+        $this->onEndRequest = [$this, '_onEndRequest'];
     }
 
     /**
@@ -350,10 +351,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             case HttpMethod::TRACE:
                 Log::error(
                     'HTTP TRACE received!',
-                    array(
+                    [
                         'server'  => $_SERVER,
                         'request' => $_REQUEST,
-                    )
+                    ]
                 );
 
                 throw new BadRequestException();
@@ -382,7 +383,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
             catch ( \Exception $_ex )
             {
-                $_sessionData = array();
+                $_sessionData = [];
             }
 
             AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), $_sessionData );
@@ -392,13 +393,40 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
+     * @return array
+     */
+    protected function _loadMetadata()
+    {
+        $_instanceId = Pii::getParam( 'dsp.name', gethostname() );
+        $_path = Platform::getPrivatePath() . DIRECTORY_SEPARATOR . $_instanceId . '.json';
+        $_md = false;
+
+        if ( file_exists( $_path ) )
+        {
+            $_md = JsonFile::decodeFile( $_path );
+        }
+
+        if ( empty( $_md ) || !is_array( $_md ) || !array_key_exists( 'instance-id', $_md ) )
+        {
+            $_md = Curl::get( '/host/environment/' . $_instanceId );
+
+            if ( !empty( $_md ) )
+            {
+                JsonFile::encodeFile( $_path, $_md );
+            }
+        }
+
+        return $_md;
+    }
+
+    /**
      * Loads any local configuration files
      */
     protected function _loadLocalConfig()
     {
         if ( false === ( $_config = $this->_appCache()->get( 'platform.local_config' ) ) )
         {
-            $_config = array();
+            $_config = [];
             $_configPath = Platform::getLocalConfigPath();
 
             $_files = FileSystem::glob(
@@ -408,7 +436,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( empty( $_files ) )
             {
-                $_files = array();
+                $_files = [];
             }
 
             sort( $_files );
@@ -434,10 +462,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                         $this->trigger(
                             DspEvents::LOCAL_CONFIG_LOADED,
                             new PlatformEvent(
-                                array(
+                                [
                                     'file' => $_file,
                                     'data' => $_data
-                                )
+                                ]
                             )
                         );
                     }
@@ -517,7 +545,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      *
      * @return bool|array
      */
-    public function addCorsHeaders( $whitelist = array(), $returnHeaders = false, $sendHeaders = true )
+    public function addCorsHeaders( $whitelist = [], $returnHeaders = false, $sendHeaders = true )
     {
         //	Reset the cache before processing...
         if ( false === $whitelist )
@@ -535,7 +563,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             //  No origin header, no CORS...
             //$this->_logCorsInfo && Log::debug( 'CORS: no origin received.' );
 
-            return $returnHeaders ? array() : false;
+            return $returnHeaders ? [] : false;
         }
 
         $_origin = trim( strtolower( $_SERVER['HTTP_ORIGIN'] ) );
@@ -550,12 +578,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             //  empty origin received we do nothing
             if ( empty( $_origin ) )
             {
-                return $returnHeaders ? array() : false;
+                return $returnHeaders ? [] : false;
             }
         }
 
         $_isStar = false;
-        $_allowedMethods = $_headers = array();
+        $_allowedMethods = $_headers = [];
         $_requestUri = $this->getRequestObject()->getSchemeAndHttpHost();
 
         $this->_logCorsInfo && Log::debug( 'CORS: origin received: ' . $_origin );
@@ -581,7 +609,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         if ( false === ( $_cache = $this->_appCache()->get( 'dsp.cors_whitelist' ) ) || !is_array( $_cache ) )
         {
-            $_cache = array();
+            $_cache = [];
         }
 
         //	Not in cache, check it out...
@@ -592,8 +620,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_originUri = $_uri;
             }
 
-            $_allowedMethods = IfSet::get( $_cache[$_key], 'allowed_methods', array() );
-            $_headers = IfSet::get( $_cache[$_key], 'headers', array() );
+            $_allowedMethods = IfSet::get( $_cache[$_key], 'allowed_methods', [] );
+            $_headers = IfSet::get( $_cache[$_key], 'headers', [] );
         }
 
         if ( empty( $_originUri ) || empty( $_allowedMethods ) || empty( $_headers ) )
@@ -608,13 +636,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return Pii::end();
             }
 
-            $_headers = array(
+            $_headers = [
                 'Access-Control-Allow-Credentials' => 'true',
                 'Access-Control-Allow-Headers'     => static::CORS_DEFAULT_ALLOWED_HEADERS,
                 'Access-Control-Allow-Methods'     => $_allowedMethods,
                 'Access-Control-Allow-Origin'      => $_isStar ? static::CORS_STAR : $_originUri,
                 'Access-Control-Max-Age'           => static::CORS_DEFAULT_MAX_AGE,
-            );
+            ];
 
             if ( $this->_extendedHeaders )
             {
@@ -625,11 +653,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         //	Store in cache...
-        $_cache[$_key] = array(
+        $_cache[$_key] = [
             'origin_uri'      => $_originUri,
             'allowed_methods' => $_allowedMethods,
             'headers'         => $_headers
-        );
+        ];
 
         $this->_appCache()->set( 'dsp.cors_config', $_cache, Platform::DEFAULT_CACHE_TTL );
 
@@ -668,7 +696,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      *
      * @return bool|array false if not allowed, otherwise array of verbs allowed
      */
-    protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
+    protected function _allowedOrigin( $origin, $additional = [], &$isStar = false )
     {
         $_requestVerb = strtoupper( $this->_requestObject->getMethod() );
         $_allowedHosts = array_merge( $this->_corsWhitelist, Option::clean( $additional ) );
@@ -679,7 +707,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             //  Get the verbs for this entry.
             $_verbs =
                 is_array( $_hostInfo )
-                    ? IfSet::get( $_hostInfo, 'verbs', array(static::CORS_OPTION_METHOD) )
+                    ? IfSet::get( $_hostInfo, 'verbs', [static::CORS_OPTION_METHOD] )
                     : explode( ',', static::CORS_DEFAULT_ALLOWED_METHODS );
 
             //  Always add OPTIONS
@@ -859,11 +887,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             unset( $_parts['path'] );
         }
 
-        $_uri = array(
+        $_uri = [
             'scheme' => IfSet::get( $_parts, 'scheme' ),
             'host'   => IfSet::get( $_parts, 'host' ),
             'port'   => IfSet::get( $_parts, 'port' ),
-        );
+        ];
 
         return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
     }
@@ -897,13 +925,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             //  Empty whitelist...
             $_config = false;
-            $_whitelist = array();
+            $_whitelist = [];
             $_locations = $_locations
-                ?: array(
+                ?: [
                     Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                );
+                ];
 
             //	Find cors config file location
             foreach ( $_locations as $_path )
@@ -1017,7 +1045,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( $this->_autoAddHeaders )
             {
-                $this->addCorsHeaders( array(), false, $sendHeaders );
+                $this->addCorsHeaders( [], false, $sendHeaders );
             }
         }
 
@@ -1175,7 +1203,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[$which], array($namespace, $path) );
+            array_unshift( static::$_namespaceMap[$which], [$namespace, $path] );
         }
         else
         {

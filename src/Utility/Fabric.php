@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
@@ -48,6 +49,10 @@ class Fabric extends SeedUtility
      * @var string
      */
     const DEFAULT_AUTH_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/instance/credentials';
+    /**
+     * @var string
+     */
+    const METADATA_ENDPOINT = 'http://dfe-beta.fabric.dreamfactory.com/host/environment';
     /**
      * @var string
      */
@@ -118,7 +123,7 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
-        static $_validRoots = array(self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT);
+        static $_validRoots = [self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT];
         static $_fabricHosted = null;
 
         return
@@ -137,11 +142,16 @@ class Fabric extends SeedUtility
         /**
          * Add host names to this list to white-list...
          */
-        static $_allowedHosts = array(
+        static $_allowedHosts, $_localHosts = [
             'launchpad-dev.dreamfactory.com',
             'launchpad-demo.dreamfactory.com',
             'next.cloud.dreamfactory.com',
-        );
+        ];
+
+        if ( empty( $_allowedHosts ) )
+        {
+            $_allowedHosts = array_merge( $_localHosts, Pii::getParam( 'dsp.allowed_hosts', array() ) );
+        }
 
         $_host = static::getHostName();
 
@@ -178,11 +188,11 @@ class Fabric extends SeedUtility
             );
         }
 
-        $_settings = static::_getDatabaseConfig( $_host );
+        list( $_settings, $_metadata ) = static::_getDatabaseConfig( $_host );
 
         if ( !empty( $_settings ) )
         {
-            return $_settings;
+            return array($_settings, $_metadata);
         }
 
         throw new \CHttpException( HttpResponse::BadRequest, 'Unable to find database configuration' );
@@ -191,18 +201,20 @@ class Fabric extends SeedUtility
     /**
      * Writes the cache file out to disk
      *
-     * @param string    $host
-     * @param array     $settings
-     * @param \stdClass $instance
+     * @param string          $host
+     * @param array           $settings
+     * @param \stdClass       $instance
+     * @param array|\stdClass $metadata
      *
      * @return mixed
      */
-    protected static function _cacheSettings( $host, $settings, $instance )
+    protected static function _cacheSettings( $host, $settings, $instance, $metadata )
     {
-        $_data = array(
+        $_data = [
             'settings' => $settings,
             'instance' => $instance,
-        );
+            'metadata' => $metadata,
+        ];
 
         JsonFile::encodeFile( static::_cacheFileName( $host ), $_data );
 
@@ -244,7 +256,7 @@ class Fabric extends SeedUtility
         {
             Log::info( 'Global provider credential pull skipped: not hosted entity.' );
 
-            return array();
+            return [];
         }
 
         //	Otherwise, get the credentials from the auth server...
@@ -266,17 +278,54 @@ class Fabric extends SeedUtility
                 print_r( $_response, true )
             );
 
-            return array();
+            return [];
         }
 
-        return Option::get( $_response, 'details', array() );
+        return Option::get( $_response, 'details', [] );
+    }
+
+    /**
+     * @param \stdClass $instance
+     * @param string    $privatePath
+     *
+     * @return mixed|string
+     * @throws \CHttpException
+     */
+    protected static function _getMetadata( $instance, $privatePath )
+    {
+        static $_metadata = null;
+
+        if ( !$_metadata )
+        {
+            $_filename = $privatePath . DIRECTORY_SEPARATOR . $instance->instance_id_text . '.json';
+
+            if ( file_exists( $_filename ) )
+            {
+                $_metadata = JsonFile::decodeFile( $_filename );
+
+                return $_metadata;
+            }
+
+            $_metadata = static::api( Verbs::GET, static::METADATA_ENDPOINT . '/' . $instance->instance_id_text );
+
+            if ( HttpResponse::Ok != Curl::getLastHttpCode() )
+            {
+                static::_errorLog( 'Metadata pull failure.' );
+
+                return false;
+            }
+
+            JsonFile::encodeFile( $_filename, $_metadata );
+        }
+
+        return $_metadata;
     }
 
     /**
      * @param string $message
      * @param array  $context
      */
-    protected static function _errorLog( $message, $context = array() )
+    protected static function _errorLog( $message, $context = [] )
     {
         Log::error( $message, $context );
     }
@@ -298,7 +347,7 @@ class Fabric extends SeedUtility
         );
 
         //	Try and get them from server...
-        if ( false === ( list( $_settings, $_instance ) = static::_checkCache( $host ) ) )
+        if ( false === ( list( $_settings, $_instance, $_metadata ) = static::_checkCache( $host ) ) )
         {
             //	Get the credentials from the auth server...
             $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
@@ -336,7 +385,7 @@ class Fabric extends SeedUtility
             $_dbConfigFile = $_privatePath . '/' . $_dbConfigFileName;
 
             //	Stick this in persistent storage
-            $_systemOptions = array(
+            $_systemOptions = [
                 'dsp.credentials'              => $_cache,
                 'dsp.db_name'                  => $_dbName,
                 'platform.dsp_name'            => $_dspName,
@@ -346,7 +395,7 @@ class Fabric extends SeedUtility
                 'platform.db_config_file'      => $_dbConfigFile,
                 'platform.db_config_file_name' => $_dbConfigFileName,
                 PlatformStates::STATE_KEY      => null,
-            );
+            ];
 
             \Kisma::set( $_systemOptions );
 
@@ -413,7 +462,9 @@ PHP;
                 setcookie( static::PrivateFigNewton, '', 0, '/' );
             }
 
-            static::_cacheSettings( $host, $_settings, $_instance );
+            $_metadata = static::_getMetadata( $_instance->instance, $_privatePath );
+
+            static::_cacheSettings( $host, $_settings, $_instance, $_metadata );
         }
 
         //  Check for enterprise status
@@ -452,10 +503,11 @@ PHP;
                 return false;
             }
 
-            return array(
-                IfSet::get( $_data, 'settings' ),
-                IfSet::get( $_data, 'instance' )
-            );
+            return [
+                IfSet::get( $_data, 'settings', array() ),
+                IfSet::get( $_data, 'instance', array() ),
+                IfSet::get( $_data, 'metadata', array() ),
+            ];
         }
 
         return false;
@@ -469,7 +521,7 @@ PHP;
      *
      * @return bool|\stdClass|array
      */
-    public static function api( $method, $uri, $payload = array(), $curlOptions = array() )
+    public static function api( $method, $uri, $payload = [], $curlOptions = [] )
     {
         if ( !HttpMethod::contains( strtoupper( $method ) ) )
         {
@@ -478,15 +530,13 @@ PHP;
 
         try
         {
-            if ( false ===
-                ( $_result =
-                    Curl::request(
-                        $method,
-                        static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' ),
-                        $payload,
-                        $curlOptions
-                    ) )
-            )
+            //  Allow full URIs
+            if ( 'http' != substr( $uri, 0, 4 ) )
+            {
+                $uri = static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' );
+            }
+
+            if ( false === ( $_result = Curl::request( $method, $uri, $payload, $curlOptions ) ) )
             {
                 throw new \RuntimeException( 'Failed to contact API server.' );
             }
