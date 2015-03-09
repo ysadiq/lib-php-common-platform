@@ -45,7 +45,7 @@
 		"dreamfactory/php-utils":            "~1.0",
 		"dreamfactory/yii":                  "~1.1.13.15",
 		"dreamfactory/lib-php-common":       "~1.5.0",
-		"dreamfactory/lib-php-common-yii":   "dev-develop as dev-master",
+		"dreamfactory/lib-php-common-yii":   "~1.5.0",
 		"dreamfactory/oasys":                "*",
 		"dreamfactory/azure-sdk-for-php":    "dev-develop as dev-master"
 	},
