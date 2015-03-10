@@ -250,16 +250,16 @@
         },
         {
             "name": "dreamfactory/fabric-audit",
-            "version": "1.0.4",
+            "version": "1.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/fabric-audit.git",
-                "reference": "2d1afc8ba60184f4c8406c2e14697e4da503837a"
+                "reference": "85f06034c05854f76218f73087e75e6c7b5500ab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/2d1afc8ba60184f4c8406c2e14697e4da503837a",
-                "reference": "2d1afc8ba60184f4c8406c2e14697e4da503837a",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/fabric-audit/zipball/85f06034c05854f76218f73087e75e6c7b5500ab",
+                "reference": "85f06034c05854f76218f73087e75e6c7b5500ab",
                 "shasum": ""
             },
             "require": {
@@ -299,7 +299,7 @@
                 "queue",
                 "utility"
             ],
-            "time": "2015-02-25 15:26:37"
+            "time": "2015-03-09 18:53:13"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -564,16 +564,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.16",
+            "version": "1.1.13.17",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "3f2ae6454d351ead0aebd081d42d5ac9714adc21"
+                "reference": "7baf2d3419b93ba2951d1f1c66070c77cb6ea2ba"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/3f2ae6454d351ead0aebd081d42d5ac9714adc21",
-                "reference": "3f2ae6454d351ead0aebd081d42d5ac9714adc21",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/7baf2d3419b93ba2951d1f1c66070c77cb6ea2ba",
+                "reference": "7baf2d3419b93ba2951d1f1c66070c77cb6ea2ba",
                 "shasum": ""
             },
             "require": {
@@ -638,7 +638,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2015-02-20 15:52:25"
+            "time": "2015-03-10 01:05:23"
         },
         {
             "name": "guzzle/guzzle",
