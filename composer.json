@@ -1,64 +1,69 @@
 {
-    "name": "dreamfactory/lib-php-common-platform",
-    "description": "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
-    "homepage": "http://dreamfactorysoftware.github.io",
-    "keywords": ["sdk", "dsp-core", "dsp"],
-    "license": ["Apache-2.0"],
-    "authors": [
-        {
-            "name": "Jerry Ablan",
-            "email": "jerryablan@dreamfactory.com",
-            "role": "Lead Developer, server-side/client-side"
-        },
-        {
-            "name": "Lee Hicks",
-            "email": "leehicks@dreamfactory.com",
-            "role": "Lead Developer, server-side/client-side"
-        }
-    ],
-    "repositories": [
-        {
-            "type": "pear",
-            "url": "http://pear.php.net"
-        }
-    ],
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "require": {
-        "kisma/kisma": "~0.2",
-        "swiftmailer/swiftmailer": "~4.3",
-        "aws/aws-sdk-php": "~2.7.0",
-        "rackspace/php-opencloud": "~1.5.0@stable",
-        "dready92/php-on-couch": "*",
-        "phpforce/soap-client": "*",
-        "jeremeamia/superclosure": "*",
-        "pear-pear.php.net/HTTP_Request2": "*",
-        "pear-pear.php.net/Net_URL2": "*",
-        "pear-pear.php.net/Mail_Mime": "*",
-        "pear-pear.php.net/Mail_mimeDecode": "*",
-        "dreamfactory/javascript-sdk": "~1.0",
-        "dreamfactory/php-utils": "~1.0",
-        "dreamfactory/yii": "~1.1.13.15",
-        "dreamfactory/lib-php-common": "~1.5.0",
-        "dreamfactory/lib-php-common-yii": "~1.5.0",
-        "dreamfactory/oasys": "*",
-        "dreamfactory/azure-sdk-for-php": "dev-develop as dev-master"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "@stable",
-        "phpunit/dbunit": "@stable",
-        "phpunit/phpunit-selenium": "@stable",
-        "phpunit/phpunit-story": "@stable",
-        "phpunit/php-invoker": "@stable"
-    },
-    "autoload": {
-        "psr-4": {
-            "DreamFactory\\Platform\\": "src/"
-        }
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-develop": "1.9.x-dev"
-        }
-    }
+	"name":              "dreamfactory/lib-php-common-platform",
+	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
+	"homepage":          "http://dreamfactorysoftware.github.io",
+	"keywords":          [
+		"sdk",
+		"dsp-core",
+		"dsp"
+	],
+	"license":           ["Apache-2.0"],
+	"authors":           [
+		{
+			"name":  "Jerry Ablan",
+			"email": "jerryablan@dreamfactory.com",
+			"role":  "Lead Developer, server-side/client-side"
+		},
+		{
+			"name":  "Lee Hicks",
+			"email": "leehicks@dreamfactory.com",
+			"role":  "Lead Developer, server-side/client-side"
+		}
+	],
+	"repositories":      [
+		{
+			"type": "pear",
+			"url":  "http://pear.php.net"
+		}
+	],
+	"minimum-stability": "dev",
+	"prefer-stable":     true,
+	"require":           {
+		"kisma/kisma":                       "~0.2",
+		"swiftmailer/swiftmailer":           "~4.3",
+		"aws/aws-sdk-php":                   "~2.7.0",
+		"rackspace/php-opencloud":           "~1.5.0@stable",
+		"dready92/php-on-couch":             "*",
+		"phpforce/soap-client":              "*",
+		"jeremeamia/superclosure":           "*",
+		"pear-pear.php.net/HTTP_Request2":   "*",
+		"pear-pear.php.net/Net_URL2":        "*",
+		"pear-pear.php.net/Mail_Mime":       "*",
+		"pear-pear.php.net/Mail_mimeDecode": "*",
+		"dreamfactory/fabric-audit":         "~1.0",
+		"dreamfactory/javascript-sdk":       "~1.0",
+		"dreamfactory/php-utils":            "~1.0",
+		"dreamfactory/yii":                  "~1.1.13.15",
+		"dreamfactory/lib-php-common":       "~1.5.0",
+		"dreamfactory/lib-php-common-yii":   "~1.5.0",
+		"dreamfactory/oasys":                "*",
+		"dreamfactory/azure-sdk-for-php":    "dev-develop as dev-master"
+	},
+	"require-dev":       {
+		"phpunit/phpunit":          "@stable",
+		"phpunit/dbunit":           "@stable",
+		"phpunit/phpunit-selenium": "@stable",
+		"phpunit/phpunit-story":    "@stable",
+		"phpunit/php-invoker":      "@stable"
+	},
+	"autoload":          {
+		"psr-4": {
+			"DreamFactory\\Platform\\": "src/"
+		}
+	},
+	"extra":             {
+		"branch-alias": {
+			"dev-develop": "1.9.x-dev"
+		}
+	}
 }

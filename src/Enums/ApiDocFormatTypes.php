@@ -53,7 +53,7 @@ class ApiDocFormatTypes extends SeedEnum
     //*************************************************************************
 
     /**
-     * @var array A hash of level names
+     * @var array A hash of level names against Monolog levels
      */
     protected static $_strings = array(
         'swagger'  => self::SWAGGER,

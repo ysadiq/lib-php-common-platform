@@ -96,15 +96,15 @@ class MongoDbSvc extends NoSqlDbSvc
         $_options = Option::get( $_credentials, 'options', array() );
 
         // support old configuration options of user, pwd, and db in credentials directly
-        if ( !isset($_options['username']) && (null !== $_username = Option::get( $_credentials, 'user', null, true, true ) ) )
+        if ( !isset( $_options['username'] ) && ( null !== $_username = Option::get( $_credentials, 'user', null, true, true ) ) )
         {
             $_options['username'] = $_username;
         }
-        if ( !isset($_options['password']) && (null !== $_password = Option::get( $_credentials, 'pwd', null, true, true ) ) )
+        if ( !isset( $_options['password'] ) && ( null !== $_password = Option::get( $_credentials, 'pwd', null, true, true ) ) )
         {
             $_options['password'] = $_password;
         }
-        if ( !isset($_options['db']) && (null !== $_db = Option::get( $_credentials, 'db', null, true, true ) ) )
+        if ( !isset( $_options['db'] ) && ( null !== $_db = Option::get( $_credentials, 'db', null, true, true ) ) )
         {
             $_options['db'] = $_db;
         }
@@ -113,7 +113,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             //  Attempt to find db in connection string
             $_db = strstr( substr( $_dsn, static::DSN_PREFIX_LENGTH ), '/' );
-            if (false !== $_pos = strpos( $_db, '?' ) )
+            if ( false !== $_pos = strpos( $_db, '?' ) )
             {
                 $_db = substr( $_db, 0, $_pos );
             }
@@ -130,6 +130,11 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             //  Automatically creates a stream from context
             $_driverOptions['context'] = stream_context_create( $_context );
+        }
+
+        if ( !extension_loaded( 'mongo' ) )
+        {
+            throw new InternalServerErrorException( 'Mongo driver is not installed.' );
         }
 
         try
@@ -217,7 +222,8 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    protected function _listTables( /** @noinspection PhpUnusedParameterInspection */ $refresh = true )
+    protected function _listTables( /** @noinspection PhpUnusedParameterInspection */
+        $refresh = true )
     {
         $_resources = array();
         $_result = $this->_dbConn->getCollectionNames();
@@ -249,8 +255,9 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
-            )}" );
+            throw new InternalServerErrorException(
+                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -629,7 +636,8 @@ class MongoDbSvc extends NoSqlDbSvc
 
         if ( is_array( $filter ) )
         {
-            return $filter; // assume they know what they are doing
+            // assume client knows correct usage of Mongo query language
+            return static::_toMongoObjects( $filter );
         }
 
         $_search = array(' or ', ' and ', ' nor ');
@@ -814,9 +822,10 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         // interpret any parameter values as lookups
         $params = static::interpretRecordValues( $params );
+        // or as Mongo objects
+        $params = static::_toMongoObjects( $params );
 
         // build filter array if necessary
-        $_criteria = $filter;
         if ( !is_array( $filter ) )
         {
             Session::replaceLookups( $filter );
@@ -824,20 +833,16 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( !is_null( $_test ) )
             {
                 // original filter was a json string, use it as array
-                $_criteria = $_test;
-            }
-            else
-            {
-                $_criteria = static::buildFilterArray( $filter, $params );
+                $filter = $_test;
             }
         }
+        $_criteria = static::buildFilterArray( $filter, $params );
 
         // add server-side filters if necessary
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria =
-                ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
+            $_criteria = ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -1024,28 +1029,36 @@ class MongoDbSvc extends NoSqlDbSvc
                     {
                         $record[$_key] = static::idToMongoId( $_data );
                     }
-                    elseif ( is_array( $_data ) && ( 1 === count( $_data ) ) )
+                    elseif ( is_array( $_data ) )
                     {
-                        // using typed definition, i.e. {"$date" : "2014-08-02T08:40:12.569Z" }
-                        if ( array_key_exists( '$date', $_data ) )
+                        if ( 1 === count( $_data ) )
                         {
-                            $_temp = $_data['$date'];
-                            if ( empty( $_temp ) )
+                            // using typed definition, i.e. {"$date" : "2014-08-02T08:40:12.569Z" }
+                            if ( array_key_exists( '$date', $_data ) )
                             {
-                                $record[$_key] = new \MongoDate();
+                                $_temp = $_data['$date'];
+                                if ( empty( $_temp ) )
+                                {
+                                    // empty means create with current time
+                                    $record[$_key] = new \MongoDate();
+                                }
+                                elseif ( is_string( $_temp ) )
+                                {
+                                    $record[$_key] = new \MongoDate( strtotime( $_temp ) );
+                                }
+                                elseif ( is_int( $_temp ) )
+                                {
+                                    $record[$_key] = new \MongoDate( $_temp );
+                                }
                             }
-                            elseif ( is_string( $_temp ) )
+                            elseif ( isset( $_data['$id'] ) )
                             {
-                                $record[$_key] = new \MongoDate( strtotime( $_temp ) );
+                                $record[$_key] = static::idToMongoId( $_data['$id'] );
                             }
-                            elseif ( is_int( $_temp ) )
+                            else
                             {
-                                $record[$_key] = new \MongoDate( $_temp );
+                                $record[$_key] = static::_toMongoObjects( $_data );
                             }
-                        }
-                        elseif ( isset( $_data['$id'] ) )
-                        {
-                            $record[$_key] = static::idToMongoId( $_data['$id'] );
                         }
                     }
                 }
@@ -1072,7 +1085,7 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param array  $records
+     * @param array $records
      *
      * @return mixed
      */

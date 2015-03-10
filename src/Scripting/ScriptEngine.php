@@ -58,6 +58,10 @@ class ScriptEngine
      * @type string The template for all module loading
      */
     const MODULE_LOADER_TEMPLATE = 'require("{module}");';
+    /**
+     * @type int The cache TTL for the scripting store
+     */
+    const SESSION_STORE_TTL = 60;
 
     //*************************************************************************
     //	Members
@@ -259,7 +263,6 @@ class ScriptEngine
             /** @noinspection PhpUndefinedClassInspection */
         catch ( \V8JsException $_ex )
         {
-            $output = ob_end_clean();
             $_message = $_ex->getMessage();
 
             /**
@@ -287,9 +290,9 @@ class ScriptEngine
             }
         }
 
-        static::destroy( $_engine );
-
+        //  Clean up
         $output = ob_get_clean();
+        static::destroy( $_engine );
 
         if ( static::$_logScriptMemoryUsage )
         {
@@ -475,6 +478,7 @@ class ScriptEngine
     {
         $exposedEvent['__tag__'] = 'exposed_event';
         $exposedPlatform['api'] = static::_getExposedApi();
+        $exposedPlatform['store'] = new ScriptSession( Pii::getParam( 'app.run_id' ), Pii::getAppStore() );
 
         $engine->event = $exposedEvent;
         $engine->platform = $exposedPlatform;
@@ -573,6 +577,25 @@ JS;
             $payload = array();
         }
 
+        if ( !empty( $curlOptions ) )
+        {
+            $_options = array();
+
+            foreach ( $curlOptions as $_key => $_value )
+            {
+                if ( !is_numeric( $_key ) )
+                {
+                    if ( defined( $_key ) )
+                    {
+                        $_options[constant( $_key )] = $_value;
+                    }
+                }
+            }
+
+            $curlOptions = $_options;
+            unset( $_options );
+        }
+
         if ( 'https:/' == ( $_protocol = substr( $path, 0, 7 ) ) || 'http://' == $_protocol )
         {
             return static::_externalRequest( $method, $path, $payload ?: array(), $curlOptions );
@@ -582,7 +605,7 @@ JS;
         $_params = array();
         if ( false !== $_pos = strpos( $path, '?' ) )
         {
-            $_paramString = substr( $path, $_pos+1 );
+            $_paramString = substr( $path, $_pos + 1 );
             if ( !empty( $_paramString ) )
             {
                 $_pArray = explode( '&', $_paramString );
@@ -616,7 +639,7 @@ JS;
             if ( !empty( $_resource ) )
             {
                 if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
-                     ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+                    ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
                     $_resource .= '/';

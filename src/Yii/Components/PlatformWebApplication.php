@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Library\Fabric\Auditing\Services\AuditingService;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
@@ -32,6 +33,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
@@ -41,7 +43,6 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\FileSystem;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
@@ -75,8 +76,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The allowed HTTP headers
      * Tunnelling verb overrides: X-HTTP-Method (Microsoft), X-HTTP-Method-Override (Google/GData), X-METHOD-OVERRIDE
      * (IBM)
+     * File service headers: X-File-Name, X-Folder-Name.
+     * Basic Auth header: Authorization
      */
-    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type,X-Requested-With,X-DreamFactory-Application-Name,X-Application-Name,X-DreamFactory-Session-Token,X-HTTP-Method,X-HTTP-Method-Override,X-METHOD-OVERRIDE';
+    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type,X-Requested-With,X-DreamFactory-Application-Name,X-Application-Name,X-DreamFactory-Session-Token,X-HTTP-Method,X-HTTP-Method-Override,X-METHOD-OVERRIDE,X-Folder-Name,X-File-Name,Authorization';
     /**
      * @var int The default number of seconds to allow this to be cached. Default is 15 minutes.
      */
@@ -326,11 +329,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 
-        //  A pristine copy of the request
+        //  A pristine copy of the request and body
+        $_request = $this->getRequestObject();
         $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Answer an options call...
-        switch ( FilterInput::server( 'REQUEST_METHOD' ) )
+        switch ( $_request->getMethod() )
         {
             case HttpMethod::OPTIONS:
                 header( 'HTTP/1.1 204' );
@@ -369,6 +373,21 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onEndRequest( \CEvent $event )
     {
+        //  Get session data and send audit entry
+        if ( Pii::getParam( 'dsp.fabric_hosted' ) )
+        {
+            try
+            {
+                $_sessionData = Session::getSessionData();
+            }
+            catch ( \Exception $_ex )
+            {
+                $_sessionData = array();
+            }
+
+            AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), $_sessionData );
+        }
+
         $this->stopProfiler( 'app.request' );
     }
 
@@ -600,7 +619,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             if ( $this->_extendedHeaders )
             {
                 $_headers['X-DreamFactory-Source'] = $_requestUri;
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] =
+                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -667,7 +687,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  If we don't have enabled array, or a string, skip
             if ( ( !is_array( $_hostInfo ) && !is_string( $_hostInfo ) ) ||
-                 ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
+                ( is_array( $_hostInfo ) && !IfSet::getBool( $_hostInfo, 'is_enabled' ) )
             )
             {
                 continue;
@@ -675,7 +695,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             //  Any "*" equals unfettered access, so check here and return quickly
             if ( ( is_array( $_hostInfo ) && static::CORS_STAR == IfSet::get( $_hostInfo, 'host' ) ) ||
-                 ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
+                ( is_string( $_hostInfo ) && static::CORS_STAR == $_hostInfo )
             )
             {
                 $isStar = true;
@@ -1112,7 +1132,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @param int $which Which map to return or null for all
      *
-     * @return \array[]
+     * @return mixed
      */
     public static function getNamespaceMap( $which = null )
     {
