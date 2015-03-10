@@ -115,22 +115,24 @@ class Service extends BaseSystemRestResource
     protected static function _getComponents( array $item )
     {
         $_apiName = Option::get( $item, 'api_name' );
-//        $_payload = array('as_access_components' => true);
-//        $_result = ScriptEngine::inlineRequest( HttpMethod::GET, $_apiName, $_payload );
-//        $_components = Option::clean( Option::get( $_result, 'resource' ) );
+        $_type = Option::get( $item, 'type' );
+        $_components = null;
 
-        $_REQUEST['as_access_components'] = true;
-        try
+        if (0 !== strcasecmp('Remote Web Service', $_type))
         {
-            $_service = ServiceHandler::getService( $_apiName );
-            $_result = $_service->processRequest( null, static::GET, false );
-            $_components = Option::clean( Option::get( $_result, 'resource' ) );
-        }
-        catch ( \Exception $_ex )
-        {
-            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false, true );
-            $_components = Option::getDeep( $_result, 'error', 0 );
-            $_components = Option::get( $_components, 'message' );
+            $_REQUEST['as_access_components'] = true;
+            try
+            {
+                $_service = ServiceHandler::getService( $_apiName );
+                $_result = $_service->processRequest( null, static::GET, false );
+                $_components = Option::clean( Option::get( $_result, 'resource' ) );
+            }
+            catch ( \Exception $_ex )
+            {
+                $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false, true );
+                $_components = Option::getDeep( $_result, 'error', 0 );
+                $_components = Option::get( $_components, 'message' );
+            }
         }
 
         return ( !empty( $_components ) ) ? $_components : array('', '*');
