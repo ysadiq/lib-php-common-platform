@@ -386,6 +386,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_sessionData = [];
             }
 
+            $_sessionData['metadata'] = Pii::getParam( 'dsp.metadata', array() );
             AuditingService::logRequest( Pii::getParam( 'dsp.name', gethostname() ), $this->getRequestObject(), $_sessionData );
         }
 

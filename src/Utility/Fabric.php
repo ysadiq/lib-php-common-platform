@@ -142,7 +142,8 @@ class Fabric extends SeedUtility
         /**
          * Add host names to this list to white-list...
          */
-        static $_allowedHosts, $_localHosts = [
+        static $_allowedHosts = null;
+        static $_localHosts = [
             'launchpad-dev.dreamfactory.com',
             'launchpad-demo.dreamfactory.com',
             'next.cloud.dreamfactory.com',
@@ -150,7 +151,7 @@ class Fabric extends SeedUtility
 
         if ( empty( $_allowedHosts ) )
         {
-            $_allowedHosts = array_merge( $_localHosts, Pii::getParam( 'dsp.allowed_hosts', array() ) );
+            $_allowedHosts = array_merge( $_localHosts, Pii::getParam( 'dsp.hpp_hosts', array() ) );
         }
 
         $_host = static::getHostName();
@@ -161,18 +162,17 @@ class Fabric extends SeedUtility
     /**
      * Initialization for hosted DSPs
      *
-     * @throws \CHttpException
-     * @return array|mixed
+     * @return array
      * @throws \RuntimeException
      * @throws \CHttpException
      */
     public static function initialize()
     {
-        static $_settings = null;
+        static $_settings = null, $_metadata = array();
 
         if ( $_settings )
         {
-            return $_settings;
+            return array($_settings, $_metadata);
         }
 
         //	If this isn't a cloud request, bail
@@ -301,19 +301,21 @@ class Fabric extends SeedUtility
 
             if ( file_exists( $_filename ) )
             {
-                $_metadata = JsonFile::decodeFile( $_filename );
+                $_metadata = JsonFile::decodeFile( $_filename, true );
 
                 return $_metadata;
             }
 
-            $_metadata = static::api( Verbs::GET, static::METADATA_ENDPOINT . '/' . $instance->instance_id_text );
+            $_response = static::api( HttpMethod::GET, '/instance/metadata/' . $instance->instance_id_text );
 
-            if ( HttpResponse::Ok != Curl::getLastHttpCode() )
+            if ( !$_response || HttpResponse::Ok != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
             {
                 static::_errorLog( 'Metadata pull failure.' );
 
                 return false;
             }
+
+            $_metadata = (array)$_response->details;
 
             JsonFile::encodeFile( $_filename, $_metadata );
         }
@@ -462,7 +464,7 @@ PHP;
                 setcookie( static::PrivateFigNewton, '', 0, '/' );
             }
 
-            $_metadata = static::_getMetadata( $_instance->instance, $_privatePath );
+            $_metadata = (array)static::_getMetadata( $_instance->instance, $_privatePath );
 
             static::_cacheSettings( $host, $_settings, $_instance, $_metadata );
         }
@@ -470,7 +472,7 @@ PHP;
         //  Check for enterprise status
         static::_checkPlatformState( $_dspName );
 
-        return $_settings;
+        return array($_settings, $_metadata);
     }
 
     /**
