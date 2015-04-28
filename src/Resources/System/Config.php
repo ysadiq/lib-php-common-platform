@@ -236,6 +236,10 @@ class Config extends BaseSystemRestResource
                     'timestamp_format'     => IfSet::get( $_params, 'dsp.db_timestamp_format' ),
                     'max_records_returned' => IfSet::get( $_params, 'dsp.db_max_records_returned' ),
                 ),
+                'chat'                      => array(
+                    'launchpad' => IfSet::get( $_params, 'dsp.chat_launchpad' ),
+                    'admin'     => IfSet::get( $_params, 'dsp.chat_admin' ),
+                ),
             );
 
             //  Get the login provider array
