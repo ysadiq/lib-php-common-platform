@@ -1,20 +1,4 @@
-<?php
-/**
- * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-namespace DreamFactory\Platform\Utility;
+<?php namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
@@ -25,96 +9,82 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
- * Hosted DSP system utilities
+ * Methods for interfacing with DreamFactory Enterprise (DFE)
  */
-class Fabric extends SeedUtility
+class Enterprise
 {
-    //*************************************************************************
+    //******************************************************************************
     //* Constants
-    //*************************************************************************
+    //******************************************************************************
 
     /**
-     * @var string
+     * @type string
      */
-    const FABRIC_API_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api';
+    const DEFAULT_DOMAIN = '.pasture.farm.com';
     /**
-     * @var string
+     * @type string
      */
-    const DEFAULT_AUTH_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/instance/credentials';
+    const DFE_MARKER = '/var/www/.dfe-hosted';
+
+    //******************************************************************************
+    //* Members
+    //******************************************************************************
+
     /**
-     * @var string
+     * @type array
      */
-    const METADATA_ENDPOINT = 'http://dfe-beta.fabric.dreamfactory.com/host/environment';
+    protected static $_config = false;
     /**
-     * @var string
+     * @type bool
      */
-    const DEFAULT_PROVIDER_ENDPOINT = 'http://oasys.cloud.dreamfactory.com/oauth/providerCredentials';
-    /**
-     * @var string
-     */
-    const DSP_DB_CONFIG_FILE_NAME_PATTERN = '%%INSTANCE_NAME%%.database.config.php';
-    /**
-     * @var string
-     */
-    const DSP_DEFAULT_SUBDOMAIN = '.cloud.dreamfactory.com';
-    /**
-     * @var string My favorite cookie
-     */
-    const FigNewton = 'dsp.blob';
-    /**
-     * @var string My favorite cookie
-     */
-    const PrivateFigNewton = 'dsp.private';
-    /**
-     * @var string
-     */
-    const BaseStorage = '/data/storage';
-    /**
-     * @var string
-     */
-    const FABRIC_MARKER = '/var/www/.fabric_hosted';
-    /**
-     * @var string
-     */
-    const MAINTENANCE_MARKER = '/var/www/.fabric_maintenance';
-    /**
-     * @var string
-     */
-    const MAINTENANCE_URI = '/static/dreamfactory/maintenance.php';
-    /**
-     * @var string
-     */
-    const UNAVAILABLE_URI = '/static/dreamfactory/unavailable.php';
-    /**
-     * @var int
-     */
-    const EXPIRATION_THRESHOLD = 30;
-    /**
-     * @var string
-     */
-    const DEFAULT_DOC_ROOT = '/var/www/launchpad/web';
-    /**
-     * @var string
-     */
-    const DEFAULT_DEV_DOC_ROOT = '/opt/dreamfactory/dsp/dsp-core/web';
+    protected static $_dfeInstance = false;
 
     //*************************************************************************
     //* Methods
     //*************************************************************************
 
     /**
+     * @param string $key
+     * @param mixed  $default
+     *
+     * @return array|mixed
+     */
+    public static function getConfig( $key = null, $default = null )
+    {
+        if ( false === static::$_config )
+        {
+            static::$_config = Pii::getParam( 'dfe' );
+
+            //  Nada
+            if ( empty( $_config ) )
+            {
+                static::$_config = array();
+                static::$_dfeInstance = false;
+
+                return $default;
+            }
+        }
+
+        if ( !$key )
+        {
+            return static::$_config;
+        }
+
+        return IfSet::get( static::$_config, $key, $default, true );
+    }
+
+    /**
      * @return string
      */
     public static function getHostName()
     {
-        return FilterInput::server( 'HTTP_HOST', gethostname() );
+        return Pii::request( false )->getHttpHost();
     }
 
     /**
@@ -167,29 +137,22 @@ class Fabric extends SeedUtility
      */
     public static function initialize()
     {
-        static $_settings = null, $_metadata = array();
+        $_settings = $_metadata = array();
 
-        if ( $_settings )
+        if ( false === ( $_config = static::getConfig() ) )
         {
             return array($_settings, $_metadata);
         }
 
-        //	If this isn't a cloud request, bail
+        //	If this isn't an enterprise instance, bail
         $_host = static::getHostName();
 
-        if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
+        //  This request is not for us, log and bail...
+        if ( false === strpos( $_host, IfSet::get( $_config, 'default-domain', static::DEFAULT_DOMAIN ) ) )
         {
-            $_dfe = Pii::getParam( 'dfe' );
+            static::_errorLog( 'Request to non-provisioned instance: ' . $_host );
 
-            if ( empty( $_dfe ) || false === strpos( $_host, IfSet::get( $_dfe, 'default-subdomain' ) ) )
-            {
-                static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
-
-                throw new \CHttpException(
-                    HttpResponse::Forbidden,
-                    'You are not authorized to access this system you cheeky devil you. (' . $_host . ').'
-                );
-            }
+            return array($_settings, $_metadata);
         }
 
         list( $_settings, $_metadata ) = static::_getDatabaseConfig( $_host );
@@ -574,6 +537,8 @@ PHP;
         }
     }
 }
+
+Enterprise::initialize();
 
 //********************************************************************************
 //* Check for maintenance mode...
