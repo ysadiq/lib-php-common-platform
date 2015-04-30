@@ -10,3 +10,4 @@ path.watcher.test.dir/
 build
 src/OLD_*.php
 docs
+composer.lock
