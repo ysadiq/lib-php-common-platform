@@ -90,25 +90,6 @@ class Enterprise
     }
 
     /**
-     * @return string
-     */
-    public static function getHostName()
-    {
-        return Pii::request( false )->getHttpHost();
-    }
-
-    /**
-     * @return bool True if this DSP is fabric-hosted
-     */
-    public static function isHostedInstance()
-    {
-        static $_hosted = null;
-
-        return
-            null !== $_hosted ? $_hosted : $_hosted = file_exists( static::DFE_MARKER );
-    }
-
-    /**
      * @param array $config
      *
      * @return array
@@ -408,9 +389,41 @@ JSON;
         return IfSet::get( static::$_config, $key, $default, true );
     }
 
-    private static function _sign( array $payload )
+    /**
+     * @param array $payload
+     *
+     * @return array
+     */
+    private static function _signPayload( $userId, array $payload )
     {
+        return array_merge(
+            array(
+                'user-id'      => $userId,
+                'client-id'    => '$this->_clientId',
+                'access-token' => '$this->_signature',
+            ),
+            $payload ?: []
+        );
 
+    }
+
+    /**
+     * @return string
+     */
+    public static function getHostName()
+    {
+        return Pii::request( false )->getHttpHost();
+    }
+
+    /**
+     * @return bool True if this DSP is fabric-hosted
+     */
+    public static function isHostedInstance()
+    {
+        static $_hosted = null;
+
+        return
+            null !== $_hosted ? $_hosted : $_hosted = file_exists( static::DFE_MARKER );
     }
 
 }
