@@ -1,21 +1,17 @@
 <?php namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Library\Utility\Curl;
 use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
-use DreamFactory\Platform\Enums\FabricPlatformStates;
-use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Curl;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
- * Methods for interfacing with DreamFactory Enterprise (DFE)
+ * Methods for interfacing with DreamFactory Enterprise( DFE )
  */
 class Enterprise
 {
@@ -31,6 +27,10 @@ class Enterprise
      * @type string
      */
     const DFE_MARKER = '/var/www/.dfe-hosted';
+    /**
+     * @type string
+     */
+    const CLUSTER_ENV_FILE = '.env.cluster';
 
     //******************************************************************************
     //* Members
@@ -50,33 +50,43 @@ class Enterprise
     //*************************************************************************
 
     /**
-     * @param string $key
-     * @param mixed  $default
+     * Initialization for hosted DSPs
      *
-     * @return array|mixed
+     * @return array
+     * @throws \RuntimeException
+     * @throws \CHttpException
      */
-    public static function getConfig( $key = null, $default = null )
+    public static function initialize()
     {
-        if ( false === static::$_config )
-        {
-            static::$_config = Pii::getParam( 'dfe' );
-
-            //  Nada
-            if ( empty( $_config ) )
-            {
-                static::$_config = array();
-                static::$_dfeInstance = false;
-
-                return $default;
-            }
-        }
-
-        if ( !$key )
+        if ( static::$_dfeInstance )
         {
             return static::$_config;
         }
 
-        return IfSet::get( static::$_config, $key, $default, true );
+        $_settings = $_metadata = array();
+
+        //  Discover where I am
+        if ( false === ( $_config = static::getConfig() ) || false === ( $_config = static::_checkClusterEnvironment( $_config ) ) )
+        {
+            Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
+
+            return false;
+        }
+
+        if ( false === ( $_cluster = static::_interrogateCluster( $_config ) ) )
+        {
+            static::_errorLog( 'Cluster interrogation failed. Suggest water-boarding.' );
+
+            return array($_settings, $_metadata);
+        }
+
+        static::$_dfeInstance = true;
+        static::$_config = $_config;
+
+        //  it sucks, but yeah...
+        Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
+
+        return false;
     }
 
     /**
@@ -90,102 +100,92 @@ class Enterprise
     /**
      * @return bool True if this DSP is fabric-hosted
      */
-    public static function fabricHosted()
+    public static function isHostedInstance()
     {
-        static $_validRoots = [self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT];
-        static $_fabricHosted = null;
+        static $_hosted = null;
 
         return
-            $_fabricHosted
-                ?: $_fabricHosted = in_array( FilterInput::server( 'DOCUMENT_ROOT' ), $_validRoots ) && file_exists( static::FABRIC_MARKER );
+            null !== $_hosted ? $_hosted : $_hosted = file_exists( static::DFE_MARKER );
     }
 
     /**
-     * @param bool $returnHost If true and the host is private, the host name is returned instead of TRUE. FALSE is
-     *                         still returned if false
-     *
-     * @return bool
-     */
-    public static function hostedPrivatePlatform( $returnHost = false )
-    {
-        /**
-         * Add host names to this list to white-list...
-         */
-        static $_allowedHosts = null;
-        static $_localHosts = [
-            'launchpad-dev.dreamfactory.com',
-            'launchpad-demo.dreamfactory.com',
-            'next.cloud.dreamfactory.com',
-        ];
-
-        if ( empty( $_allowedHosts ) )
-        {
-            $_allowedHosts = array_merge( $_localHosts, Pii::getParam( 'dsp.hpp_hosts', array() ) );
-        }
-
-        $_host = static::getHostName();
-
-        return in_array( $_host, $_allowedHosts ) ? ( $returnHost ? $_host : true ) : false;
-    }
-
-    /**
-     * Initialization for hosted DSPs
+     * @param array $config
      *
      * @return array
-     * @throws \RuntimeException
-     * @throws \CHttpException
      */
-    public static function initialize()
+    protected static function _checkClusterEnvironment( array $config )
     {
-        $_settings = $_metadata = array();
-
-        if ( false === ( $_config = static::getConfig() ) )
+        try
         {
-            return array($_settings, $_metadata);
+            //	If this isn't an enterprise instance, bail
+            $config['host-name'] = $_host = static::getHostName();
+
+            //  This request is not for us, log and bail...
+            if ( false === strpos( $_host, $_defaultDomain = IfSet::get( $config, 'default-domain', static::DEFAULT_DOMAIN ) ) )
+            {
+                static::_errorLog( 'Request to non-provisioned instance: ' . $_host );
+
+                //@todo handle differently? Redirect somewhere?
+                return false;
+            }
+
+            //  Check for a cluster environment file
+            return array_merge(
+                $config,
+                array(
+                    'cluster'        => JsonFile::decodeFile( Pii::basePath() . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE ),
+                    'default-domain' => $_defaultDomain,
+                    'instance-name'  => str_replace( $_defaultDomain, null, $_host )
+                )
+            );
         }
-
-        //	If this isn't an enterprise instance, bail
-        $_host = static::getHostName();
-
-        //  This request is not for us, log and bail...
-        if ( false === strpos( $_host, IfSet::get( $_config, 'default-domain', static::DEFAULT_DOMAIN ) ) )
+        catch ( \InvalidArgumentException $_ex )
         {
-            static::_errorLog( 'Request to non-provisioned instance: ' . $_host );
-
-            return array($_settings, $_metadata);
+            //  The file is bogus or not there
+            return false;
         }
+    }
 
-        list( $_settings, $_metadata ) = static::_getDatabaseConfig( $_host );
+    /**
+     * @param array $config
+     */
+    protected static function _interrogateCluster( array $config )
+    {
+        $_json = <<<JSON
+{
+	"cluster-id":       "cluster-east-1",
+	"signature-method": "sha256",
+	"endpoint":         "https://console.enterprise.dreamfactory.com/api/v1",
+	"port":             443,
+	"client-key":       "%]3,]~&t,EOxL30[wKw3auju:[+L>eYEVWEP,@3n79Qy",
+	"client-id":        "",
+	"client-secret":    ""
+}
 
-        if ( !empty( $_settings ) )
-        {
-            return array($_settings, $_metadata);
-        }
+JSON;
 
-        throw new \CHttpException( HttpResponse::BadRequest, 'Unable to find database configuration' );
+        //  Get cluster config from env
+        $_id = $config['instance-name'];
+
+        $_status = static::_api( 'status', array('id' => $_id) );
+
+        //  Get my config from console
+        //  Set my storage up according
     }
 
     /**
      * Writes the cache file out to disk
      *
-     * @param string          $host
-     * @param array           $settings
-     * @param \stdClass       $instance
-     * @param array|\stdClass $metadata
+     * @param string $key
+     * @param array  $data
      *
-     * @return mixed
+     * @return array
      */
-    protected static function _cacheSettings( $host, $settings, $instance, $metadata )
+    protected static function _cache( $key, $data )
     {
-        $_data = [
-            'settings' => $settings,
-            'instance' => $instance,
-            'metadata' => $metadata,
-        ];
+        JsonFile::encodeFile( static::_cacheFileName( $key ), $data );
 
-        JsonFile::encodeFile( static::_cacheFileName( $host ), $_data );
-
-        return $settings;
+        return $data;
     }
 
     /**
@@ -199,7 +199,8 @@ class Enterprise
     {
         $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
             DIRECTORY_SEPARATOR . '.dreamfactory' .
-            DIRECTORY_SEPARATOR . '.fabric';
+            DIRECTORY_SEPARATOR . 'dfe' .
+            DIRECTORY_SEPARATOR . 'cache';
 
         if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
         {
@@ -302,149 +303,6 @@ class Enterprise
     /**
      * @param string $host
      *
-     * @return mixed|string
-     * @throws \CHttpException
-     */
-    protected static function _getDatabaseConfig( $host )
-    {
-        $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $host );
-
-        $_dbConfigFileName = str_ireplace(
-            '%%INSTANCE_NAME%%',
-            $_dspName,
-            static::DSP_DB_CONFIG_FILE_NAME_PATTERN
-        );
-
-        //	Try and get them from server...
-        if ( false === ( list( $_settings, $_instance, $_metadata ) = static::_checkCache( $host ) ) )
-        {
-            //	Get the credentials from the auth server...
-            $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
-
-            if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
-            {
-                static::_errorLog( 'DB Credential pull failure. Redirecting to df.com: ' . $host );
-                header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
-                exit( 1 );
-            }
-
-            if ( is_object( $_response ) &&
-                isset( $_response->details, $_response->details->code ) &&
-                HttpResponse::NotFound == $_response->details->code
-            )
-            {
-                static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
-                throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
-            }
-
-            if ( !$_response || !is_object( $_response ) || false == $_response->success )
-            {
-                static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
-                throw new \CHttpException(
-                    HttpResponse::InternalServerError, 'Cannot connect to authentication service'
-                );
-            }
-
-            $_instance = $_cache = $_response->details;
-            $_dbName = $_instance->db_name;
-            $_dspName = $_instance->instance->instance_name_text;
-
-            $_privatePath = $_cache->private_path;
-            $_privateKey = basename( dirname( $_privatePath ) );
-            $_dbConfigFile = $_privatePath . '/' . $_dbConfigFileName;
-
-            //	Stick this in persistent storage
-            $_systemOptions = [
-                'dsp.credentials'              => $_cache,
-                'dsp.db_name'                  => $_dbName,
-                'platform.dsp_name'            => $_dspName,
-                'platform.private_path'        => $_privatePath,
-                'platform.storage_key'         => $_instance->storage_key,
-                'platform.private_storage_key' => $_privateKey,
-                'platform.db_config_file'      => $_dbConfigFile,
-                'platform.db_config_file_name' => $_dbConfigFileName,
-                PlatformStates::STATE_KEY      => null,
-            ];
-
-            \Kisma::set( $_systemOptions );
-
-            //	File should be there from provisioning... If not, tenemos una problema!
-            if ( !file_exists( $_dbConfigFile ) )
-            {
-                $_file = basename( $_dbConfigFile );
-                $_version = ( defined( 'DSP_VERSION' ) ? 'v' . DSP_VERSION : 'fabric' );
-                $_timestamp = date( 'c' );
-
-                $_dbConfig = <<<PHP
-<?php
-/**
- * **** DO NOT MODIFY THIS FILE ****
- * **** CHANGES WILL BREAK YOUR DSP AND COULD BE OVERWRITTEN AT ANY TIME ****
- * @(#)\$Id: {$_file}, {$_version}-{$_dspName} {$_timestamp} \$
- */
-return array(
-    'connectionString'      => 'mysql:host={$_instance->db_host};port={$_instance->db_port};dbname={$_dbName}',
-    'username'              => '{$_instance->db_user}',
-    'password'              => '{$_instance->db_password}',
-    'emulatePrepare'        => true,
-    'charset'               => 'utf8',
-    'schemaCachingDuration' => 3600,
-);
-PHP;
-
-                if ( !is_dir( dirname( $_dbConfigFile ) ) )
-                {
-                    @mkdir( dirname( $_dbConfigFile ), 0777, true );
-                }
-
-                //Log::debug( 'Writing config "' . $_dbConfigFile . '": ' . json_encode( $_instance, JSON_PRETTY_PRINT ) . PHP_EOL . $_dbConfig );
-
-                if ( false === file_put_contents( $_dbConfigFile, $_dbConfig ) )
-                {
-                    static::_errorLog( 'Cannot create database config file.' );
-                }
-
-                //  Try and read again
-                if ( !file_exists( $_dbConfigFile ) )
-                {
-                    static::_errorLog( 'DB Credential READ failure. Redirecting to df.com: ' . $host );
-                    header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
-                    exit( 1 );
-                }
-            }
-
-            /** @noinspection PhpIncludeInspection */
-            $_settings = require( $_dbConfigFile );
-
-            //Log::debug( 'Reading config: ' . $_settings );
-
-            if ( !empty( $_settings ) )
-            {
-                //	Save it for later (don't run away and let me down <== extra points if you get the reference)
-                setcookie( static::FigNewton, $_instance->storage_key, time() + DateTime::TheEnd, '/' );
-                setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
-            }
-            else
-            {
-                //  Clear cookies
-                setcookie( static::FigNewton, '', 0, '/' );
-                setcookie( static::PrivateFigNewton, '', 0, '/' );
-            }
-
-            $_metadata = (array)static::_getMetadata( $_instance->instance, $_privatePath );
-
-            static::_cacheSettings( $host, $_settings, $_instance, $_metadata );
-        }
-
-        //  Check for enterprise status
-        static::_checkPlatformState( $_dspName );
-
-        return array($_settings, $_metadata);
-    }
-
-    /**
-     * @param string $host
-     *
      * @return bool|mixed
      */
     protected static function _checkCache( $host )
@@ -521,21 +379,40 @@ PHP;
     }
 
     /**
-     * Check platform state for locks, etc.
+     * @param string $key
+     * @param mixed  $default
      *
-     * @param string $dspName
+     * @return array|mixed
      */
-    protected static function _checkPlatformState( $dspName )
+    public static function getConfig( $key = null, $default = null )
     {
-        if ( false !== ( $_states = Platform::getPlatformStates( $dspName ) ) )
+        if ( false === static::$_config )
         {
-            if ( $_states['operation_state'] > FabricPlatformStates::ACTIVATED )
+            static::$_config = Pii::getParam( 'dfe' );
+
+            //  Nada
+            if ( empty( $_config ) )
             {
-                Pii::redirect( static::UNAVAILABLE_URI );
-                exit( FabricPlatformStates::LOCKED );
+                static::$_config = array();
+                static::$_dfeInstance = false;
+
+                return $default;
             }
         }
+
+        if ( !$key )
+        {
+            return static::$_config;
+        }
+
+        return IfSet::get( static::$_config, $key, $default, true );
     }
+
+    private static function _sign( array $payload )
+    {
+
+    }
+
 }
 
 Enterprise::initialize();
