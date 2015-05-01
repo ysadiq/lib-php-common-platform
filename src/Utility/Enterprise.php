@@ -9,9 +9,29 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Methods for interfacing with DreamFactory Enterprise( DFE )
+ *
+ * This class discovers if this instance is a DFE cluster participant. When the DFE console provisions an instance, it places a file called
+ * ".env.cluster.json" into the root directory of the installation. This file contains the necessary information to operate and/or communicate with
+ * its cluster console.
+ *
+ * Config File Format
+ * ===============
+ * The file is in JSON format and looks similar to this:
+ *
+ *  {
+ *      "cluster-id":       "my-cluster-id",
+ *      "default-domain":   ".pasture.farm.com"
+ *      "signature-method": "sha256",
+ *      "api-url":          "https://console.pasture.farm.com/api/v1",
+ *      "api-key":          "@N(cUrwqU)!GNUMiB518,zHMDaq~76l,",
+ *      "client-id":        "cb171a80999a8db5c72956006812bbb307af8e54185ab1f40308189dc4d3f601",
+ *      "client-secret":    "b4f53df1d3ce84b9e8a0b55455c36ccfac8e0ed2dd9bf9941178559dd9d69c4a"
+ *  }
+ *
  */
 class Enterprise
 {
@@ -26,11 +46,7 @@ class Enterprise
     /**
      * @type string
      */
-    const DFE_MARKER = '/var/www/.dfe-hosted';
-    /**
-     * @type string
-     */
-    const CLUSTER_ENV_FILE = '.env.cluster';
+    const CLUSTER_ENV_FILE = '.env.cluster.json';
 
     //******************************************************************************
     //* Members
@@ -44,6 +60,14 @@ class Enterprise
      * @type bool
      */
     protected static $_dfeInstance = false;
+    /**
+     * @type string Our API access token
+     */
+    protected static $_token = null;
+    /**
+     * @type string The instance name
+     */
+    protected static $_instanceName = null;
 
     //*************************************************************************
     //* Methods
@@ -66,22 +90,23 @@ class Enterprise
         $_settings = $_metadata = array();
 
         //  Discover where I am
-        if ( false === ( $_config = static::getConfig() ) || false === ( $_config = static::_checkClusterEnvironment( $_config ) ) )
+        if ( false === ( $_config = static::_getClusterConfig() ) )
         {
             Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
 
             return false;
         }
 
-        if ( false === ( $_cluster = static::_interrogateCluster( $_config ) ) )
+        if ( false === ( $_cluster = static::_interrogateCluster() ) )
         {
-            static::_errorLog( 'Cluster interrogation failed. Suggest water-boarding.' );
+            Log::error( 'Cluster interrogation failed. Suggest water-boarding.' );
 
             return array($_settings, $_metadata);
         }
 
         static::$_dfeInstance = true;
         static::$_config = $_config;
+        static::$_token = static::_generateSignature();
 
         //  it sucks, but yeah...
         Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
@@ -90,35 +115,49 @@ class Enterprise
     }
 
     /**
-     * @param array $config
-     *
      * @return array
      */
-    protected static function _checkClusterEnvironment( array $config )
+    protected static function _validateClusterEnvironment()
     {
         try
         {
+            //  Start out false
+            static::$_dfeInstance = false;
+
             //	If this isn't an enterprise instance, bail
-            $config['host-name'] = $_host = static::getHostName();
+            $_host = Pii::request( false )->getHttpHost();
 
-            //  This request is not for us, log and bail...
-            if ( false === strpos( $_host, $_defaultDomain = IfSet::get( $config, 'default-domain', static::DEFAULT_DOMAIN ) ) )
+            //  Ensure keys exist...
+            if ( !isset( static::$_config['client-id'], static::$_config['client-secret'] ) )
             {
-                static::_errorLog( 'Request to non-provisioned instance: ' . $_host );
+                Log::error( 'No client-id/secret in cluster manifest.' );
 
-                //@todo handle differently? Redirect somewhere?
                 return false;
             }
 
-            //  Check for a cluster environment file
-            return array_merge(
-                $config,
-                array(
-                    'cluster'        => JsonFile::decodeFile( Pii::basePath() . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE ),
-                    'default-domain' => $_defaultDomain,
-                    'instance-name'  => str_replace( $_defaultDomain, null, $_host )
-                )
-            );
+            //  And API url
+            if ( !isset( static::$_config['api-url'] ) )
+            {
+                Log::error( 'No "api-url" in cluster manifest.' );
+
+                return false;
+            }
+
+            //  And default domain
+            $_defaultDomain = IfSet::get( static::$_config, 'default-domain' );
+
+            if ( empty( $_defaultDomain ) || false === strpos( $_host, $_defaultDomain ) )
+            {
+                Log::error( 'Invalid "default-domain" for host "' . $_host . '"' );
+
+                return false;
+            }
+
+            static::$_config['default-domain'] = $_defaultDomain = '.' . ltrim( $_defaultDomain, '. ' );
+            static::$_instanceName = str_replace( $_defaultDomain, null, $_host );
+
+            //  It's all good!
+            return static::$_dfeInstance = true;
         }
         catch ( \InvalidArgumentException $_ex )
         {
@@ -129,108 +168,23 @@ class Enterprise
 
     /**
      * @param array $config
+     *
+     * @return bool
      */
     protected static function _interrogateCluster( array $config )
     {
-        $_json = <<<JSON
-{
-	"cluster-id":       "cluster-east-1",
-	"signature-method": "sha256",
-	"endpoint":         "https://console.enterprise.dreamfactory.com/api/v1",
-	"port":             443,
-	"client-key":       "%]3,]~&t,EOxL30[wKw3auju:[+L>eYEVWEP,@3n79Qy",
-	"client-id":        "",
-	"client-secret":    ""
-}
-
-JSON;
-
         //  Get cluster config from env
-        $_id = $config['instance-name'];
+        $_status = static::_api( 'status', array('id' => static::$_instanceName) );
 
-        $_status = static::_api( 'status', array('id' => $_id) );
+        if ( false === $_status )
+        {
+            Log::error( 'Unable to contact DFE console.' );
+        }
 
         //  Get my config from console
         //  Set my storage up according
-    }
 
-    /**
-     * Writes the cache file out to disk
-     *
-     * @param string $key
-     * @param array  $data
-     *
-     * @return array
-     */
-    protected static function _cache( $key, $data )
-    {
-        JsonFile::encodeFile( static::_cacheFileName( $key ), $data );
-
-        return $data;
-    }
-
-    /**
-     * Generates the file name for the configuration cache file
-     *
-     * @param string $host
-     *
-     * @return string
-     */
-    protected static function _cacheFileName( $host )
-    {
-        $_path = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) .
-            DIRECTORY_SEPARATOR . '.dreamfactory' .
-            DIRECTORY_SEPARATOR . 'dfe' .
-            DIRECTORY_SEPARATOR . 'cache';
-
-        if ( !is_dir( $_path ) && false === @mkdir( $_path, 0777, true ) )
-        {
-            throw new FileSystemException( 'Unable to create cache directory' );
-        }
-
-        return $_path . DIRECTORY_SEPARATOR . sha1( $host . $_SERVER['REMOTE_ADDR'] );
-    }
-
-    /**
-     * Retrieves a global login provider credential set
-     *
-     * @param string $id
-     * @param bool   $force
-     *
-     * @return array
-     */
-    public static function getProviderCredentials( $id = null, $force = false )
-    {
-        if ( !$force && !static::fabricHosted() && !static::hostedPrivatePlatform() )
-        {
-            Log::info( 'Global provider credential pull skipped: not hosted entity.' );
-
-            return [];
-        }
-
-        //	Otherwise, get the credentials from the auth server...
-        $_url = static::DEFAULT_PROVIDER_ENDPOINT . '/';
-
-        if ( null !== $id )
-        {
-            $_url .= $id . '/';
-        }
-
-        $_response = Curl::get( $_url . '?oasys=' . urlencode( Pii::getParam( 'oauth.salt' ) ) );
-
-        if ( !$_response || HttpResponse::Ok != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
-        {
-            static::_errorLog(
-                'Global provider credential pull failed: ' .
-                Curl::getLastHttpCode() .
-                PHP_EOL .
-                print_r( $_response, true )
-            );
-
-            return [];
-        }
-
-        return Option::get( $_response, 'details', [] );
+        return true;
     }
 
     /**
@@ -255,11 +209,11 @@ JSON;
                 return $_metadata;
             }
 
-            $_response = static::api( HttpMethod::GET, '/instance/metadata/' . $instance->instance_id_text );
+            $_response = static::_api( HttpMethod::GET, 'instance/metadata/' . $instance->instance_id_text );
 
             if ( !$_response || HttpResponse::Ok != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
             {
-                static::_errorLog( 'Metadata pull failure.' );
+                Log::error( 'Metadata pull failure.' );
 
                 return false;
             }
@@ -273,55 +227,6 @@ JSON;
     }
 
     /**
-     * @param string $message
-     * @param array  $context
-     */
-    protected static function _errorLog( $message, $context = [] )
-    {
-        Log::error( $message, $context );
-    }
-
-    /**
-     * @param string $host
-     *
-     * @return bool|mixed
-     */
-    protected static function _checkCache( $host )
-    {
-        $_cacheFile = static::_cacheFileName( $host );
-
-        //	See if file is available and return it, or expire it...
-        if ( file_exists( $_cacheFile ) )
-        {
-            //	No session or expired?
-            if ( Pii::isEmpty( session_id() ) || ( time() - fileatime( $_cacheFile ) ) > static::EXPIRATION_THRESHOLD )
-            {
-                @unlink( $_cacheFile );
-
-                return false;
-            }
-
-            try
-            {
-                $_data = JsonFile::decodeFile( $_cacheFile );
-            }
-            catch ( \InvalidArgumentException $_ex )
-            {
-                //  File can't be read
-                return false;
-            }
-
-            return [
-                IfSet::get( $_data, 'settings', array() ),
-                IfSet::get( $_data, 'instance', array() ),
-                IfSet::get( $_data, 'metadata', array() ),
-            ];
-        }
-
-        return false;
-    }
-
-    /**
      * @param string $method
      * @param string $uri
      * @param array  $payload
@@ -329,7 +234,7 @@ JSON;
      *
      * @return bool|\stdClass|array
      */
-    public static function api( $method, $uri, $payload = [], $curlOptions = [] )
+    protected static function _api( $method, $uri, $payload = [], $curlOptions = [] )
     {
         if ( !HttpMethod::contains( strtoupper( $method ) ) )
         {
@@ -341,10 +246,10 @@ JSON;
             //  Allow full URIs
             if ( 'http' != substr( $uri, 0, 4 ) )
             {
-                $uri = static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' );
+                $uri = rtrim( static::$_config['api-url'], '/' ) . '/' . ltrim( $uri, '/ ' );
             }
 
-            if ( false === ( $_result = Curl::request( $method, $uri, $payload, $curlOptions ) ) )
+            if ( false === ( $_result = Curl::request( $method, $uri, static::_signPayload( $payload ), $curlOptions ) ) )
             {
                 throw new \RuntimeException( 'Failed to contact API server.' );
             }
@@ -362,31 +267,42 @@ JSON;
     /**
      * @param string $key
      * @param mixed  $default
+     * @param bool   $emptyStringIsNull
      *
      * @return array|mixed
      */
-    public static function getConfig( $key = null, $default = null )
+    protected static function _getClusterConfig( $key = null, $default = null, $emptyStringIsNull = true )
     {
         if ( false === static::$_config )
         {
-            static::$_config = Pii::getParam( 'dfe' );
+            $_configFile = Pii::basePath() . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE;
 
-            //  Nada
-            if ( empty( $_config ) )
+            if ( !file_exists( $_configFile ) )
             {
-                static::$_config = array();
-                static::$_dfeInstance = false;
+                return false;
+            }
 
-                return $default;
+            try
+            {
+                static::$_config = JsonFile::decodeFile( $_configFile );
+
+                if ( !static::_validateClusterEnvironment() )
+                {
+                    return false;
+                }
+
+                //  Re-write the cluster config
+                JsonFile::encodeFile( $_configFile, static::$_config );
+            }
+            catch ( \Exception $_ex )
+            {
+                Log::error( 'Cluster configuration file could not be decoded.' );
+
+                throw new \RuntimeException( 'This instance is not configured properly for your system environment.' );
             }
         }
 
-        if ( !$key )
-        {
-            return static::$_config;
-        }
-
-        return IfSet::get( static::$_config, $key, $default, true );
+        return null === $key ? static::$_config : IfSet::get( static::$_config, $key, $default, $emptyStringIsNull );
     }
 
     /**
@@ -394,13 +310,12 @@ JSON;
      *
      * @return array
      */
-    private static function _signPayload( $userId, array $payload )
+    protected function _signPayload( array $payload )
     {
         return array_merge(
             array(
-                'user-id'      => $userId,
-                'client-id'    => '$this->_clientId',
-                'access-token' => '$this->_signature',
+                'client-id'    => static::$_config['client-id'],
+                'access-token' => static::$_token,
             ),
             $payload ?: []
         );
@@ -410,32 +325,19 @@ JSON;
     /**
      * @return string
      */
-    public static function getHostName()
+    protected function _generateSignature()
     {
-        return Pii::request( false )->getHttpHost();
-    }
-
-    /**
-     * @return bool True if this DSP is fabric-hosted
-     */
-    public static function isHostedInstance()
-    {
-        static $_hosted = null;
-
         return
-            null !== $_hosted ? $_hosted : $_hosted = file_exists( static::DFE_MARKER );
+            hash_hmac(
+                static::$_config['signature-method'],
+                static::$_config['client-id'],
+                static::$_config['client-secret']
+            );
     }
-
 }
+
+//******************************************************************************
+//* Initialize the DFE integration
+//******************************************************************************
 
 Enterprise::initialize();
-
-//********************************************************************************
-//* Check for maintenance mode...
-//********************************************************************************
-
-if ( is_file( Fabric::MAINTENANCE_MARKER ) && Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) )
-{
-    header( 'Location: ' . Fabric::MAINTENANCE_URI );
-    die();
-}
