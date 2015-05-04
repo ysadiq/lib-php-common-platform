@@ -3,7 +3,6 @@
 use DreamFactory\Library\Utility\Curl;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
@@ -55,6 +54,10 @@ final class Enterprise
      */
     private static $_config = false;
     /**
+     * @type string
+     */
+    private static $_cacheKey = null;
+    /**
      * @type bool
      */
     protected static $_dfeInstance = false;
@@ -62,6 +65,10 @@ final class Enterprise
      * @type string Our API access token
      */
     private static $_token = null;
+    /**
+     * @type array The storage paths
+     */
+    protected static $_paths = array();
     /**
      * @type string The instance name
      */
@@ -84,36 +91,33 @@ final class Enterprise
      */
     public static function initialize()
     {
-        if ( static::$_dfeInstance )
+        static::$_cacheKey = 'dfe.config.' . static::_getHostName();
+
+        if ( !static::_reloadCache() )
         {
-            return static::$_config;
+            //  Discover where I am
+            if ( false === ( $_config = static::_getClusterConfig() ) )
+            {
+                Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
+
+                return false;
+            }
         }
 
-        $_settings = $_metadata = array();
+        //  It's all good!
+        static::$_dfeInstance = true;
 
-        //  Discover where I am
-        if ( false === ( $_config = static::_getClusterConfig() ) )
-        {
-            Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
-
-            return false;
-        }
+        //  Generate a signature for signing payloads...
+        static::$_token = static::_generateSignature();
 
         if ( false === ( $_cluster = static::_interrogateCluster( $_config ) ) )
         {
             Log::error( 'Cluster interrogation failed. Suggest water-boarding.' );
 
-            return array($_settings, $_metadata);
+            return false;
         }
 
-        static::$_dfeInstance = true;
-        static::$_config = $_config;
-        static::$_token = static::_generateSignature();
-
-        //  it sucks, but yeah...
-        Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
-
-        return false;
+        return true;
     }
 
     /**
@@ -127,7 +131,7 @@ final class Enterprise
             static::$_dfeInstance = false;
 
             //	If this isn't an enterprise instance, bail
-            $_host = Pii::request( false )->getHttpHost();
+            $_host = static::_getHostName();
 
             //  Ensure keys exist...
             if ( null === IfSet::get( static::$_config, 'client-id' ) || null === IfSet::get( static::$_config, 'client-secret' ) )
@@ -158,11 +162,21 @@ final class Enterprise
                 return false;
             }
 
+            $_storageRoot = IfSet::get( static::$_config, 'storage-root' );
+
+            if ( empty( $_storageRoot ) )
+            {
+                Log::error( 'No "storage-root" found.' );
+
+                return false;
+            }
+
+            static::$_config['storage-root'] = rtrim( $_storageRoot, ' ' . DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
             static::$_config['default-domain'] = $_defaultDomain = '.' . ltrim( $_defaultDomain, '. ' );
             static::$_instanceName = str_replace( $_defaultDomain, null, $_host );
 
             //  It's all good!
-            return static::$_dfeInstance = true;
+            return true;
         }
         catch ( \InvalidArgumentException $_ex )
         {
@@ -180,16 +194,23 @@ final class Enterprise
     {
         $_cluster = array();
 
-        //  Get cluster config from env
-        $_status = static::_api( 'status/' . static::getInstanceName() );
+        //  Get my config from console
+        $_status = static::_api( 'status', ['id' => static::getInstanceName()] );
 
-        if ( false === $_status )
+        if ( !is_object( $_status ) && !is_array( $_status ) )
         {
             Log::error( 'Unable to contact DFE console.' );
+
+            return false;
         }
 
-        //  Get my config from console
-        //  Set my storage up according
+        is_object( $_status ) && isset( $_status->response ) && ( $_status = (array)$_status->response );
+
+        static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
+        static::$_paths['private-path'] = static::$_config['storage-root'] . ltrim( $_status['private-path'], DIRECTORY_SEPARATOR );
+        static::$_paths['owner-private-path'] = static::$_config['storage-root'] . ltrim( $_status['owner-private-path'], DIRECTORY_SEPARATOR );
+
+        static::_refreshCache();
 
         return $_cluster;
     }
@@ -282,9 +303,9 @@ final class Enterprise
     {
         if ( false === static::$_config )
         {
-            $_configFile = dirname( Pii::basePath() ) . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE;
+            $_configFile = static::_locateClusterEnvironmentFile( static::CLUSTER_ENV_FILE );
 
-            if ( !file_exists( $_configFile ) )
+            if ( !$_configFile || !file_exists( $_configFile ) )
             {
                 return false;
             }
@@ -364,6 +385,107 @@ final class Enterprise
     public static function isWritableConfig()
     {
         return static::$_writableConfig;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getStoragePath()
+    {
+        return static::$_paths['storage-path'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function getPrivatePath()
+    {
+        return static::$_paths['private-path'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function getOwnerPrivatePath()
+    {
+        return static::$_paths['owner-private-path'];
+    }
+
+    /**
+     * Refreshes the cache with fresh values
+     */
+    protected static function _refreshCache()
+    {
+        Platform::storeSet( static::$_cacheKey, $_cache = array('paths' => static::$_paths, 'config' => static::$_config) );
+
+        Log::debug( 'dfe: cache written ' . print_r( $_cache, true ) );
+    }
+
+    /**
+     * Reload the cache
+     */
+    protected static function _reloadCache()
+    {
+        $_cache = Platform::storeGet( static::$_cacheKey );
+
+        if ( !empty( $_cache ) )
+        {
+            static::$_paths = $_cache['paths'];
+            static::$_config = $_cache['config'];
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Locate the configuration file for DFE, if any
+     *
+     * @param string $file
+     *
+     * @return bool|string
+     */
+    protected static function _locateClusterEnvironmentFile( $file )
+    {
+        $_path = getcwd();
+
+        while ( true )
+        {
+            if ( file_exists( $_path . DIRECTORY_SEPARATOR . $file ) )
+            {
+                return $_path . DIRECTORY_SEPARATOR . $file;
+            }
+
+            $_parentPath = dirname( $_path );
+
+            if ( $_parentPath == $_path || empty( $_parentPath ) || $_parentPath == DIRECTORY_SEPARATOR )
+            {
+                return false;
+            }
+
+            $_path = $_parentPath;
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets my host name
+     *
+     * @return string
+     */
+    protected static function _getHostName()
+    {
+        static $_hostname = null;
+
+        return
+            $_hostname
+                ?:
+                ( $_hostname = isset( $_SERVER )
+                    ? IfSet::get( $_SERVER, 'HTTP_HOST', gethostname() )
+                    : gethostname()
+                );
     }
 }
 

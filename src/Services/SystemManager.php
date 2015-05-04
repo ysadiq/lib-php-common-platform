@@ -29,6 +29,7 @@ use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\DataFormatter;
 use DreamFactory\Platform\Utility\Drupal;
+use DreamFactory\Platform\Utility\Enterprise;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -197,7 +198,7 @@ class SystemManager extends BaseSystemRestService
         }
 
         //	And redirect to welcome screen
-        if ( !Pii::guest() && !Fabric::fabricHosted() && !SystemManager::registrationComplete() )
+        if ( !Pii::guest() && !Fabric::fabricHosted() && !Enterprise::isManagedInstance() && !SystemManager::registrationComplete() )
         {
             Log::debug( 'Unregistered, non-hosted DSP detected.' );
 
@@ -303,7 +304,8 @@ class SystemManager extends BaseSystemRestService
                     {
                         $command->reset();
 
-                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
+                        $serviceId =
+                            $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
 
                         if ( false === $serviceId )
                         {
@@ -722,8 +724,8 @@ SQL;
 
         if ( !file_exists( $_marker ) )
         {
-            //	Test if directory is not writeable
-            if ( false === @file_put_contents( $_marker . '.test', null ) )
+            //	Test if directory is not writable
+            if ( false === @file_put_contents( $_marker, null ) )
             {
                 Log::error( 'Unable to write marker file. Ignoring.' );
 
@@ -731,7 +733,7 @@ SQL;
             }
             else
             {
-                if ( false === @unlink( $_marker . '.test' ) )
+                if ( false === @unlink( $_marker ) )
                 {
                     Log::error( 'Unable to remove test file created for check.' );
                 }
@@ -1213,10 +1215,10 @@ MYSQL
                     {
                         throw new InternalServerErrorException(
                             'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), null, null, array(
-                                'data'          => $data,
-                                'bogus_row'     => $_row,
-                                'unique_column' => $uniqueColumn
-                            )
+                                                                                                           'data'          => $data,
+                                                                                                           'bogus_row'     => $_row,
+                                                                                                           'unique_column' => $uniqueColumn
+                                                                                                       )
                         );
                     }
                 }

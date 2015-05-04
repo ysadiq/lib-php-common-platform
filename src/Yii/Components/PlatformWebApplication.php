@@ -180,6 +180,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @type \CDbCache
      */
     protected $_cache = null;
+    /**
+     * @type bool
+     */
+    protected $_initialized = false;
 
     //*************************************************************************
     //	Methods
@@ -195,8 +199,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Debug options
         $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-
-        $this->_localInit();
 
         //	Setup the request handler and events
         $this->onBeginRequest = [$this, '_onBeginRequest'];
@@ -327,6 +329,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onBeginRequest( \CEvent $event )
     {
+        if ( !$this->_initialized )
+        {
+            $this->_localInit();
+        }
+
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 

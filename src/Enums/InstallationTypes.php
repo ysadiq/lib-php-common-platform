@@ -77,6 +77,10 @@ class InstallationTypes extends SeedEnum
      * @var int
      */
     const PIVOTAL_PACKAGE = 1002;
+    /**
+     * @var int
+     */
+    const DFE_INSTANCE = 1003;
 
     /**
      * Package Markers
