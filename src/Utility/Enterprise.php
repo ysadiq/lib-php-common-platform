@@ -1,14 +1,12 @@
 <?php namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Library\Utility\Curl;
-use DreamFactory\Library\Utility\Exceptions\FileSystemException;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -33,7 +31,7 @@ use Symfony\Component\HttpFoundation\Request;
  *  }
  *
  */
-class Enterprise
+final class Enterprise
 {
     //******************************************************************************
     //* Constants
@@ -55,7 +53,7 @@ class Enterprise
     /**
      * @type array
      */
-    protected static $_config = false;
+    private static $_config = false;
     /**
      * @type bool
      */
@@ -63,11 +61,15 @@ class Enterprise
     /**
      * @type string Our API access token
      */
-    protected static $_token = null;
+    private static $_token = null;
     /**
      * @type string The instance name
      */
     protected static $_instanceName = null;
+    /**
+     * @type bool Set to TRUE to allow updating of cluster environment file.
+     */
+    protected static $_writableConfig = false;
 
     //*************************************************************************
     //* Methods
@@ -97,7 +99,7 @@ class Enterprise
             return false;
         }
 
-        if ( false === ( $_cluster = static::_interrogateCluster() ) )
+        if ( false === ( $_cluster = static::_interrogateCluster( $_config ) ) )
         {
             Log::error( 'Cluster interrogation failed. Suggest water-boarding.' );
 
@@ -128,9 +130,9 @@ class Enterprise
             $_host = Pii::request( false )->getHttpHost();
 
             //  Ensure keys exist...
-            if ( !isset( static::$_config['client-id'], static::$_config['client-secret'] ) )
+            if ( null === IfSet::get( static::$_config, 'client-id' ) || null === IfSet::get( static::$_config, 'client-secret' ) )
             {
-                Log::error( 'No client-id/secret in cluster manifest.' );
+                Log::error( 'Invalid cluster credentials: No "client-id" and/or "client-secret" found.' );
 
                 return false;
             }
@@ -138,10 +140,13 @@ class Enterprise
             //  And API url
             if ( !isset( static::$_config['api-url'] ) )
             {
-                Log::error( 'No "api-url" in cluster manifest.' );
+                Log::error( 'Invalid cluster configuration: No "api-url" in cluster manifest.' );
 
                 return false;
             }
+
+            //  Make it ready for action...
+            static::$_config['api-url'] = rtrim( static::$_config['api-url'], '/' ) . '/';
 
             //  And default domain
             $_defaultDomain = IfSet::get( static::$_config, 'default-domain' );
@@ -169,12 +174,14 @@ class Enterprise
     /**
      * @param array $config
      *
-     * @return bool
+     * @return array|bool
      */
     protected static function _interrogateCluster( array $config )
     {
+        $_cluster = array();
+
         //  Get cluster config from env
-        $_status = static::_api( 'status', array('id' => static::$_instanceName) );
+        $_status = static::_api( 'status/' . static::getInstanceName() );
 
         if ( false === $_status )
         {
@@ -184,7 +191,7 @@ class Enterprise
         //  Get my config from console
         //  Set my storage up according
 
-        return true;
+        return $_cluster;
     }
 
     /**
@@ -234,7 +241,7 @@ class Enterprise
      *
      * @return bool|\stdClass|array
      */
-    protected static function _api( $method, $uri, $payload = [], $curlOptions = [] )
+    protected static function _api( $uri, $payload = array(), $curlOptions = array(), $method = Request::METHOD_POST )
     {
         if ( !HttpMethod::contains( strtoupper( $method ) ) )
         {
@@ -243,10 +250,10 @@ class Enterprise
 
         try
         {
-            //  Allow full URIs
+            //  Allow full URIs or manufacture one...
             if ( 'http' != substr( $uri, 0, 4 ) )
             {
-                $uri = rtrim( static::$_config['api-url'], '/' ) . '/' . ltrim( $uri, '/ ' );
+                $uri = static::$_config['api-url'] . ltrim( $uri, '/ ' );
             }
 
             if ( false === ( $_result = Curl::request( $method, $uri, static::_signPayload( $payload ), $curlOptions ) ) )
@@ -271,11 +278,11 @@ class Enterprise
      *
      * @return array|mixed
      */
-    protected static function _getClusterConfig( $key = null, $default = null, $emptyStringIsNull = true )
+    private static function _getClusterConfig( $key = null, $default = null, $emptyStringIsNull = true )
     {
         if ( false === static::$_config )
         {
-            $_configFile = Pii::basePath() . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE;
+            $_configFile = dirname( Pii::basePath() ) . DIRECTORY_SEPARATOR . static::CLUSTER_ENV_FILE;
 
             if ( !file_exists( $_configFile ) )
             {
@@ -292,7 +299,7 @@ class Enterprise
                 }
 
                 //  Re-write the cluster config
-                JsonFile::encodeFile( $_configFile, static::$_config );
+                static::isWritableConfig() && JsonFile::encodeFile( $_configFile, static::$_config );
             }
             catch ( \Exception $_ex )
             {
@@ -310,14 +317,14 @@ class Enterprise
      *
      * @return array
      */
-    protected function _signPayload( array $payload )
+    private function _signPayload( array $payload )
     {
         return array_merge(
             array(
                 'client-id'    => static::$_config['client-id'],
                 'access-token' => static::$_token,
             ),
-            $payload ?: []
+            $payload ?: array()
         );
 
     }
@@ -325,7 +332,7 @@ class Enterprise
     /**
      * @return string
      */
-    protected function _generateSignature()
+    private function _generateSignature()
     {
         return
             hash_hmac(
@@ -333,6 +340,30 @@ class Enterprise
                 static::$_config['client-id'],
                 static::$_config['client-secret']
             );
+    }
+
+    /**
+     * @return boolean
+     */
+    public static function isManagedInstance()
+    {
+        return static::$_dfeInstance;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getInstanceName()
+    {
+        return static::$_instanceName;
+    }
+
+    /**
+     * @return boolean
+     */
+    public static function isWritableConfig()
+    {
+        return static::$_writableConfig;
     }
 }
 
