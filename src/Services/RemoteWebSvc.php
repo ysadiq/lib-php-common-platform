@@ -250,14 +250,13 @@ class RemoteWebSvc extends BasePlatformRestService
                     if ( Option::getBool( $_header, 'pass_from_client' ) )
                     {
                         // Check for Basic Auth pulled into server variable already
-                        if ( ( 0 === strcasecmp( $_name, 'Authorization' ) ) &&
-                             ( isset( $_SERVER['PHP_AUTH_USER'] ) && isset( $_SERVER['PHP_AUTH_PW'] ) ) )
+                        if ( ( 0 === strcasecmp( $_name, 'Authorization' ) ) && ( isset( $_SERVER['PHP_AUTH_USER'] ) && isset( $_SERVER['PHP_AUTH_PW'] ) ) )
                         {
                             $_value = 'Basic ' . base64_encode( $_SERVER['PHP_AUTH_USER'] . ':' . $_SERVER['PHP_AUTH_PW'] );
                         }
                         else
                         {
-                            $_phpHeaderName = 'HTTP_' . strtoupper( str_replace( array( '-', ' ' ), array( '_', '_' ), $_name ) );
+                            $_phpHeaderName = 'HTTP_' . strtoupper( str_replace( array('-', ' '), array('_', '_'), $_name ) );
                             $_value = ( isset( $_SERVER[$_phpHeaderName] ) ) ? $_SERVER[$_phpHeaderName] : $_value;
                         }
                     }
@@ -294,8 +293,15 @@ class RemoteWebSvc extends BasePlatformRestService
     {
         $_data = RestData::getPostedData() ?: array();
 
-        $_resource = ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null );
-        $this->_url = rtrim( $this->_baseUrl, '/' ) . $_resource;
+        $_resource = ( !empty( $this->_resourcePath ) ? ltrim( $this->_resourcePath, '/' ) : null );
+        if ( $_resource )
+        {
+            $this->_url = rtrim( $this->_baseUrl, '/' ) . '/' . $_resource;
+        }
+        else
+        {
+            $this->_url = $this->_baseUrl;
+        }
 
         if ( !empty( $this->_query ) )
         {
@@ -304,7 +310,7 @@ class RemoteWebSvc extends BasePlatformRestService
         }
 
         // build cache_key
-        $_cacheKey = $this->_action . ':' . $this->_apiName . $_resource;
+        $_cacheKey = $this->_action . ':' . $this->_apiName . str_replace( '/', '.', $_resource );
         if ( !empty( $this->_cacheQuery ) )
         {
             $_splicer = ( false === strpos( $_cacheKey, '?' ) ) ? '?' : '&';
@@ -355,7 +361,10 @@ class RemoteWebSvc extends BasePlatformRestService
             switch ( $this->_action )
             {
                 case static::GET:
-                    Platform::storeSet( $_cacheKey, $_result, $this->_cacheTTL );
+                    if ( !Platform::storeSet( $_cacheKey, $_result, $this->_cacheTTL ) )
+                    {
+                        Log::warning( 'Caching not working for key ' . $this->_action . ': ' . $this->_url );
+                    }
                     break;
             }
         }
