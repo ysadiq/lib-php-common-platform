@@ -58,13 +58,13 @@ final class Enterprise
      */
     private static $_cacheKey = null;
     /**
-     * @type bool
-     */
-    protected static $_dfeInstance = false;
-    /**
      * @type string Our API access token
      */
     private static $_token = null;
+    /**
+     * @type bool
+     */
+    protected static $_dfeInstance = false;
     /**
      * @type array The storage paths
      */
@@ -110,12 +110,45 @@ final class Enterprise
         //  Generate a signature for signing payloads...
         static::$_token = static::_generateSignature();
 
-        if ( false === ( $_cluster = static::_interrogateCluster( $_config ) ) )
+        if ( !static::_interrogateCluster() )
         {
             Log::error( 'Cluster interrogation failed. Suggest water-boarding.' );
 
             return false;
         }
+
+        return true;
+    }
+
+    /**
+     * @return array|bool
+     */
+    protected static function _interrogateCluster()
+    {
+        //  Get my config from console
+        $_status = static::_api( 'status', array('id' => static::getInstanceName()) );
+
+        if ( false === $_status || ( !is_object( $_status ) && !is_array( $_status ) ) )
+        {
+            Log::error( 'DFE console offline or unreachable.' );
+
+            return false;
+        }
+
+        if ( $_status instanceof \stdClass && isset( $_status->response, $_status->response->metadata, $_status->response->metadata->env ) )
+        {
+            static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
+        }
+        else
+        {
+            //   $_status = (array)$_status->response;
+        }
+
+        static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
+        static::$_paths['private-path'] = static::$_config['storage-root'] . ltrim( $_status['private-path'], DIRECTORY_SEPARATOR );
+        static::$_paths['owner-private-path'] = static::$_config['storage-root'] . ltrim( $_status['owner-private-path'], DIRECTORY_SEPARATOR );
+
+        static::_refreshCache();
 
         return true;
     }
@@ -133,24 +166,16 @@ final class Enterprise
             //	If this isn't an enterprise instance, bail
             $_host = static::_getHostName();
 
-            //  Ensure keys exist...
-            if ( null === IfSet::get( static::$_config, 'client-id' ) || null === IfSet::get( static::$_config, 'client-secret' ) )
-            {
-                Log::error( 'Invalid cluster credentials: No "client-id" and/or "client-secret" found.' );
-
-                return false;
-            }
-
             //  And API url
-            if ( !isset( static::$_config['api-url'] ) )
+            if ( !isset( static::$_config['console-api-url'], static::$_config['console-api-key'] ) )
             {
-                Log::error( 'Invalid cluster configuration: No "api-url" in cluster manifest.' );
+                Log::error( 'Invalid configuration: No "console-api-url" or "console-api-key" in cluster manifest.' );
 
                 return false;
             }
 
             //  Make it ready for action...
-            static::$_config['api-url'] = rtrim( static::$_config['api-url'], '/' ) . '/';
+            static::$_config['console-api-url'] = rtrim( static::$_config['console-api-url'], '/' ) . '/';
 
             //  And default domain
             $_defaultDomain = IfSet::get( static::$_config, 'default-domain' );
@@ -183,36 +208,6 @@ final class Enterprise
             //  The file is bogus or not there
             return false;
         }
-    }
-
-    /**
-     * @param array $config
-     *
-     * @return array|bool
-     */
-    protected static function _interrogateCluster( array $config )
-    {
-        $_cluster = array();
-
-        //  Get my config from console
-        $_status = static::_api( 'status', ['id' => static::getInstanceName()] );
-
-        if ( !is_object( $_status ) && !is_array( $_status ) )
-        {
-            Log::error( 'Unable to contact DFE console.' );
-
-            return false;
-        }
-
-        is_object( $_status ) && isset( $_status->response ) && ( $_status = (array)$_status->response );
-
-        static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
-        static::$_paths['private-path'] = static::$_config['storage-root'] . ltrim( $_status['private-path'], DIRECTORY_SEPARATOR );
-        static::$_paths['owner-private-path'] = static::$_config['storage-root'] . ltrim( $_status['owner-private-path'], DIRECTORY_SEPARATOR );
-
-        static::_refreshCache();
-
-        return $_cluster;
     }
 
     /**
@@ -274,7 +269,7 @@ final class Enterprise
             //  Allow full URIs or manufacture one...
             if ( 'http' != substr( $uri, 0, 4 ) )
             {
-                $uri = static::$_config['api-url'] . ltrim( $uri, '/ ' );
+                $uri = static::$_config['console-api-url'] . ltrim( $uri, '/ ' );
             }
 
             if ( false === ( $_result = Curl::request( $method, $uri, static::_signPayload( $payload ), $curlOptions ) ) )
@@ -286,7 +281,7 @@ final class Enterprise
         }
         catch ( \Exception $_ex )
         {
-            Log::error( 'Fabric::api error: ' . $_ex->getMessage() );
+            Log::error( 'api error: ' . $_ex->getMessage() );
 
             return false;
         }
@@ -324,7 +319,8 @@ final class Enterprise
             }
             catch ( \Exception $_ex )
             {
-                Log::error( 'Cluster configuration file could not be decoded.' );
+                Log::error( 'Cluster configuration file is not in a recognizable format.' );
+                static::$_config = false;
 
                 throw new \RuntimeException( 'This instance is not configured properly for your system environment.' );
             }
@@ -428,7 +424,7 @@ final class Enterprise
     {
         $_cache = Platform::storeGet( static::$_cacheKey );
 
-        if ( !empty( $_cache ) )
+        if ( !empty( $_cache ) && isset( $_cache['paths'], $_cache['config'] ) )
         {
             static::$_paths = $_cache['paths'];
             static::$_config = $_cache['config'];
