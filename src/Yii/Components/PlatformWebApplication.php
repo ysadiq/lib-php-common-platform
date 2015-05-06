@@ -200,6 +200,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
+        //  Local initialization
+        $this->_localInit();
+
         //	Setup the request handler and events
         $this->onBeginRequest = [$this, '_onBeginRequest'];
         $this->onEndRequest = [$this, '_onEndRequest'];
@@ -329,11 +332,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onBeginRequest( \CEvent $event )
     {
-        if ( !$this->_initialized )
-        {
-            $this->_localInit();
-        }
-
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 

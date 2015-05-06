@@ -1,12 +1,15 @@
 <?php namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Common\Exceptions\ProvisioningException;
 use DreamFactory\Library\Utility\Curl;
 use DreamFactory\Library\Utility\IfSet;
 use DreamFactory\Library\Utility\JsonFile;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Methods for interfacing with DreamFactory Enterprise( DFE )
@@ -77,6 +80,10 @@ final class Enterprise
      * @type bool Set to TRUE to allow updating of cluster environment file.
      */
     protected static $_writableConfig = false;
+    /**
+     * @type string The root storage directory
+     */
+    protected static $_storageRoot;
 
     //*************************************************************************
     //* Methods
@@ -122,31 +129,40 @@ final class Enterprise
 
     /**
      * @return array|bool
+     * @throws \DreamFactory\Common\Exceptions\ProvisioningException
      */
     protected static function _interrogateCluster()
     {
         //  Get my config from console
         $_status = static::_api( 'status', array('id' => static::getInstanceName()) );
 
-        if ( false === $_status || ( !is_object( $_status ) && !is_array( $_status ) ) )
+        if ( false === $_status || false === $_status->success )
         {
-            Log::error( 'DFE console offline or unreachable.' );
+            Log::error( 'Instance not found or unavailable.' );
 
             return false;
         }
 
-        if ( $_status instanceof \stdClass && isset( $_status->response, $_status->response->metadata, $_status->response->metadata->env ) )
+        if ( !( $_status instanceof \stdClass ) || !isset( $_status->response, $_status->response->metadata, $_status->response->metadata->env ) )
         {
-            static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
-        }
-        else
-        {
-            //   $_status = (array)$_status->response;
+            Log::info( 'Unable to contact DFE console.' );
+
+            return false;
         }
 
-        static::$_paths['storage-path'] = static::$_config['storage-root'] . ltrim( $_status['storage-path'], DIRECTORY_SEPARATOR );
-        static::$_paths['private-path'] = static::$_config['storage-root'] . ltrim( $_status['private-path'], DIRECTORY_SEPARATOR );
-        static::$_paths['owner-private-path'] = static::$_config['storage-root'] . ltrim( $_status['owner-private-path'], DIRECTORY_SEPARATOR );
+        $_map = (array)$_status->response->metadata->{'storage-map'};
+        $_paths = (array)$_status->response->metadata->paths;
+        $_root = rtrim( static::$_config['storage-root'] . static::_locateInstanceRootStorage( $_map, $_paths ), ' ' . DIRECTORY_SEPARATOR );
+
+        if ( !is_dir( $_root ) || empty( $_paths ) )
+        {
+            throw new ProvisioningException( 'This storage configuration for this instance is not valid.' );
+        }
+
+        static::$_paths['storage-path'] = $_root . DIRECTORY_SEPARATOR . static::$_instanceName;
+        static::$_paths['private-path'] = $_root . DIRECTORY_SEPARATOR . static::$_instanceName . DIRECTORY_SEPARATOR . $_paths['private-path'];
+        static::$_paths['owner-private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['owner-private-path'];
+        static::$_storageRoot = $_root;
 
         static::_refreshCache();
 
@@ -277,6 +293,14 @@ final class Enterprise
                 throw new \RuntimeException( 'Failed to contact API server.' );
             }
 
+            if ( !( $_result instanceof \stdClass ) )
+            {
+                if ( is_string( $_result ) && ( false === json_decode( $_result ) || JSON_ERROR_NONE !== json_last_error() ) )
+                {
+                    throw new \RuntimeException( 'Invalid response received from DFE console.' );
+                }
+            }
+
             return $_result;
         }
         catch ( \Exception $_ex )
@@ -402,6 +426,14 @@ final class Enterprise
     /**
      * @return string
      */
+    public static function getLogPath()
+    {
+        return static::getPrivatePath() . DIRECTORY_SEPARATOR . 'log';
+    }
+
+    /**
+     * @return string
+     */
     public static function getOwnerPrivatePath()
     {
         return static::$_paths['owner-private-path'];
@@ -482,6 +514,26 @@ final class Enterprise
                     ? IfSet::get( $_SERVER, 'HTTP_HOST', gethostname() )
                     : gethostname()
                 );
+    }
+
+    /**
+     * @param array $map
+     * @param array $paths
+     *
+     * @return string
+     */
+    protected static function _locateInstanceRootStorage( array $map, array $paths )
+    {
+        $_zone = trim( IfSet::get( $map, 'zone' ), DIRECTORY_SEPARATOR );
+        $_partition = trim( IfSet::get( $map, 'partition' ), DIRECTORY_SEPARATOR );
+        $_rootHash = trim( IfSet::get( $map, 'root-hash' ), DIRECTORY_SEPARATOR );
+
+        if ( empty( $_zone ) || empty( $_partition ) || empty( $_rootHash ) )
+        {
+            return dirname( Pii::basePath() ) . DIRECTORY_SEPARATOR . 'storage';
+        }
+
+        return implode( DIRECTORY_SEPARATOR, [$_zone, $_partition, $_rootHash] );
     }
 }
 
