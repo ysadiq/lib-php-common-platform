@@ -1,16 +1,5 @@
 <?php namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Exceptions\ProvisioningException;
-use DreamFactory\Library\Utility\Curl;
-use DreamFactory\Library\Utility\IfSet;
-use DreamFactory\Library\Utility\JsonFile;
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Log;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-
 /**
  * Methods for interfacing with DreamFactory Enterprise( DFE )
  *
@@ -121,7 +110,7 @@ final class Enterprise
         {
             Log::error( 'Cluster interrogation failed. Suggest water-boarding.' );
 
-            return false;
+            throw new \RuntimeException( 'Unknown managed instance detected. No access allowed.' );
         }
 
         return true;
