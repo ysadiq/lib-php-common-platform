@@ -204,8 +204,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_localInit();
 
         //	Setup the request handler and events
-        $this->onBeginRequest = [$this, '_onBeginRequest'];
-        $this->onEndRequest = [$this, '_onEndRequest'];
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
     }
 
     /**
@@ -931,13 +931,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             //  Empty whitelist...
             $_config = false;
-            $_whitelist = [];
+            $_whitelist = array();
             $_locations = $_locations
-                ?: [
+                ?: array(
                     Platform::getLocalConfigPath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
                     Platform::getStoragePath( static::CORS_DEFAULT_CONFIG_FILE, true, true ),
-                ];
+                );
 
             //	Find cors config file location
             foreach ( $_locations as $_path )

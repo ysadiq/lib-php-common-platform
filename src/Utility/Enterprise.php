@@ -1,7 +1,17 @@
 <?php namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Common\Exceptions\ProvisioningException;
+use DreamFactory\Library\Utility\Curl;
+use DreamFactory\Library\Utility\FileSystem;
+use DreamFactory\Library\Utility\IfSet;
+use DreamFactory\Library\Utility\JsonFile;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Log;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+
 /**
- * Methods for interfacing with DreamFactory Enterprise( DFE )
+ * Methods for interfacing with DreamFactory Enterprise (DFE)
  *
  * This class discovers if this instance is a DFE cluster participant. When the DFE console provisions an instance, it places a file called
  * ".env.cluster.json" into the root directory of the installation. This file contains the necessary information to operate and/or communicate with
@@ -92,7 +102,7 @@ final class Enterprise
         if ( !static::_reloadCache() )
         {
             //  Discover where I am
-            if ( false === ( $_config = static::_getClusterConfig() ) )
+            if ( !static::_getClusterConfig() )
             {
                 Log::debug( 'Not a DFE hosted instance. Resistance is NOT futile.' );
 
@@ -102,6 +112,7 @@ final class Enterprise
 
         //  It's all good!
         static::$_dfeInstance = true;
+        static::$_instanceName = IfSet::get( static::$_config, 'instance-name' );
 
         //  Generate a signature for signing payloads...
         static::$_token = static::_generateSignature();
@@ -149,7 +160,7 @@ final class Enterprise
         }
 
         static::$_paths['storage-path'] = $_root . DIRECTORY_SEPARATOR . static::$_instanceName;
-        static::$_paths['private-path'] = $_root . DIRECTORY_SEPARATOR . static::$_instanceName . DIRECTORY_SEPARATOR . $_paths['private-path'];
+        static::$_paths['private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['private-path'];
         static::$_paths['owner-private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['owner-private-path'];
         static::$_storageRoot = $_root;
 
@@ -237,9 +248,9 @@ final class Enterprise
                 return $_metadata;
             }
 
-            $_response = static::_api( HttpMethod::GET, 'instance/metadata/' . $instance->instance_id_text );
+            $_response = static::_api( Request::METHOD_GET, 'instance/metadata/' . $instance->instance_id_text );
 
-            if ( !$_response || HttpResponse::Ok != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
+            if ( !$_response || Response::HTTP_OK != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
             {
                 Log::error( 'Metadata pull failure.' );
 
@@ -264,11 +275,6 @@ final class Enterprise
      */
     protected static function _api( $uri, $payload = array(), $curlOptions = array(), $method = Request::METHOD_POST )
     {
-        if ( !HttpMethod::contains( strtoupper( $method ) ) )
-        {
-            throw new \InvalidArgumentException( 'The method "' . $method . '" is invalid.' );
-        }
-
         try
         {
             //  Allow full URIs or manufacture one...
@@ -286,6 +292,10 @@ final class Enterprise
             {
                 if ( is_string( $_result ) && ( false === json_decode( $_result ) || JSON_ERROR_NONE !== json_last_error() ) )
                 {
+                    Log::debug( '-----***** Invalid Response Received *****-----' );
+                    Log::debug( $_result );
+                    Log::debug( '-----***** Invalid Response End *****-----' );
+
                     throw new \RuntimeException( 'Invalid response received from DFE console.' );
                 }
             }
@@ -329,6 +339,16 @@ final class Enterprise
 
                 //  Re-write the cluster config
                 static::isWritableConfig() && JsonFile::encodeFile( $_configFile, static::$_config );
+
+                //  Stick instance name inside for when pulled from cache...
+                if ( !empty( static::$_instanceName ) )
+                {
+                    static::$_config['instance-name'] = static::$_instanceName;
+                }
+                else if ( isset( static::$_config['instance-name'] ) )
+                {
+                    static::$_instanceName = static::$_config['instance-name'];
+                }
             }
             catch ( \Exception $_ex )
             {
@@ -347,7 +367,7 @@ final class Enterprise
      *
      * @return array
      */
-    private function _signPayload( array $payload )
+    private static function _signPayload( array $payload )
     {
         return array_merge(
             array(
@@ -362,7 +382,7 @@ final class Enterprise
     /**
      * @return string
      */
-    private function _generateSignature()
+    private static function _generateSignature()
     {
         return
             hash_hmac(
@@ -417,7 +437,12 @@ final class Enterprise
      */
     public static function getLogPath()
     {
-        return static::getPrivatePath() . DIRECTORY_SEPARATOR . 'log';
+        if ( !FileSystem::ensurePath( $_path = static::getPrivatePath() . DIRECTORY_SEPARATOR . 'log' ) )
+        {
+            throw new \RuntimeException( 'Cannot access/read/write log directory' );
+        }
+
+        return $_path;
     }
 
     /**
@@ -448,9 +473,8 @@ final class Enterprise
         if ( !empty( $_cache ) && isset( $_cache['paths'], $_cache['config'] ) )
         {
             static::$_paths = $_cache['paths'];
-            static::$_config = $_cache['config'];
 
-            return true;
+            return static::$_config = $_cache['config'];
         }
 
         return false;
@@ -522,7 +546,7 @@ final class Enterprise
             return dirname( Pii::basePath() ) . DIRECTORY_SEPARATOR . 'storage';
         }
 
-        return implode( DIRECTORY_SEPARATOR, [$_zone, $_partition, $_rootHash] );
+        return implode( DIRECTORY_SEPARATOR, array($_zone, $_partition, $_rootHash) );
     }
 }
 

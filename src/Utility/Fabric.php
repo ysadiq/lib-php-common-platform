@@ -122,7 +122,7 @@ class Fabric extends SeedUtility
      */
     public static function fabricHosted()
     {
-        static $_validRoots = [self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT];
+        static $_validRoots = array(self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT);
         static $_fabricHosted = null;
 
         return
@@ -142,11 +142,11 @@ class Fabric extends SeedUtility
          * Add host names to this list to white-list...
          */
         static $_allowedHosts = null;
-        static $_localHosts = [
+        static $_localHosts = array(
             'launchpad-dev.dreamfactory.com',
             'launchpad-demo.dreamfactory.com',
             'next.cloud.dreamfactory.com',
-        ];
+        );
 
         if ( empty( $_allowedHosts ) )
         {
@@ -214,11 +214,11 @@ class Fabric extends SeedUtility
      */
     protected static function _cacheSettings( $host, $settings, $instance, $metadata )
     {
-        $_data = [
+        $_data = array(
             'settings' => $settings,
             'instance' => $instance,
             'metadata' => $metadata,
-        ];
+        );
 
         JsonFile::encodeFile( static::_cacheFileName( $host ), $_data );
 
@@ -260,7 +260,7 @@ class Fabric extends SeedUtility
         {
             Log::info( 'Global provider credential pull skipped: not hosted entity.' );
 
-            return [];
+            return array();
         }
 
         //	Otherwise, get the credentials from the auth server...
@@ -282,10 +282,10 @@ class Fabric extends SeedUtility
                 print_r( $_response, true )
             );
 
-            return [];
+            return array();
         }
 
-        return Option::get( $_response, 'details', [] );
+        return Option::get( $_response, 'details', array() );
     }
 
     /**
@@ -331,7 +331,7 @@ class Fabric extends SeedUtility
      * @param string $message
      * @param array  $context
      */
-    protected static function _errorLog( $message, $context = [] )
+    protected static function _errorLog( $message, $context = array() )
     {
         Log::error( $message, $context );
     }
@@ -391,7 +391,7 @@ class Fabric extends SeedUtility
             $_dbConfigFile = $_privatePath . '/' . $_dbConfigFileName;
 
             //	Stick this in persistent storage
-            $_systemOptions = [
+            $_systemOptions = array(
                 'dsp.credentials'              => $_cache,
                 'dsp.db_name'                  => $_dbName,
                 'platform.dsp_name'            => $_dspName,
@@ -401,7 +401,7 @@ class Fabric extends SeedUtility
                 'platform.db_config_file'      => $_dbConfigFile,
                 'platform.db_config_file_name' => $_dbConfigFileName,
                 PlatformStates::STATE_KEY      => null,
-            ];
+            );
 
             \Kisma::set( $_systemOptions );
 
@@ -509,11 +509,11 @@ PHP;
                 return false;
             }
 
-            return [
+            return array(
                 IfSet::get( $_data, 'settings', array() ),
                 IfSet::get( $_data, 'instance', array() ),
                 IfSet::get( $_data, 'metadata', array() ),
-            ];
+            );
         }
 
         return false;
@@ -527,7 +527,7 @@ PHP;
      *
      * @return bool|\stdClass|array
      */
-    public static function api( $method, $uri, $payload = [], $curlOptions = [] )
+    public static function api( $method, $uri, $payload = array(), $curlOptions = array() )
     {
         if ( !HttpMethod::contains( strtoupper( $method ) ) )
         {

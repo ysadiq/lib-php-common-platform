@@ -146,7 +146,7 @@ class Platform
                 }
             }
 
-            $_path = rtrim( $_path, DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR . $_appendage;
+            $_path = rtrim( $_path, DIRECTORY_SEPARATOR ) . $_appendage;
 
             //	Store path for next time...
             $_cache[$_cacheKey] = $_path;
@@ -482,7 +482,7 @@ class Platform
      */
     protected static function _doSet( $key, $value = null, $ttl = self::MEMCACHE_TTL, $flag = 0 )
     {
-        return Pii::appStoreSet( $key, $value, $ttl, $flag );
+        return Pii::appStoreSet( $key, $value, $ttl );
     }
 
     /**
