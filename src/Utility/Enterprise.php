@@ -8,7 +8,6 @@ use DreamFactory\Library\Utility\JsonFile;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Methods for interfacing with DreamFactory Enterprise (DFE)
@@ -136,16 +135,23 @@ final class Enterprise
         //  Get my config from console
         $_status = static::_api( 'status', array('id' => static::getInstanceName()) );
 
-        if ( false === $_status || false === $_status->success )
+        if ( !( $_status instanceof \stdClass ) || !isset( $_status->response ) )
+        {
+            Log::info( 'Unable to contact DFE console.' );
+
+            return false;
+        }
+
+        if ( $_status instanceof \stdClass && ( false === $_status->success ) )
         {
             Log::error( 'Instance not found or unavailable.' );
 
             return false;
         }
 
-        if ( !( $_status instanceof \stdClass ) || !isset( $_status->response, $_status->response->metadata, $_status->response->metadata->env ) )
+        if ( $_status->response->archived || $_status->response->deleted )
         {
-            Log::info( 'Unable to contact DFE console.' );
+            Log::error( 'Instance has been archived or deleted.' );
 
             return false;
         }
@@ -159,10 +165,12 @@ final class Enterprise
             throw new ProvisioningException( 'This storage configuration for this instance is not valid.' );
         }
 
+        static::$_storageRoot = $_root;
         static::$_paths['storage-path'] = $_root . DIRECTORY_SEPARATOR . static::$_instanceName;
         static::$_paths['private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['private-path'];
         static::$_paths['owner-private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['owner-private-path'];
-        static::$_storageRoot = $_root;
+
+        static::$_config['metadata'] = static::_getMetadata( static::$_instanceName, static::$_config['private-path'] );
 
         static::_refreshCache();
 
@@ -227,39 +235,28 @@ final class Enterprise
     }
 
     /**
-     * @param \stdClass $instance
-     * @param string    $privatePath
+     * @param string $instanceName
+     * @param string $privatePath
      *
      * @return mixed|string
      * @throws \CHttpException
      */
-    protected static function _getMetadata( $instance, $privatePath )
+    protected static function _getMetadata( $instanceName, $privatePath )
     {
         static $_metadata = null;
 
         if ( !$_metadata )
         {
-            $_filename = $privatePath . DIRECTORY_SEPARATOR . $instance->instance_id_text . '.json';
+            $_mdFile = $privatePath . DIRECTORY_SEPARATOR . $instanceName . '.json';
 
-            if ( file_exists( $_filename ) )
+            if ( !file_exists( $_mdFile ) )
             {
-                $_metadata = JsonFile::decodeFile( $_filename, true );
-
-                return $_metadata;
-            }
-
-            $_response = static::_api( Request::METHOD_GET, 'instance/metadata/' . $instance->instance_id_text );
-
-            if ( !$_response || Response::HTTP_OK != Curl::getLastHttpCode() || !is_object( $_response ) || !$_response->success )
-            {
-                Log::error( 'Metadata pull failure.' );
+                Log::error( 'No instance metadata file found: ' . $_mdFile );
 
                 return false;
             }
 
-            $_metadata = (array)$_response->details;
-
-            JsonFile::encodeFile( $_filename, $_metadata );
+            $_metadata = JsonFile::decodeFile( $_mdFile );
         }
 
         return $_metadata;
