@@ -110,6 +110,10 @@ class InstallationTypes extends SeedEnum
      * @var string
      */
     const PAAS_MARKER = '/.paas';
+    /**
+     * @var string
+     */
+    const DFE_MARKER = '/var/www/.dfe-managed';
 
     //*************************************************************************
     //	Methods
@@ -151,14 +155,19 @@ class InstallationTypes extends SeedEnum
             self::RPM_PACKAGE     => self::RPM_PACKAGE_MARKER,
             self::PIVOTAL_PACKAGE => self::PIVOTAL_PACKAGE_MARKER,
             self::BLUEMIX_PACKAGE => self::BLUEMIX_PACKAGE_MARKER,
+            self::DFE_INSTANCE    => self::DFE_MARKER,
         );
 
-        $_docRoot = Option::server( 'DOCUMENT_ROOT' );
         $_type = static::FABRIC_HOSTED;
+        $_docRoot = Option::server( 'DOCUMENT_ROOT' );
         $_cachedType = Platform::storeGet( INSTALL_TYPE_KEY );
 
-        //	Hosted?
-        if ( !Fabric::fabricHosted() )
+        //	Enterprise?
+        if ( Fabric::fabricHosted( true ) )
+        {
+            $_type = static::DFE_INSTANCE;
+        }
+        else if ( !Fabric::fabricHosted() )
         {
             //	Default to stand-alone
             $_type = static::STANDALONE_PACKAGE;

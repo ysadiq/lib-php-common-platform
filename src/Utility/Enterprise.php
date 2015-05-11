@@ -156,6 +156,8 @@ final class Enterprise
             return false;
         }
 
+        Log::debug( 'DFE instance status received: ' . print_r( $_status, true ) );
+
         $_map = (array)$_status->response->metadata->{'storage-map'};
         $_paths = (array)$_status->response->metadata->paths;
         $_root = rtrim( static::$_config['storage-root'] . static::_locateInstanceRootStorage( $_map, $_paths ), ' ' . DIRECTORY_SEPARATOR );
@@ -173,6 +175,8 @@ final class Enterprise
         static::$_config['metadata'] = static::_getMetadata( static::$_instanceName, static::$_config['private-path'] );
 
         static::_refreshCache();
+
+        Log::debug( 'enterprise: cached config ' . print_r( static::$_config, true ) );
 
         return true;
     }
@@ -448,6 +452,24 @@ final class Enterprise
     public static function getOwnerPrivatePath()
     {
         return static::$_paths['owner-private-path'];
+    }
+
+    /**
+     * Retrieve a config value or the entire array
+     *
+     * @param string $key
+     * @param mixed  $default
+     *
+     * @return array|mixed
+     */
+    public static function getConfig( $key = null, $default = null )
+    {
+        if ( null === $key )
+        {
+            return static::$_config;
+        }
+
+        return IfSet::get( static::$_config, $key, $default );
     }
 
     /**

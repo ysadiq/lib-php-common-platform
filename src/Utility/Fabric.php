@@ -30,6 +30,7 @@ use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Hosted DSP system utilities
@@ -83,6 +84,10 @@ class Fabric extends SeedUtility
     /**
      * @var string
      */
+    const DFE_MARKER = '/var/www/.dfe-managed';
+    /**
+     * @var string
+     */
     const MAINTENANCE_MARKER = '/var/www/.fabric_maintenance';
     /**
      * @var string
@@ -118,12 +123,19 @@ class Fabric extends SeedUtility
     }
 
     /**
+     * @param bool $dfeManaged If true, will check for DFE managed systems
+     *
      * @return bool True if this DSP is fabric-hosted
      */
-    public static function fabricHosted()
+    public static function fabricHosted( $dfeManaged = false )
     {
         static $_validRoots = array(self::DEFAULT_DOC_ROOT, self::DEFAULT_DEV_DOC_ROOT);
         static $_fabricHosted = null;
+
+        if ( $dfeManaged && file_exists( static::DFE_MARKER ) )
+        {
+            return true;
+        }
 
         return
             $_fabricHosted
@@ -179,9 +191,8 @@ class Fabric extends SeedUtility
 
         if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
         {
-            $_dfe = Pii::getParam( 'dfe' );
-
-            if ( empty( $_dfe ) || false === strpos( $_host, IfSet::get( $_dfe, 'default-subdomain' ) ) )
+            //  Enterprise?
+            if ( !static::fabricHosted( true ) )
             {
                 static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
 
@@ -338,13 +349,21 @@ class Fabric extends SeedUtility
 
     /**
      * @param string $host
+     * @param bool   $dfeManaged If true, credentials are pulled from DFE console
      *
      * @return mixed|string
      * @throws \CHttpException
      */
-    protected static function _getDatabaseConfig( $host )
+    protected static function _getDatabaseConfig( $host, $dfeManaged = false )
     {
-        $_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $host );
+        $_parts = explode( '.', $host );
+
+        if ( empty( $_parts ) )
+        {
+            throw new \InvalidArgumentException( 'The host "' . $host . '" is invalid.' );
+        }
+
+        $_dspName = $_parts[0];
 
         $_dbConfigFileName = str_ireplace(
             '%%INSTANCE_NAME%%',
@@ -356,7 +375,14 @@ class Fabric extends SeedUtility
         if ( false === ( list( $_settings, $_instance, $_metadata ) = static::_checkCache( $host ) ) )
         {
             //	Get the credentials from the auth server...
-            $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
+            if ( $dfeManaged )
+            {
+                $_response = static::dfeApi( 'credentials/' . $_dspName . '/database' );
+            }
+            else
+            {
+                $_response = static::api( HttpMethod::GET, '/instance/credentials/' . $_dspName . '/database' );
+            }
 
             if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
             {
@@ -534,6 +560,39 @@ PHP;
             throw new \InvalidArgumentException( 'The method "' . $method . '" is invalid.' );
         }
 
+        try
+        {
+            //  Allow full URIs
+            if ( 'http' != substr( $uri, 0, 4 ) )
+            {
+                $uri = static::FABRIC_API_ENDPOINT . '/' . ltrim( $uri, '/ ' );
+            }
+
+            if ( false === ( $_result = Curl::request( $method, $uri, $payload, $curlOptions ) ) )
+            {
+                throw new \RuntimeException( 'Failed to contact API server.' );
+            }
+
+            return $_result;
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( 'Fabric::api error: ' . $_ex->getMessage() );
+
+            return false;
+        }
+    }
+
+    /**
+     * @param string $method
+     * @param string $uri
+     * @param array  $payload
+     * @param array  $curlOptions
+     *
+     * @return bool|\stdClass|array
+     */
+    public static function dfeApi( $uri, $payload = array(), $curlOptions = array(), $method = Request::METHOD_POST )
+    {
         try
         {
             //  Allow full URIs
