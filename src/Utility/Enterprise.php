@@ -172,7 +172,20 @@ final class Enterprise
         static::$_paths['private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['private-path'];
         static::$_paths['owner-private-path'] = $_root . DIRECTORY_SEPARATOR . $_paths['owner-private-path'];
 
-        static::$_config['metadata'] = static::_getMetadata( static::$_instanceName, static::$_config['private-path'] );
+        static::$_config['paths'] = (array)$_paths;
+        static::$_config['storage-map'] = (array)$_map;
+        static::$_config['env'] = (array)$_status->response->metadata->env;
+        static::$_config['metadata'] = (array)$_status->response->metadata;
+
+        //  Get the database config
+        if ( !empty( $_status->response->metadata->db ) )
+        {
+            foreach ( (array)$_status->response->metadata->db as $_name => $_db )
+            {
+                static::$_config['db'] = (array)$_db;
+                break;
+            }
+        }
 
         static::_refreshCache();
 
