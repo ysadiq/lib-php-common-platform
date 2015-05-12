@@ -189,6 +189,8 @@ class Role extends BasePlatformSystemModel
                     'description',
                     'is_active',
                     'default_app_id',
+                    'parse_app_id',
+                    'parse_rest_key',
                 ),
                 $columns
             ),

@@ -397,6 +397,9 @@ class Session extends BaseUserRestResource
 
         $_roleApps = $_allowedApps = array();
         $_roleId = $_user->role_id;
+        $_roleParseAppId = $_user->role->parse_app_id;
+        $_roleParseRestKey = $_user->role->parse_rest_key;
+
         if ( !$_user->is_sys_admin )
         {
             if ( !$_user->role )
@@ -438,6 +441,10 @@ class Session extends BaseUserRestResource
             $_cached['role'] = $_role;
             $_public['role'] = $_roleName;
             $_public['role_id'] = $_roleId;
+
+            $_public['parse_app_id'] = $_roleParseAppId;
+            $_public['parse_rest_key'] = $_roleParseRestKey;
+
         }
         else
         {
